@@ -34,19 +34,26 @@ export async function GET(
     // Get detailed student info
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select(`
-        *,
-        users!inner (
-          full_name,
-          email,
-          avatar_url,
-          profile_data
-        )
-      `)
+      .select('*')
       .eq('user_id', studentId)
       .single();
 
     if (studentError) throw studentError;
+
+    // Get user's profile data separately
+    const { data: userData, error: userDataError } = await supabase
+      .from('users')
+      .select('email, profile_data')
+      .eq('id', studentId)
+      .single();
+
+    if (userDataError) throw userDataError;
+
+    // Extract full_name from profile_data
+    const firstName = userData?.profile_data?.first_name || '';
+    const lastName = userData?.profile_data?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || userData?.email || 'User';
+    const avatarUrl = userData?.profile_data?.avatar_url || null;
 
     // Get student's ARKs
     const { data: arks, error: arksError } = await supabase
@@ -122,9 +129,9 @@ export async function GET(
     return successResponse({
       student: {
         id: student.user_id,
-        full_name: student.users.full_name,
-        email: student.users.email,
-        avatar_url: student.users.avatar_url,
+        full_name: fullName,
+        email: userData.email,
+        avatar_url: avatarUrl,
         grade: student.grade,
         batch: student.batch,
         interests: student.interests,

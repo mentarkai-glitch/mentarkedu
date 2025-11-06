@@ -39,12 +39,16 @@ export async function GET(request: NextRequest) {
       status: iv.status,
       created_at: iv.created_at,
       students: {
-        users: {
-          full_name: `${iv.students.users.profile_data?.first_name || ""} ${
-            iv.students.users.profile_data?.last_name || ""
-          }`.trim(),
-          avatar_url: iv.students.users.profile_data?.avatar_url,
-        },
+        users: (() => {
+          // Handle users as array (TypeScript inference issue with Supabase joins)
+          const studentUsers = Array.isArray(iv.students?.users) ? iv.students.users[0] : iv.students?.users;
+          const firstName = studentUsers?.profile_data?.first_name || "";
+          const lastName = studentUsers?.profile_data?.last_name || "";
+          return {
+            full_name: `${firstName} ${lastName}`.trim(),
+            avatar_url: studentUsers?.profile_data?.avatar_url || null,
+          };
+        })(),
       },
     }));
 

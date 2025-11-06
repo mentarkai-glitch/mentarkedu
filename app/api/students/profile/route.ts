@@ -50,13 +50,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Format the response - get full_name from profile_data
-    const firstName = student.users?.profile_data?.first_name || '';
-    const lastName = student.users?.profile_data?.last_name || '';
-    const fullName = `${firstName} ${lastName}`.trim() || student.users?.email || 'User';
+    // Handle users as array (TypeScript inference issue with Supabase joins)
+    const studentUser = Array.isArray(student.users) ? student.users[0] : student.users;
+    const firstName = studentUser?.profile_data?.first_name || '';
+    const lastName = studentUser?.profile_data?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || studentUser?.email || 'User';
 
     const profileData = {
       user_id: student.user_id,
-      email: student.users.email,
+      email: studentUser?.email || '',
       full_name: fullName,
       grade: student.grade,
       batch: student.batch,
@@ -64,7 +66,7 @@ export async function GET(request: NextRequest) {
       goals: student.goals || [],
       risk_score: student.risk_score,
       onboarding_profile: student.onboarding_profile,
-      institute_id: student.users.institute_id
+      institute_id: studentUser?.institute_id || null
     };
 
     return successResponse(profileData);
