@@ -18,20 +18,20 @@ export async function POST(request: NextRequest) {
     // Get current student's profile
     const { data: currentStudent, error: studentError } = await supabase
       .from('students')
-      .select(`
-        grade,
-        batch,
-        interests,
-        goals,
-        users!inner (
-          institute_id,
-          full_name
-        )
-      `)
+      .select('grade, batch, interests, goals')
       .eq('user_id', user.id)
       .single();
 
     if (studentError) throw studentError;
+
+    // Get current user's institute_id
+    const { data: userData, error: userDataError } = await supabase
+      .from('users')
+      .select('institute_id')
+      .eq('id', user.id)
+      .single();
+
+    if (userDataError) throw userDataError;
 
     // Get current student's career profile
     const { data: currentCareerProfile, error: careerError } = await supabase
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
           )
         )
       `)
-      .eq('users.institute_id', currentStudent.users.institute_id)
+      .eq('users.institute_id', userData.institute_id)
       .eq('batch', currentStudent.batch)
       .neq('user_id', user.id)
       .limit(20);
@@ -113,10 +113,13 @@ export async function POST(request: NextRequest) {
         matchType = 'study_buddy';
       }
 
+      // Handle users as array (TypeScript inference issue with Supabase joins)
+      const matchUser = Array.isArray(match.users) ? match.users[0] : match.users;
+      
       return {
         student_id: match.user_id,
-        name: match.users.full_name,
-        avatar: match.users.avatar_url,
+        name: matchUser?.full_name || 'Unknown',
+        avatar: matchUser?.avatar_url || null,
         grade: match.grade,
         interests: match.interests,
         goals: match.goals,
