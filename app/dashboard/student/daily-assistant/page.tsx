@@ -265,7 +265,7 @@ export default function DailyAssistantPage() {
                 <span className="text-2xl font-bold text-white">{Math.round(completionRate)}%</span>
               </div>
               <p className="text-slate-400 text-sm">Completion Rate</p>
-              <p className="text-slate-500 text-xs mt-1">Today's progress</p>
+              <p className="text-slate-500 text-xs mt-1">Today&apos;s progress</p>
             </CardContent>
           </Card>
         </div>
@@ -275,7 +275,7 @@ export default function DailyAssistantPage() {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Calendar className="w-6 h-6 text-yellow-400" />
-              Today's Tasks
+              Today&apos;s Tasks
               {incompleteTasks.length > 0 && (
                 <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 ml-2">
                   {incompleteTasks.length} remaining
@@ -401,7 +401,7 @@ export default function DailyAssistantPage() {
             </CardHeader>
             <CardContent>
               <p className="text-slate-300 mb-4">
-                "Every expert was once a beginner. Keep pushing forward!"
+                &quot;Every expert was once a beginner. Keep pushing forward!&quot;
               </p>
               <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
                 <Brain className="w-4 h-4 mr-2" />

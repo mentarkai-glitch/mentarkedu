@@ -12,6 +12,8 @@ import {
   Zap,
   Clock,
   Users,
+  User,
+  Settings,
   TrendingUp,
   TrendingDown,
   RefreshCw,

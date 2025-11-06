@@ -171,7 +171,7 @@ export default function TeacherDashboard() {
                 Welcome, Teacher! 👋
               </CardTitle>
               <p className="text-lg text-slate-300">
-                Monitor your students' progress and provide personalized support.
+                Monitor your students&apos; progress and provide personalized support.
               </p>
             </CardHeader>
           </Card>

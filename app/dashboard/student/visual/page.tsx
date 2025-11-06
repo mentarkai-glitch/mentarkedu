@@ -144,7 +144,7 @@ export default function VisualExplainerPage() {
 
                 <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                   <p className="text-xs text-slate-400">
-                    💡 <strong>Tip:</strong> Be specific! Instead of "Math", try "Quadratic Equations" or "Integration by Parts"
+                    💡 <strong>Tip:</strong> Be specific! Instead of &quot;Math&quot;, try &quot;Quadratic Equations&quot; or &quot;Integration by Parts&quot;
                   </p>
                 </div>
               </CardContent>
