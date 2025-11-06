@@ -92,13 +92,19 @@ async function getTotalCachedResponses(): Promise<number> {
 
 async function getCacheSize(): Promise<string> {
   try {
-    // Get approximate cache size in MB
+    // Upstash Redis (REST-based) doesn't support INFO command
+    // Estimate cache size by counting keys and estimating average size
     const redis = redisService.getRedisInstance();
-    const info = await redis.info('memory');
-    // Parse memory info to get used memory
-    const usedMemory = info.match(/used_memory:(\d+)/)?.[1] || '0';
-    const sizeInMB = Math.round(parseInt(usedMemory) / 1024 / 1024);
-    return `${sizeInMB} MB`;
+    if (!redis) {
+      return 'Unknown';
+    }
+    
+    // Get all cache keys
+    const cacheKeys = await redis.keys('ai_response:*');
+    // Estimate: each cached response is roughly 1-5KB, use 2KB average
+    const estimatedSizeKB = cacheKeys.length * 2;
+    const sizeInMB = Math.round(estimatedSizeKB / 1024);
+    return `${sizeInMB} MB (estimated)`;
   } catch (error) {
     console.error('Error getting cache size:', error);
     return 'Unknown';
