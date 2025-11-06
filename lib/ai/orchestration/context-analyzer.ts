@@ -8,7 +8,7 @@
  * - Performance requirements
  */
 
-import type { AIContext } from '@/lib/types';
+import type { AIContext, AIModel } from '@/lib/types';
 
 export interface ContextAnalysis {
   complexity: number; // 0-10
