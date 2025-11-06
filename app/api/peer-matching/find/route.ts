@@ -173,7 +173,10 @@ export async function POST(request: NextRequest) {
       current_profile: {
         interests: currentStudent.interests,
         goals: currentStudent.goals,
-        top_career_categories: currentCareerProfile?.slice(0, 3).map(p => p.career_categories.name) || []
+        top_career_categories: (currentCareerProfile?.slice(0, 3) || []).map((p: any) => {
+          const category = Array.isArray(p.career_categories) ? p.career_categories[0] : p.career_categories;
+          return category?.name;
+        }).filter(Boolean) || []
       }
     });
   } catch (error) {
