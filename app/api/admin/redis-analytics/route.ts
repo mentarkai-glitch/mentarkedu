@@ -113,7 +113,7 @@ async function getRateLimitStats(): Promise<any> {
     const stats = {
       totalRateLimitedUsers: rateLimitKeys.length,
       activeRateLimits: 0,
-      rateLimitBreakdown: {}
+      rateLimitBreakdown: {} as Record<string, number>
     };
 
     for (const key of rateLimitKeys) {
