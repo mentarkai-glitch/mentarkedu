@@ -373,22 +373,22 @@ export default function ChatPage() {
     <div className="flex h-screen flex-col bg-black">
       {/* Enhanced Header */}
       <header className="border-b border-yellow-500/20 glass backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="text-yellow-400 hover:bg-yellow-500/10 border-yellow-500/20">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Dashboard
+              <Button variant="ghost" size="sm" className="text-yellow-400 hover:bg-yellow-500/10 border-yellow-500/20 p-2 sm:px-3">
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Dashboard</span>
               </Button>
             </Link>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="relative">
-                <img src="/logo.png" alt="Mentark" className="h-8 w-8 rounded-lg" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <img src="/logo.png" alt="Mentark" className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
-              <div>
-                <span className="font-display text-xl font-bold text-white">
+              <div className="hidden sm:block">
+                <span className="font-display text-lg sm:text-xl font-bold text-white">
                   AI Mentor Chat
                 </span>
                 <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -408,29 +408,31 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4">
             <Button
               onClick={() => setShowARKs(!showARKs)}
               variant="outline"
-              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+              size="sm"
+              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-2 sm:px-3 text-xs sm:text-sm"
             >
-              <Layers className="w-4 h-4 mr-2" />
-              {showARKs ? 'Hide ARKs' : 'Show ARKs'}
+              <Layers className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden lg:inline">{showARKs ? 'Hide ARKs' : 'Show ARKs'}</span>
             </Button>
 
             <Button
               onClick={() => setShowPersonaSelector(!showPersonaSelector)}
               variant="outline"
-              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+              size="sm"
+              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-2 sm:px-3 text-xs sm:text-sm"
             >
-              <selectedPersona.icon className="w-4 h-4 mr-2" />
-              {selectedPersona.name}
+              <selectedPersona.icon className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden md:inline">{selectedPersona.name}</span>
             </Button>
 
-            <Link href="/ark/create">
-              <Button className="bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold text-sm neon-glow">
-                <Plus className="h-4 w-4 mr-1" />
-                Create ARK
+            <Link href="/ark/create" className="hidden sm:block">
+              <Button className="bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold text-xs sm:text-sm neon-glow px-2 sm:px-3">
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                <span className="hidden lg:inline">Create ARK</span>
               </Button>
             </Link>
           </div>
@@ -446,9 +448,9 @@ export default function ChatPage() {
             exit={{ opacity: 0, height: 0 }}
             className="border-b border-yellow-500/20 glass backdrop-blur-xl"
           >
-            <div className="container mx-auto px-4 py-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Choose Your Mentor</h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+              <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Choose Your Mentor</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
                 {mentorPersonas.map((persona) => (
                   <motion.div
                     key={persona.id}
@@ -499,31 +501,31 @@ export default function ChatPage() {
             exit={{ opacity: 0, height: 0 }}
             className="border-b border-yellow-500/20 glass backdrop-blur-xl"
           >
-            <div className="container mx-auto px-4 py-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
+            <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="relative">
-                    <Target className="h-6 w-6 text-yellow-500" />
+                    <Target className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
                     <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                   </div>
-                  <h2 className="text-2xl font-bold text-white">ARK Management</h2>
-                  <Badge variant="outline" className="border-yellow-500/50 text-yellow-500">
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">ARK Management</h2>
+                  <Badge variant="outline" className="border-yellow-500/50 text-yellow-500 text-xs">
                     <Eye className="h-3 w-3 mr-1" />
                     {arks.filter(ark => ark.status === 'active').length} Active
                   </Badge>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Link href="/ark/create">
-                    <Button className="bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold neon-glow hover:shadow-yellow-500/50 transition-all">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create ARK
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                  <Link href="/ark/create" className="flex-1 sm:flex-initial">
+                    <Button className="w-full sm:w-auto bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold neon-glow hover:shadow-yellow-500/50 transition-all text-xs sm:text-sm">
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                      <span className="sm:inline">Create ARK</span>
                     </Button>
                   </Link>
                 </div>
               </div>
               
               {/* ARK Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {arks.map((ark, index) => (
                   <motion.div
                     key={ark.id}
@@ -598,7 +600,7 @@ export default function ChatPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="flex flex-wrap gap-3 mt-6">
+              <div className="flex flex-wrap gap-2 sm:gap-3 mt-4 sm:mt-6">
                 <Link href="/daily-checkin">
                   <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
                     <Heart className="h-4 w-4 mr-2" />
@@ -630,8 +632,8 @@ export default function ChatPage() {
       </AnimatePresence>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="container mx-auto max-w-4xl space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="container mx-auto max-w-4xl space-y-4 sm:space-y-6">
           <AnimatePresence>
             {messages.map((message, index) => (
               <motion.div
@@ -641,12 +643,12 @@ export default function ChatPage() {
                 transition={{ delay: index * 0.05 }}
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <Card className={`max-w-[80%] ${
+                <Card className={`max-w-[85%] sm:max-w-[80%] ${
                   message.role === "user"
                     ? "bg-gradient-cyan-blue border-0 neon-glow"
                     : "glass border-yellow-500/20 backdrop-blur-sm"
                 }`}>
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-start gap-3">
                       {message.role === "assistant" && (
                         <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${selectedPersona.gradient} flex items-center justify-center shadow-lg flex-shrink-0`}>
@@ -746,9 +748,9 @@ export default function ChatPage() {
           transition={{ delay: 0.5 }}
           className="border-t border-yellow-500/20 glass backdrop-blur-xl"
         >
-          <div className="container mx-auto px-4 py-4">
-            <p className="text-sm text-slate-400 mb-3 text-center">Try asking:</p>
-            <div className="flex flex-wrap justify-center gap-2">
+          <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+            <p className="text-xs sm:text-sm text-slate-400 mb-2 sm:mb-3 text-center">Try asking:</p>
+            <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
               {quickQuestions.map((q, index) => (
                 <motion.div
                   key={index}
@@ -758,10 +760,10 @@ export default function ChatPage() {
                 >
                   <Badge
                     variant="outline"
-                    className="cursor-pointer border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50 transition-all"
+                    className="cursor-pointer border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50 transition-all text-xs"
                     onClick={() => setInput(q.text)}
                   >
-                    {q.emoji} {q.text}
+                    {q.emoji} <span className="hidden sm:inline">{q.text}</span>
                   </Badge>
                 </motion.div>
               ))}
@@ -772,9 +774,9 @@ export default function ChatPage() {
 
       {/* Enhanced Input Area */}
       <div className="border-t border-yellow-500/20 glass backdrop-blur-xl">
-        <div className="container mx-auto max-w-4xl p-4">
-          <div className="flex gap-3">
-            <div className="flex gap-2">
+        <div className="container mx-auto max-w-4xl p-3 sm:p-4">
+          <div className="flex gap-2 sm:gap-3">
+            <div className="flex gap-1 sm:gap-2">
               <ImageUploadButton 
                 onImageUpload={handleImageUpload}
                 disabled={loading || uploadingImage}
@@ -782,26 +784,26 @@ export default function ChatPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-2 sm:px-3"
                 disabled={true}
               >
-                <Mic className="w-4 h-4" />
+                <Mic className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
             
             <Input
-              placeholder="Ask your mentor anything... (Press Enter to send)"
+              placeholder="Ask your mentor..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={loading}
-              className="flex-1 glass border-yellow-500/20 text-white placeholder:text-slate-400 focus:border-yellow-500/50 h-12"
+              className="flex-1 glass border-yellow-500/20 text-white placeholder:text-slate-400 focus:border-yellow-500/50 h-10 sm:h-12 text-sm sm:text-base"
             />
             
             <Button
               onClick={sendMessage}
               disabled={!input.trim() || loading || uploadingImage}
-              className="bg-gradient-cyan-blue text-black hover:opacity-90 disabled:opacity-50 h-12 px-6 neon-glow"
+              className="bg-gradient-cyan-blue text-black hover:opacity-90 disabled:opacity-50 h-10 sm:h-12 px-3 sm:px-6 neon-glow"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -813,9 +815,10 @@ export default function ChatPage() {
             </Button>
           </div>
           
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-            <div className="flex items-center gap-4">
-              <span>Powered by AI • Your conversations are private and secure</span>
+          <div className="mt-2 sm:mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <span className="hidden sm:inline">Powered by AI • Your conversations are private and secure</span>
+              <span className="sm:hidden">AI Powered</span>
               <div className="flex items-center gap-1">
                 {isConnected ? (
                   <>

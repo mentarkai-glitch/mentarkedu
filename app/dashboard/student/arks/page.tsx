@@ -106,14 +106,14 @@ export default function MyARKsPage() {
     <div className="min-h-screen">
       {/* Page Header */}
       <div className="border-b border-slate-700 bg-slate-900/50">
-        <div className="container mx-auto px-8 py-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">My ARKs</h1>
-              <p className="text-slate-400">Manage your learning journeys</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">My ARKs</h1>
+              <p className="text-sm sm:text-base text-slate-400">Manage your learning journeys</p>
             </div>
-            <Link href="/ark/create">
-              <Button className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold">
+            <Link href="/ark/create" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold text-sm sm:text-base">
                 <Plus className="w-4 h-4 mr-2" />
                 Create New ARK
               </Button>
@@ -121,81 +121,84 @@ export default function MyARKsPage() {
           </div>
 
           {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col gap-3 sm:gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
               <Input
                 placeholder="Search ARKs..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-800 border-slate-700 text-white"
+                className="pl-9 sm:pl-10 bg-slate-800 border-slate-700 text-white text-sm sm:text-base h-10 sm:h-11"
               />
             </div>
-            <div className="flex gap-2">
-              {(["all", "active", "completed", "paused"] as const).map((status) => (
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex flex-wrap gap-2 flex-1">
+                {(["all", "active", "completed", "paused"] as const).map((status) => (
+                  <Button
+                    key={status}
+                    variant={filter === status ? "default" : "outline"}
+                    onClick={() => setFilter(status)}
+                    className={filter === status ? "bg-yellow-500 text-black" : "border-slate-600"}
+                    size="sm"
+                    className="text-xs sm:text-sm"
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex gap-1 sm:gap-2 border border-slate-700 rounded-lg p-1">
                 <Button
-                  key={status}
-                  variant={filter === status ? "default" : "outline"}
-                  onClick={() => setFilter(status)}
-                  className={filter === status ? "bg-yellow-500 text-black" : "border-slate-600"}
+                  variant={view === "grid" ? "default" : "ghost"}
+                  onClick={() => setView("grid")}
                   size="sm"
+                  className={view === "grid" ? "bg-slate-700" : "text-slate-400 p-2"}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  <Grid className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
-              ))}
-            </div>
-            <div className="flex gap-2 border border-slate-700 rounded-lg p-1">
-              <Button
-                variant={view === "grid" ? "default" : "ghost"}
-                onClick={() => setView("grid")}
-                size="sm"
-                className={view === "grid" ? "bg-slate-700" : "text-slate-400"}
-              >
-                <Grid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={view === "list" ? "default" : "ghost"}
-                onClick={() => setView("list")}
-                size="sm"
-                className={view === "list" ? "bg-slate-700" : "text-slate-400"}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={view === "timeline" ? "default" : "ghost"}
-                onClick={() => setView("timeline")}
-                size="sm"
-                className={view === "timeline" ? "bg-slate-700" : "text-slate-400"}
-              >
-                <Calendar className="w-4 h-4" />
-              </Button>
+                <Button
+                  variant={view === "list" ? "default" : "ghost"}
+                  onClick={() => setView("list")}
+                  size="sm"
+                  className={view === "list" ? "bg-slate-700" : "text-slate-400 p-2"}
+                >
+                  <List className="w-3 h-3 sm:w-4 sm:h-4" />
+                </Button>
+                <Button
+                  variant={view === "timeline" ? "default" : "ghost"}
+                  onClick={() => setView("timeline")}
+                  size="sm"
+                  className={view === "timeline" ? "bg-slate-700" : "text-slate-400 p-2"}
+                >
+                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* ARKs Display */}
-      <div className="container mx-auto px-8 py-8">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         {filteredARKs.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20"
+            className="text-center py-12 sm:py-20"
           >
-            <BookOpen className="w-24 h-24 text-slate-700 mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-white mb-4">No ARKs Yet</h2>
-            <p className="text-slate-400 mb-8">
+            <BookOpen className="w-16 h-16 sm:w-24 sm:h-24 text-slate-700 mx-auto mb-4 sm:mb-6" />
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">No ARKs Yet</h2>
+            <p className="text-sm sm:text-base text-slate-400 mb-6 sm:mb-8 px-4">
               Start your personalized learning journey by creating your first ARK
             </p>
-            <Link href="/ark/create">
-              <Button size="lg" className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black">
-                <Plus className="w-5 h-5 mr-2" />
+            <Link href="/ark/create" className="inline-block">
+              <Button size="lg" className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black text-sm sm:text-base">
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Create Your First ARK
               </Button>
             </Link>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredARKs.map((ark) => (
               <motion.div key={ark.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <Card className="bg-slate-800/50 border-slate-700 hover:border-yellow-500/30 transition-all h-full">

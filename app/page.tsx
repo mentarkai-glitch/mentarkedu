@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedText, CountUp } from "@/components/ui/AnimatedText";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { 
   Brain, 
   Target, 
@@ -27,36 +28,39 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-black">
       {/* Navigation */}
-      <nav className="border-b border-border bg-background/50 backdrop-blur-xl">
+      <nav className="border-b border-border bg-background/50 backdrop-blur-xl sticky top-0 z-30">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Mentark Quantum" className="h-10 w-10 rounded-lg" />
-            <span className="font-display text-xl font-bold text-gradient-cyan">
+            <img src="/logo.png" alt="Mentark Quantum" className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg" />
+            <span className="font-display text-lg sm:text-xl font-bold text-gradient-cyan">
               Mentark Quantum
             </span>
           </Link>
-          <div className="flex items-center gap-4">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-4">
             <Link href="/search">
               <Button variant="ghost" className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                Smart Search
+                <span className="hidden lg:inline">Smart Search</span>
               </Button>
             </Link>
             <Link href="/chat">
-              <Button variant="ghost">Try AI Chat</Button>
+              <Button variant="ghost" className="hidden lg:inline-flex">Try AI Chat</Button>
             </Link>
             <Link href="#features">
-              <Button variant="ghost">Features</Button>
+              <Button variant="ghost" className="hidden lg:inline-flex">Features</Button>
             </Link>
             <Link href="/auth/login">
               <Button variant="ghost">Login</Button>
             </Link>
             <Link href="/auth/register">
-              <Button className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90">
+              <Button className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 text-sm sm:text-base">
                 Get Started
               </Button>
             </Link>
           </div>
+          {/* Mobile Navigation */}
+          <MobileNav />
         </div>
       </nav>
 
@@ -117,37 +121,37 @@ export default function LandingPage() {
               transition={{ delay: 1 + index * 0.1, type: "spring", stiffness: 200 }}
               whileHover={{ scale: 1.1 }}
             >
-              <div className="font-display text-3xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent md:text-4xl">
+              <div className="font-display text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
                 <CountUp value={stat.value} suffix={stat.suffix} />
               </div>
-              <div className="mt-1 text-sm text-slate-400">{stat.label}</div>
+              <div className="mt-1 text-xs sm:text-sm text-slate-400">{stat.label}</div>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="container mx-auto px-4 py-20">
-        <div className="mb-16 text-center">
+      <section id="features" className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
+        <div className="mb-12 sm:mb-16 text-center">
           <AnimatedText delay={1.4}>
-            <Badge className="mb-4 border-yellow-500/30 bg-yellow-500/10 text-yellow-400 neon-glow">
+            <Badge className="mb-4 border-yellow-500/30 bg-yellow-500/10 text-yellow-400 neon-glow text-xs sm:text-sm">
               Premium Features
             </Badge>
           </AnimatedText>
           <AnimatedText delay={1.6}>
-            <h2 className="font-display text-4xl font-bold md:text-5xl text-white">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white px-4">
               Everything Your Institute Needs
             </h2>
           </AnimatedText>
           <AnimatedText delay={1.8}>
-            <p className="mt-4 text-lg text-slate-400 max-w-3xl mx-auto">
+            <p className="mt-4 text-base sm:text-lg text-slate-400 max-w-3xl mx-auto px-4">
               Powered by GPT-4o, Claude 3.5, Gemini 1.5 Pro, and Perplexity — 
               The most advanced AI mentorship platform for institutes
             </p>
           </AnimatedText>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
           {/* Feature 1: AI Mentor Chat */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -641,21 +645,21 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="mb-12 text-center">
+      <section className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
+        <div className="mb-8 sm:mb-12 text-center">
           <h2 className="font-display text-3xl font-bold md:text-4xl">Simple, Transparent Pricing</h2>
           <p className="mt-4 text-slate-400">Choose the plan that fits your institute</p>
         </div>
 
-        <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2">
+        <div className="mx-auto grid max-w-5xl gap-4 sm:gap-6 md:grid-cols-2">
           {/* Neuro Plan */}
-          <Card className="border-border bg-card p-8">
-            <h3 className="font-display text-2xl font-bold">Neuro</h3>
+          <Card className="border-border bg-card p-6 sm:p-8">
+            <h3 className="font-display text-xl sm:text-2xl font-bold">Neuro</h3>
             <div className="mt-4">
-              <span className="font-display text-4xl font-bold">₹8,999</span>
-              <span className="text-slate-400">/student/year</span>
+              <span className="font-display text-3xl sm:text-4xl font-bold">₹8,999</span>
+              <span className="text-slate-400 text-sm sm:text-base">/student/year</span>
             </div>
-            <ul className="mt-6 space-y-3 text-sm">
+            <ul className="mt-6 space-y-3 text-xs sm:text-sm">
               {[
                 "Unlimited ARKs",
                 "Focus analytics",
@@ -674,16 +678,16 @@ export default function LandingPage() {
           </Card>
 
           {/* Quantum Plan */}
-          <Card className="relative border-primary/50 bg-gradient-to-br from-card to-primary/5 p-8">
-            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 border-primary/20 bg-primary/10 text-primary">
+          <Card className="relative border-primary/50 bg-gradient-to-br from-card to-primary/5 p-6 sm:p-8">
+            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 border-primary/20 bg-primary/10 text-primary text-xs sm:text-sm">
               Popular
             </Badge>
-            <h3 className="font-display text-2xl font-bold">Quantum</h3>
+            <h3 className="font-display text-xl sm:text-2xl font-bold">Quantum</h3>
             <div className="mt-4">
-              <span className="font-display text-4xl font-bold">₹11,999</span>
-              <span className="text-slate-400">/student/year</span>
+              <span className="font-display text-3xl sm:text-4xl font-bold">₹11,999</span>
+              <span className="text-slate-400 text-sm sm:text-base">/student/year</span>
             </div>
-            <ul className="mt-6 space-y-3 text-sm">
+            <ul className="mt-6 space-y-3 text-xs sm:text-sm">
               {[
                 "Everything in Neuro",
                 "Emotion graph & timeline",
@@ -706,25 +710,25 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 p-12">
-          <h2 className="font-display text-3xl font-bold md:text-4xl">
+      <section className="container mx-auto px-4 py-12 sm:py-16 md:py-20 text-center">
+        <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 p-6 sm:p-8 md:p-12">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold px-2">
             Ready to Transform Your Institute?
           </h2>
-          <p className="mt-4 text-slate-400">
+          <p className="mt-4 text-sm sm:text-base text-slate-400 px-4">
             Join leading educational institutions using Mentark Quantum
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link href="/auth/register">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 px-4">
+            <Link href="/auth/register" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90"
+                className="w-full sm:w-auto bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 text-sm sm:text-base"
               >
                 Start Free Trial
               </Button>
             </Link>
-            <Link href="mailto:contact@mentark.ai">
-              <Button size="lg" variant="outline">
+            <Link href="mailto:contact@mentark.ai" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
                 Contact Sales
               </Button>
             </Link>

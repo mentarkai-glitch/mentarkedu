@@ -248,7 +248,7 @@ export default function OnboardingPage() {
   // PHASE 1: Welcome Screen
   if (currentPhase === 'welcome') {
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -257,27 +257,27 @@ export default function OnboardingPage() {
           <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"></div>
             
-            <CardHeader className="text-center pt-12 pb-8">
+            <CardHeader className="text-center pt-8 sm:pt-12 pb-6 sm:pb-8 px-4 sm:px-6">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.2 }}
-                className="w-20 h-20 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full mx-auto mb-6 flex items-center justify-center"
+                className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full mx-auto mb-4 sm:mb-6 flex items-center justify-center"
               >
-                <Brain className="w-10 h-10 text-white" />
+                <Brain className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
               </motion.div>
               
-              <CardTitle className="text-4xl font-bold text-white mb-4">
+              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">
                 Welcome to Mentark! 👋
               </CardTitle>
               
-              <CardDescription className="text-lg text-slate-300 max-w-2xl mx-auto">
+              <CardDescription className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto">
                 We&apos;re excited to get to know you! This quick profile will help us create the perfect learning journey tailored just for you.
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="pb-12">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <CardContent className="pb-8 sm:pb-12 px-4 sm:px-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 {[
                   { icon: Target, title: 'Personalized', desc: 'Get AI mentoring designed for you' },
                   { icon: Zap, title: 'Quick Setup', desc: 'Just 5-10 minutes to complete' },
@@ -322,24 +322,24 @@ export default function OnboardingPage() {
   // PHASE 2: Category Selection
   if (currentPhase === 'category') {
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-6xl"
         >
           <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl text-white mb-2">
+            <CardHeader className="text-center px-4 sm:px-6 pt-6 sm:pt-8">
+              <CardTitle className="text-2xl sm:text-3xl text-white mb-2">
                 What brings you here today?
               </CardTitle>
-              <CardDescription className="text-lg text-slate-300">
+              <CardDescription className="text-base sm:text-lg text-slate-300">
                 Choose the area you want to focus on most. You can explore others later!
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CardContent className="p-4 sm:p-6 lg:p-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {studentCategories.map((category, index) => (
                   <motion.div
                     key={category.id}
@@ -391,35 +391,35 @@ export default function OnboardingPage() {
   // PHASE 3: Grade Selection
   if (currentPhase === 'grade') {
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-3xl"
         >
           <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-            <CardHeader className="text-center">
-              <div className="flex items-center justify-center gap-3 mb-4">
+            <CardHeader className="text-center px-4 sm:px-6 pt-6 sm:pt-8">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                 {selectedCategory && (
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${selectedCategory.gradient} flex items-center justify-center text-2xl`}>
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${selectedCategory.gradient} flex items-center justify-center text-xl sm:text-2xl`}>
                     {selectedCategory.emoji}
                   </div>
                 )}
-                <Badge className={selectedCategory ? `bg-gradient-to-r ${selectedCategory.gradient} text-white border-0` : ''}>
+                <Badge className={selectedCategory ? `bg-gradient-to-r ${selectedCategory.gradient} text-white border-0 text-xs sm:text-sm` : ''}>
                   {selectedCategory?.title}
                 </Badge>
               </div>
               
-              <CardTitle className="text-3xl text-white mb-2">
+              <CardTitle className="text-2xl sm:text-3xl text-white mb-2">
                 Which class are you in?
               </CardTitle>
-              <CardDescription className="text-lg text-slate-300">
+              <CardDescription className="text-base sm:text-lg text-slate-300">
                 This helps us ask age-appropriate questions
               </CardDescription>
             </CardHeader>
             
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <CardContent className="px-4 sm:px-6 pb-6 sm:pb-8">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
                 {gradeOptions.map((option) => (
                   <motion.div
                     key={option.value}
@@ -464,7 +464,7 @@ export default function OnboardingPage() {
     const currentQuestion = questions[currentStep];
     
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
         <motion.div
           key={currentStep}
           initial={{ opacity: 0, x: 20 }}
@@ -473,26 +473,26 @@ export default function OnboardingPage() {
           className="w-full max-w-3xl"
         >
           <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0">
+            <CardHeader className="px-4 sm:px-6 pt-6 sm:pt-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0 text-xs sm:text-sm">
                     {grade}
                   </Badge>
                   {selectedCategory && (
-                    <Badge className={`bg-gradient-to-r ${selectedCategory.gradient} text-white border-0`}>
+                    <Badge className={`bg-gradient-to-r ${selectedCategory.gradient} text-white border-0 text-xs sm:text-sm`}>
                       {selectedCategory.emoji} {selectedCategory.title}
                     </Badge>
                   )}
                 </div>
-                <span className="text-sm text-slate-400 font-medium">
+                <span className="text-xs sm:text-sm text-slate-400 font-medium">
                   Question {currentStep + 1} of {questions.length}
                 </span>
               </div>
               
-              <Progress value={getProgress()} className="mb-6" />
+              <Progress value={getProgress()} className="mb-4 sm:mb-6" />
               
-              <CardTitle className="text-2xl text-white mb-3">
+              <CardTitle className="text-xl sm:text-2xl text-white mb-3">
                 {currentQuestion?.question}
               </CardTitle>
               

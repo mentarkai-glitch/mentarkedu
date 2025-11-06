@@ -121,44 +121,44 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-black">
       {/* Header */}
       <header className="border-b border-yellow-500/20 glass backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5, type: "spring" }}
             >
-              <img src="/logo.png" alt="Mentark" className="h-8 w-8 rounded-lg" />
+              <img src="/logo.png" alt="Mentark" className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg" />
             </motion.div>
-            <span className="font-display text-xl font-bold text-white">Mentark Quantum</span>
+            <span className="font-display text-lg sm:text-xl font-bold text-white">Mentark Quantum</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-white text-sm">{user.email}</span>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10">
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="hidden sm:inline text-white text-xs sm:text-sm">{user.email}</span>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-2 sm:px-3 text-xs sm:text-sm">
+              <LogOut className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 lg:py-12">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
           {/* Welcome Section */}
-          <div className="text-center mb-12">
+          <div className="text-center mb-8 sm:mb-12 px-2">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: "spring" }}
-              className="mb-6"
+              className="mb-4 sm:mb-6"
             >
-              <div className="inline-flex items-center justify-center p-4 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-full neon-glow mb-4">
-                <Rocket className="h-12 w-12 text-black" />
+              <div className="inline-flex items-center justify-center p-3 sm:p-4 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-full neon-glow mb-3 sm:mb-4">
+                <Rocket className="h-8 w-8 sm:h-12 sm:w-12 text-black" />
               </div>
             </motion.div>
             
@@ -166,7 +166,7 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="font-display text-5xl font-bold mb-4"
+              className="font-display text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4"
             >
               <AnimatedText 
                 children={`Welcome to your Quantum Journey, ${displayName}!`}
@@ -178,11 +178,11 @@ export default function DashboardPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.8 }}
-              className="text-xl text-slate-400 mb-6 flex items-center justify-center gap-2"
+              className="text-base sm:text-lg lg:text-xl text-slate-400 mb-4 sm:mb-6 flex flex-col sm:flex-row items-center justify-center gap-2"
             >
-              <Sparkles className="h-5 w-5 text-yellow-400" />
-              Your AI-powered learning companion is ready to help you succeed
-              <Sparkles className="h-5 w-5 text-yellow-400" />
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
+              <span>Your AI-powered learning companion is ready to help you succeed</span>
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
             </motion.p>
             
             {/* Email Verification Status */}
@@ -202,7 +202,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Dashboard Options */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
             {/* Student Dashboard */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}

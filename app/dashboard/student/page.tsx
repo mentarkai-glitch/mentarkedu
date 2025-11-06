@@ -246,36 +246,37 @@ export default function StudentDashboard() {
     <div className="min-h-screen bg-black">
       {/* Top Header Bar */}
       <header className="border-b-2 border-yellow-500/30 bg-black backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-8">
-          <div className="flex items-center gap-4">
-            <h1 className="font-display text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-              {getGreeting()}, {user?.user_metadata?.first_name || 'Student'}
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <h1 className="font-display text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+              <span className="hidden sm:inline">{getGreeting()}, </span>
+              {user?.user_metadata?.first_name || 'Student'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-yellow-200">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden sm:flex items-center gap-2 text-yellow-200">
               <TimeIcon className="w-4 h-4" />
-              <span className="text-sm">{currentTime.toLocaleTimeString()}</span>
+              <span className="text-xs sm:text-sm">{currentTime.toLocaleTimeString()}</span>
             </div>
             <Link href="/chat">
-              <Button size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Quick Chat
+              <Button size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold text-xs sm:text-sm">
+                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Quick Chat</span>
               </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-8 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Link href="/emotion-check">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Card className="border-pink-500/30 bg-gradient-to-br from-pink-500/10 to-purple-500/10 hover:border-pink-500/50 transition-all cursor-pointer">
@@ -331,35 +332,35 @@ export default function StudentDashboard() {
           className="mb-8"
         >
           <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className="text-4xl font-bold text-yellow-400">{stats.level}</div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="w-full sm:w-auto">
+                  <div className="flex items-center gap-3 sm:gap-4 mb-2">
+                    <div className="text-3xl sm:text-4xl font-bold text-yellow-400">{stats.level}</div>
                     <div>
-                      <div className="text-lg font-semibold text-white">Level {stats.level}</div>
-                      <div className="text-sm text-slate-400">{stats.xp.toLocaleString()} XP</div>
+                      <div className="text-base sm:text-lg font-semibold text-white">Level {stats.level}</div>
+                      <div className="text-xs sm:text-sm text-slate-400">{stats.xp.toLocaleString()} XP</div>
                     </div>
                   </div>
-                  <div className="w-64">
-                    <div className="flex justify-between text-sm text-slate-400 mb-2">
+                  <div className="w-full sm:w-64">
+                    <div className="flex justify-between text-xs sm:text-sm text-slate-400 mb-2">
                       <span>Level {stats.level}</span>
                       <span>{Math.round((stats.xp % 1000) / 10)}% to next level</span>
                     </div>
                     <Progress value={(stats.xp % 1000) / 10} className="h-2" />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-6 text-center">
+                <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center w-full sm:w-auto">
                   <div>
-                    <div className="text-2xl font-bold text-cyan-400">{stats.streak}</div>
+                    <div className="text-xl sm:text-2xl font-bold text-cyan-400">{stats.streak}</div>
                     <div className="text-xs text-slate-400">Day Streak</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-purple-400">{stats.arksActive}</div>
+                    <div className="text-xl sm:text-2xl font-bold text-purple-400">{stats.arksActive}</div>
                     <div className="text-xs text-slate-400">Active ARKs</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-green-400">{stats.weeklyProgress}%</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-400">{stats.weeklyProgress}%</div>
                     <div className="text-xs text-slate-400">Weekly Progress</div>
                   </div>
                 </div>
@@ -371,7 +372,7 @@ export default function StudentDashboard() {
 
         {/* Tabbed Content */}
         <Tabs defaultValue="overview" className="mb-8">
-          <TabsList className="grid w-full grid-cols-7 glass border border-yellow-500/30 bg-slate-900/50">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 glass border border-yellow-500/30 bg-slate-900/50 text-xs sm:text-sm">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="gamification">Gamification</TabsTrigger>
             <TabsTrigger value="career-dna">Career DNA</TabsTrigger>
@@ -383,7 +384,7 @@ export default function StudentDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               {/* Active ARKs */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}

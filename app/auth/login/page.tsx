@@ -72,14 +72,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black px-4">
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-8 sm:py-12">
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md"
       >
-        <Card className="glass border-yellow-500/20 p-8 neon-glow">
+        <Card className="glass border-yellow-500/20 p-6 sm:p-8 neon-glow">
           <div className="mb-8 text-center">
             <motion.div
               initial={{ scale: 0.5, rotate: -180 }}
@@ -89,14 +89,14 @@ export default function LoginPage() {
               <img 
                 src="/logo.png" 
                 alt="Mentark Quantum" 
-                className="mx-auto mb-4 h-16 w-16 rounded-xl" 
+                className="mx-auto mb-4 h-12 w-12 sm:h-16 sm:w-16 rounded-xl" 
               />
             </motion.div>
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="font-display text-2xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent"
+              className="font-display text-xl sm:text-2xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent"
             >
               Welcome Back
             </motion.h1>
@@ -104,13 +104,13 @@ export default function LoginPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="mt-2 text-sm text-slate-400"
+              className="mt-2 text-xs sm:text-sm text-slate-400"
             >
               Sign in to your Mentark Quantum account
             </motion.p>
           </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
           <div>
             <Label htmlFor="email">Email</Label>
             <Input

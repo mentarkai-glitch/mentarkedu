@@ -137,21 +137,21 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <Card className="w-full max-w-md border-border bg-card p-8">
-        <div className="mb-8 text-center">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:py-12">
+      <Card className="w-full max-w-md border-border bg-card p-6 sm:p-8">
+        <div className="mb-6 sm:mb-8 text-center">
           <img 
             src="/logo.png" 
             alt="Mentark Quantum" 
-            className="mx-auto mb-4 h-16 w-16 rounded-xl" 
+            className="mx-auto mb-4 h-12 w-12 sm:h-16 sm:w-16 rounded-xl" 
           />
-          <h1 className="font-display text-2xl font-bold">Create Your Account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h1 className="font-display text-xl sm:text-2xl font-bold">Create Your Account</h1>
+          <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
             Start your AI-powered mentorship journey
           </p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleRegister} className="space-y-3 sm:space-y-4">
           <div>
             <Label htmlFor="instituteName">Institute Name</Label>
             <Input
@@ -167,7 +167,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="firstName">First Name</Label>
               <Input

@@ -473,8 +473,8 @@ export default function ARKDetailPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
       {/* Header Navigation */}
       <div className="border-b border-slate-700 bg-slate-900/50 sticky top-0 z-10 backdrop-blur-sm">
-        <div className="container mx-auto px-8 py-4">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <Link href="/dashboard/student/arks">
               <Button variant="ghost" className="text-white hover:bg-slate-800">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -507,8 +507,8 @@ export default function ARKDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Left Sidebar - Quick Stats */}
           <div className="lg:col-span-1">
             <QuickStatsSidebar
@@ -556,7 +556,7 @@ export default function ARKDetailPage() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4 glass border border-yellow-500/30 bg-slate-900/50">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 glass border border-yellow-500/30 bg-slate-900/50 text-xs sm:text-sm">
                 <TabsTrigger value="overview" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
                   <MapPin className="w-4 h-4 mr-2" />
                   Overview

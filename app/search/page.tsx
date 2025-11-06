@@ -68,18 +68,18 @@ function SearchPageContent() {
 
   return (
     <div className="min-h-screen bg-black">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 lg:py-12">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-center gap-3 mb-4"
+            className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4"
           >
-            <Sparkles className="h-10 w-10 text-yellow-400" />
-            <h1 className="text-4xl font-bold text-white font-display">Mentark Search</h1>
+            <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-400" />
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white font-display">Mentark Search</h1>
           </motion.div>
-          <p className="text-slate-300 text-lg">
+          <p className="text-slate-300 text-base sm:text-lg px-4">
             Don&apos;t just search. Get answers that lead to action.
           </p>
         </div>
@@ -89,40 +89,42 @@ function SearchPageContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="max-w-4xl mx-auto mb-8"
+          className="max-w-4xl mx-auto mb-6 sm:mb-8"
         >
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask anything... Get personalized, actionable answers"
-              className="w-full h-16 pl-12 pr-4 bg-black/40 border-2 border-yellow-500/30 rounded-2xl text-white text-lg placeholder-gray-400 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
+              placeholder="Ask anything..."
+              className="w-full h-12 sm:h-16 pl-10 sm:pl-12 pr-3 sm:pr-4 bg-black/40 border-2 border-yellow-500/30 rounded-xl sm:rounded-2xl text-white text-base sm:text-lg placeholder-gray-400 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
             />
           </div>
 
           {/* Context Selector */}
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <span className="text-sm text-gray-400">Context:</span>
-            {["general", "academic", "career", "personal"].map((ctx) => (
-              <button
-                key={ctx}
-                onClick={() => setContext(ctx as any)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  context === ctx
-                    ? "bg-yellow-500 text-black"
-                    : "bg-slate-800 text-gray-400 hover:bg-slate-700"
-                }`}
-              >
-                {ctx.charAt(0).toUpperCase() + ctx.slice(1)}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 mt-3 sm:mt-4">
+            <span className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">Context:</span>
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+              {["general", "academic", "career", "personal"].map((ctx) => (
+                <button
+                  key={ctx}
+                  onClick={() => setContext(ctx as any)}
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    context === ctx
+                      ? "bg-yellow-500 text-black"
+                      : "bg-slate-800 text-gray-400 hover:bg-slate-700"
+                  }`}
+                >
+                  {ctx.charAt(0).toUpperCase() + ctx.slice(1)}
+                </button>
+              ))}
+            </div>
             <Button
               onClick={handleSearch}
               disabled={loading || !query.trim()}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+              className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-sm sm:text-base w-full sm:w-auto"
             >
               {loading ? "Searching..." : "Search"}
             </Button>
@@ -177,7 +179,7 @@ function SearchPageContent() {
                     <Target className="h-5 w-5 text-cyan-400" />
                     What You Can Do Next
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {results.actions.map((action, idx) => (
                       <motion.div
                         key={idx}

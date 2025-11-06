@@ -248,17 +248,17 @@ export default function StudentARKCreation() {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-4">
+          <div className="space-y-6 sm:space-y-8">
+            <div className="text-center px-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
                 Choose Your Focus Area
               </h2>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto">
                 What do you want to work on? Pick the category that matters most to you right now.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {studentCategories.map((category) => (
                 <CategoryCard
                   key={category.id}
@@ -296,12 +296,12 @@ export default function StudentARKCreation() {
       case 4:
         const timeframes = getTimeframesForCategory(arkData.categoryId);
         return (
-          <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-4">
+          <div className="space-y-6 sm:space-y-8">
+            <div className="text-center px-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
                 When Do You Want to Achieve This?
               </h2>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto">
                 Choose a timeframe that feels realistic for your goal and schedule.
               </p>
             </div>
@@ -320,19 +320,19 @@ export default function StudentARKCreation() {
 
       case 5:
         return (
-          <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-4">
+          <div className="space-y-6 sm:space-y-8">
+            <div className="text-center px-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
                 Want to Use a Template?
               </h2>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto">
                 Your teachers may have created ready-made roadmaps for you. You can customize them!
               </p>
             </div>
 
             {availableTemplates.length > 0 ? (
-              <div className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {availableTemplates.map((template) => (
                     <TemplatePreview
                       key={template.id}
@@ -386,18 +386,18 @@ export default function StudentARKCreation() {
 
       case 6:
         return (
-          <div className="space-y-8 max-w-2xl mx-auto">
+          <div className="space-y-6 sm:space-y-8 max-w-2xl mx-auto px-2">
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
                 How Are You Feeling?
               </h2>
-              <p className="text-xl text-gray-300">
+              <p className="text-base sm:text-lg lg:text-xl text-gray-300">
                 This helps us adjust the roadmap intensity to match your current state.
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-yellow-900/20 to-orange-900/20 border-yellow-500/20 rounded-lg p-6">
-              <div className="space-y-8">
+            <div className="bg-gradient-to-br from-yellow-900/20 to-orange-900/20 border-yellow-500/20 rounded-lg p-4 sm:p-6">
+              <div className="space-y-6 sm:space-y-8">
                 <PsychologySlider
                   label="Motivation Level"
                   description="How motivated are you to achieve this goal right now?"
@@ -443,13 +443,13 @@ export default function StudentARKCreation() {
         const timeframeName = getTimeframeById(arkData.timeframeId)?.name || "";
         
         return (
-          <div className="space-y-8 max-w-3xl mx-auto">
+          <div className="space-y-6 sm:space-y-8 max-w-3xl mx-auto px-2">
             <div className="text-center">
-              <Sparkles className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold text-white mb-4">
+              <Sparkles className="h-10 w-10 sm:h-12 sm:w-12 text-yellow-400 mx-auto mb-3 sm:mb-4" />
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
                 Ready to Generate Your ARK?
               </h2>
-              <p className="text-xl text-gray-300">
+              <p className="text-base sm:text-lg lg:text-xl text-gray-300">
                 We&apos;ll create a personalized learning roadmap just for you!
               </p>
             </div>
@@ -465,7 +465,7 @@ export default function StudentARKCreation() {
                 onClick={handleGenerateARK}
                 disabled={isGenerating}
                 size="lg"
-                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black px-12 py-6 text-lg"
+                className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black px-8 sm:px-12 py-4 sm:py-6 text-base sm:text-lg"
               >
                 {isGenerating ? (
                   <>
@@ -548,25 +548,25 @@ export default function StudentARKCreation() {
     <div className="min-h-screen bg-black">
       {/* Header */}
       <header className="bg-slate-800/50 border-b border-slate-700 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <Link href="/dashboard/student" className="flex items-center gap-3">
-              <img src="/logo.png" alt="Mentark" className="h-8 w-8 rounded-lg" />
-              <span className="text-xl font-bold text-white">Create ARK</span>
+            <Link href="/dashboard/student" className="flex items-center gap-2 sm:gap-3">
+              <img src="/logo.png" alt="Mentark" className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg" />
+              <span className="text-lg sm:text-xl font-bold text-white">Create ARK</span>
             </Link>
-            <div className="text-gray-300">
+            <div className="text-sm sm:text-base text-gray-300">
               Step {currentStep} of {TOTAL_STEPS}
             </div>
           </div>
           
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <Progress value={progressPercentage} className="h-2" />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 lg:py-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -581,12 +581,12 @@ export default function StudentARKCreation() {
 
         {/* Navigation */}
         {currentStep < TOTAL_STEPS && !isGenerating && (
-          <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-700 max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-700 max-w-4xl mx-auto gap-3 sm:gap-4">
             <Button
               onClick={handlePrevious}
               disabled={currentStep === 1}
               variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="border-gray-600 text-gray-300 hover:bg-gray-700 flex-1 sm:flex-initial text-sm sm:text-base"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
@@ -595,7 +595,7 @@ export default function StudentARKCreation() {
             <Button
               onClick={handleNext}
               disabled={!canProceedToNextStep()}
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black"
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black flex-1 sm:flex-initial text-sm sm:text-base"
             >
               Next
               <ArrowRight className="h-4 w-4 ml-2" />

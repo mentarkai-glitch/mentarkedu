@@ -146,7 +146,7 @@ export default function DailyCheckInPage() {
   // Welcome Screen
   if (currentStep === 0) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black flex items-center justify-center p-3 sm:p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -155,27 +155,27 @@ export default function DailyCheckInPage() {
           <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-500 via-cyan-500 to-blue-500"></div>
             
-            <CardHeader className="text-center pt-12 pb-8">
+            <CardHeader className="text-center pt-8 sm:pt-12 pb-6 sm:pb-8 px-4 sm:px-6">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2 }}
-                className="w-20 h-20 bg-gradient-to-r from-green-400 to-cyan-500 rounded-full mx-auto mb-6 flex items-center justify-center"
+                className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-green-400 to-cyan-500 rounded-full mx-auto mb-4 sm:mb-6 flex items-center justify-center"
               >
-                <Calendar className="w-10 h-10 text-white" />
+                <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
               </motion.div>
               
-              <CardTitle className="text-3xl text-white mb-3">
+              <CardTitle className="text-2xl sm:text-3xl text-white mb-2 sm:mb-3">
                 Daily Check-in 🌟
               </CardTitle>
               
-              <CardDescription className="text-lg text-slate-300 max-w-xl mx-auto">
+              <CardDescription className="text-base sm:text-lg text-slate-300 max-w-xl mx-auto">
                 Take 2 minutes to reflect on your day. This helps Mentark AI understand you better and provide more personalized guidance.
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="pb-12">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <CardContent className="pb-8 sm:pb-12 px-4 sm:px-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 {[
                   { icon: Battery, title: 'Energy', desc: 'How energetic do you feel?' },
                   { icon: TrendingUp, title: 'Progress', desc: 'How much did you accomplish?' },
@@ -201,12 +201,12 @@ export default function DailyCheckInPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="flex gap-4"
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4"
               >
                 <Link href="/" className="flex-1">
                   <Button
                     variant="outline"
-                    className="w-full border-slate-600 text-slate-200 hover:bg-slate-700/50 h-12"
+                    className="w-full border-slate-600 text-slate-200 hover:bg-slate-700/50 h-11 sm:h-12 text-sm sm:text-base"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Maybe Later
@@ -214,7 +214,7 @@ export default function DailyCheckInPage() {
                 </Link>
                 <Button
                   onClick={() => setCurrentStep(1)}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-cyan-500 text-white hover:from-green-600 hover:to-cyan-600 h-12 text-lg font-semibold"
+                  className="flex-1 bg-gradient-to-r from-green-500 to-cyan-500 text-white hover:from-green-600 hover:to-cyan-600 h-11 sm:h-12 text-base sm:text-lg font-semibold"
                 >
                   Let&apos;s Start!
                   <TrendingUp className="w-4 h-4 ml-2" />
