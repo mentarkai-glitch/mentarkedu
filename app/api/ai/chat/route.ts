@@ -17,9 +17,13 @@ export async function POST(request: NextRequest) {
 
     // Get student profile for personalized mentoring
     let studentProfile: StudentProfile | undefined;
+    let userTier: 'free' | 'premium' | 'enterprise' = 'free';
+    
     if (user_id) {
       try {
         const supabase = await createClient();
+        
+        // Fetch student profile
         const { data: student, error } = await supabase
           .from('students')
           .select('onboarding_profile')
@@ -29,8 +33,30 @@ export async function POST(request: NextRequest) {
         if (!error && student?.onboarding_profile) {
           studentProfile = student.onboarding_profile as StudentProfile;
         }
+        
+        // Fetch user's institute to determine tier
+        const { data: userData } = await supabase
+          .from('users')
+          .select('institute_id')
+          .eq('id', user_id)
+          .single();
+        
+        if (userData?.institute_id) {
+          const { data: institute } = await supabase
+            .from('institutes')
+            .select('plan_type')
+            .eq('id', userData.institute_id)
+            .single();
+          
+          // Map plan_type to user_tier
+          if (institute?.plan_type === 'quantum') {
+            userTier = 'enterprise';
+          } else if (institute?.plan_type === 'neuro') {
+            userTier = 'premium';
+          }
+        }
       } catch (error) {
-        console.warn('Failed to fetch student profile:', error);
+        console.warn('Failed to fetch student profile or tier:', error);
         // Continue without profile - don't fail the request
       }
     }
@@ -50,7 +76,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         persona: persona || "friendly",
         system_prompt: systemPrompt,
-        user_tier: studentProfile?.tier || 'free',
+        user_tier: userTier,
         complexity: 5, // Default complexity
       },
     };
