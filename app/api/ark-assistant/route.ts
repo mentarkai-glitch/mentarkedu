@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { aiOrchestrator } from '@/lib/ai/orchestrator';
 import type { ChatContext } from '@/lib/stores/ark-chat-store';
+import type { AIContext } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -118,12 +119,16 @@ async function generateAssistantResponse(
     const prompt = `${contextString}\n\nStudent: ${userMessage}\n\nMentark:`;
 
     // Call AI orchestrator
-    const response = await aiOrchestrator.generate({
-      model: 'claude-sonnet-4-5-20250929',
-      prompt,
-      temperature: 0.7,
-      maxTokens: 200
-    });
+    const aiContext: AIContext = {
+      task: 'mentor_chat',
+      user_id: undefined,
+      metadata: {
+        model: 'claude-sonnet-4-5-20250929',
+        temperature: 0.7,
+        maxTokens: 200
+      }
+    };
+    const response = await aiOrchestrator(aiContext, prompt);
 
     // Try to extract suggestions from response
     const suggestions = extractFieldSuggestions(userMessage, context);
