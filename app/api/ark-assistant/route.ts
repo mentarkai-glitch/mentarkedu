@@ -112,7 +112,8 @@ async function generateAssistantResponse(
   userMessage: string,
   contextString: string,
   context: ChatContext,
-  history: any[]
+  history: any[],
+  userId?: string
 ): Promise<{ text: string; suggestions?: any[] }> {
   try {
     // Use Claude for conversational context
@@ -121,7 +122,7 @@ async function generateAssistantResponse(
     // Call AI orchestrator
     const aiContext: AIContext = {
       task: 'mentor_chat',
-      user_id: undefined,
+      user_id: userId,
       metadata: {
         model: 'claude-sonnet-4-5-20250929',
         temperature: 0.7,
