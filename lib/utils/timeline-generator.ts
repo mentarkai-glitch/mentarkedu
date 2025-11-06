@@ -3,7 +3,7 @@
  * Used when AI doesn't provide timeline data
  */
 
-import type { Milestone } from "@/lib/types";
+import type { ARKMilestone } from "@/lib/types";
 
 export interface TimelineTask {
   task_date: string;
