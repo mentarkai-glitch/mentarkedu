@@ -82,6 +82,9 @@ async function getTotalCachedResponses(): Promise<number> {
   try {
     // Count total cached responses
     const redis = redisService.getRedisInstance();
+    if (!redis) {
+      return 0;
+    }
     const keys = await redis.keys('ai_response:*');
     return keys.length;
   } catch (error) {
@@ -114,6 +117,9 @@ async function getCacheSize(): Promise<string> {
 async function getRateLimitStats(): Promise<any> {
   try {
     const redis = redisService.getRedisInstance();
+    if (!redis) {
+      return { totalRateLimitedUsers: 0, activeRateLimits: 0, rateLimitBreakdown: {} };
+    }
     const rateLimitKeys = await redis.keys('rate_limit:*');
     
     const stats = {
@@ -145,6 +151,9 @@ async function getRateLimitStats(): Promise<any> {
 async function getSessionStats(): Promise<any> {
   try {
     const redis = redisService.getRedisInstance();
+    if (!redis) {
+      return { totalActiveSessions: 0, totalUsersWithSessions: 0, averageSessionsPerUser: 0 };
+    }
     const sessionKeys = await redis.keys('session:*');
     const userSessionKeys = await redis.keys('user_sessions:*');
     
@@ -175,6 +184,9 @@ export async function POST(request: NextRequest) {
         const { userId } = data;
         // Clear all cache entries for a specific user
         const redis = redisService.getRedisInstance();
+        if (!redis) {
+          return errorResponse('Redis not available', 503);
+        }
         const userCacheKeys = await redis.keys(`*:${userId}:*`);
         if (userCacheKeys.length > 0) {
           await redis.del(...userCacheKeys);
@@ -183,9 +195,13 @@ export async function POST(request: NextRequest) {
 
       case 'clear-all-cache':
         // Clear all AI response cache
-        const allCacheKeys = await redis.keys('ai_response:*');
+        const redis2 = redisService.getRedisInstance();
+        if (!redis2) {
+          return errorResponse('Redis not available', 503);
+        }
+        const allCacheKeys = await redis2.keys('ai_response:*');
         if (allCacheKeys.length > 0) {
-          await redis.del(...allCacheKeys);
+          await redis2.del(...allCacheKeys);
         }
         return successResponse({ message: 'All cache cleared successfully' });
 
