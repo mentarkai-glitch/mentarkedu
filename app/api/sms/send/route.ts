@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
           .eq('phone_number', phoneValidation.formatted)
           .single();
 
-        let conversationId: string;
+        let conversationId: string | undefined;
         
         if (convError || !conversation) {
           // Create new conversation
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
 
           if (newConvError || !newConv) {
             console.error('Failed to create SMS conversation:', newConvError);
+            conversationId = undefined;
           } else {
             conversationId = newConv.id;
           }
