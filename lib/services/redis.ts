@@ -262,7 +262,7 @@ class RedisService {
       
       const data = await redisInstance.hgetall(analyticsKey);
       
-      if (Object.keys(data).length === 0) {
+      if (!data || Object.keys(data).length === 0) {
         return null;
       }
       
