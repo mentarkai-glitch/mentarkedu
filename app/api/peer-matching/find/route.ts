@@ -81,24 +81,31 @@ export async function POST(request: NextRequest) {
       const factors = [];
 
       // Interest overlap (40% weight)
-      const commonInterests = match.interests.filter(interest => 
-        currentStudent.interests.includes(interest)
+      const commonInterests = (match.interests || []).filter((interest: string) => 
+        (currentStudent.interests || []).includes(interest)
       );
-      const interestScore = commonInterests.length / Math.max(currentStudent.interests.length, 1);
+      const interestScore = commonInterests.length / Math.max((currentStudent.interests || []).length, 1);
       compatibilityScore += interestScore * 0.4;
       factors.push(`Shared interests: ${commonInterests.join(', ') || 'None'}`);
 
       // Goal similarity (30% weight)
-      const commonGoals = match.goals.filter(goal => 
-        currentStudent.goals.includes(goal)
+      const commonGoals = (match.goals || []).filter((goal: string) => 
+        (currentStudent.goals || []).includes(goal)
       );
-      const goalScore = commonGoals.length / Math.max(currentStudent.goals.length, 1);
+      const goalScore = commonGoals.length / Math.max((currentStudent.goals || []).length, 1);
       compatibilityScore += goalScore * 0.3;
       factors.push(`Shared goals: ${commonGoals.join(', ') || 'None'}`);
 
       // Career profile similarity (30% weight)
-      const currentTopCategories = currentCareerProfile?.slice(0, 3).map(p => p.career_categories.name) || [];
-      const matchTopCategories = match.student_career_profiles?.slice(0, 3).map(p => p.career_categories.name) || [];
+      // Handle career_categories as potentially being an array
+      const currentTopCategories = (currentCareerProfile?.slice(0, 3) || []).map((p: any) => {
+        const category = Array.isArray(p.career_categories) ? p.career_categories[0] : p.career_categories;
+        return category?.name;
+      }).filter(Boolean) || [];
+      const matchTopCategories = (match.student_career_profiles?.slice(0, 3) || []).map((p: any) => {
+        const category = Array.isArray(p.career_categories) ? p.career_categories[0] : p.career_categories;
+        return category?.name;
+      }).filter(Boolean) || [];
       const commonCategories = currentTopCategories.filter(cat => matchTopCategories.includes(cat));
       const careerScore = commonCategories.length / Math.max(currentTopCategories.length, 1);
       compatibilityScore += careerScore * 0.3;
