@@ -113,10 +113,10 @@ class RedisService {
       if (cached) {
         // Handle both string and already-parsed objects
         if (typeof cached === 'string') {
-          return JSON.parse(cached);
+          return JSON.parse(cached) as AIResponseCache;
         }
-        // If it's already an object, return it directly
-        return cached;
+        // If it's already an object, return it directly with type assertion
+        return cached as AIResponseCache;
       }
       return null;
     } catch (error) {
