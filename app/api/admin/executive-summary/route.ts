@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       : 0;
 
     const completionRate = totalStudents > 0 ? Math.round((completedArks / totalStudents) * 100) : 0;
-    const engagementRate = totalStudents > 0
+    const engagementRate = totalStudents > 0 && checkIns
       ? Math.round((checkIns.filter((_, i) => i < totalStudents).length / totalStudents) * 100)
       : 0;
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 **Activity Summary:**
 - Active ARKs: ${activeArks}
 - Completed ARKs: ${completedArks}
-- Total Check-ins: ${checkIns.length}
+- Total Check-ins: ${checkIns?.length || 0}
 - Interventions: ${interventions?.length || 0}
 
 **Time Period:**
