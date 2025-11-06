@@ -158,9 +158,9 @@ export async function POST(request: NextRequest) {
       campaign_id: campaign.id,
       student_id: recipients.find(r => r.phone === result.phone)?.studentId,
       phone_number: result.phone,
-      message_sid: result.sid,
+      message_sid: result.request_id || null,
       status: result.success ? 'sent' : 'failed',
-      error_code: result.error
+      error_code: result.error || null
     }));
 
     const { error: logError } = await supabase
