@@ -6,7 +6,7 @@ import type { BehavioralPattern } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get current user or student_id from body
     const body = await request.json();
@@ -150,7 +150,7 @@ async function generatePrediction(
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('student_id');

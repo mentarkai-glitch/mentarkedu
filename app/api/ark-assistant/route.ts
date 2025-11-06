@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current user for context
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     // Build context string for AI
