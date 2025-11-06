@@ -34,7 +34,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
  */
 export async function modelHealthCheck(model: AIModel): Promise<boolean> {
   try {
-    const cached = healthCache.get(model.type);
+    const cached = healthCache.get(model);
     
     // Check cache first
     if (cached && Date.now() - cached.lastCheck.getTime() < CACHE_DURATION) {
@@ -46,7 +46,7 @@ export async function modelHealthCheck(model: AIModel): Promise<boolean> {
     
     // Update cache
     const health: ModelHealth = {
-      model: model.type,
+      model: model,
       status: result.isHealthy ? 'healthy' : 'down',
       lastCheck: new Date(),
       consecutiveFailures: result.isHealthy ? 0 : (cached?.consecutiveFailures || 0) + 1,
@@ -56,7 +56,7 @@ export async function modelHealthCheck(model: AIModel): Promise<boolean> {
       lastError: result.error
     };
     
-    healthCache.set(model.type, health);
+    healthCache.set(model, health);
     
     // Update database
     await updateModelHealthStatus(health);
@@ -64,7 +64,7 @@ export async function modelHealthCheck(model: AIModel): Promise<boolean> {
     return result.isHealthy;
     
   } catch (error) {
-    console.error(`Health check failed for ${model.type}:`, error);
+    console.error(`Health check failed for ${model}:`, error);
     return false;
   }
 }
@@ -81,17 +81,17 @@ async function performHealthCheck(model: AIModel): Promise<HealthCheckResult> {
     
     // Import the model client dynamically
     let response;
-    switch (model.type) {
+    switch (model) {
       case 'gpt-4o':
       case 'gpt-4o-mini':
         const { callGPT4o } = await import('@/lib/ai/models/openai');
-        response = await callGPT4o(testPrompt, { model: model.type });
+        response = await callGPT4o(testPrompt, { model: model });
         break;
         
       case 'claude-opus':
       case 'claude-sonnet':
         const { callClaude } = await import('@/lib/ai/models/claude');
-        response = await callClaude(testPrompt, { model: model.type });
+        response = await callClaude(testPrompt, { model: model });
         break;
         
       case 'gemini-pro':
@@ -105,13 +105,13 @@ async function performHealthCheck(model: AIModel): Promise<HealthCheckResult> {
         break;
         
       default:
-        throw new Error(`Unknown model type: ${model.type}`);
+        throw new Error(`Unknown model type: ${model}`);
     }
     
     const responseTime = Date.now() - startTime;
     
     return {
-      model: model.type,
+      model: model,
       isHealthy: true,
       responseTime
     };
@@ -120,7 +120,7 @@ async function performHealthCheck(model: AIModel): Promise<HealthCheckResult> {
     const responseTime = Date.now() - startTime;
     
     return {
-      model: model.type,
+      model: model,
       isHealthy: false,
       responseTime,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -163,7 +163,7 @@ export async function getModelHealthStatus(model: AIModel): Promise<ModelHealth 
     const { data, error } = await supabase
       .from('model_health_status')
       .select('*')
-      .eq('model', model.type)
+      .eq('model', model)
       .single();
     
     if (error || !data) {
@@ -223,14 +223,14 @@ export async function getAllModelHealthStatus(): Promise<ModelHealth[]> {
  */
 export async function runHealthChecks(): Promise<HealthCheckResult[]> {
   const models: AIModel[] = [
-    { type: 'gpt-4o' },
-    { type: 'o1-preview' },
-    { type: 'claude-opus' },
-    { type: 'gemini-pro' },
-    { type: 'claude-sonnet' },
-    { type: 'gpt-4o-mini' },
-    { type: 'mistral-large' },
-    { type: 'llama-3.1' }
+    'gpt-4o',
+    'o1-preview',
+    'claude-opus',
+    'gemini-pro',
+    'claude-sonnet',
+    'gpt-4o-mini',
+    'mistral-large',
+    'llama-3.1'
   ];
   
   const results: HealthCheckResult[] = [];
@@ -240,16 +240,16 @@ export async function runHealthChecks(): Promise<HealthCheckResult[]> {
       const result = await performHealthCheck(model);
       results.push(result);
       
-      console.log(`🏥 Health Check: ${model.type} - ${result.isHealthy ? '✅' : '❌'} (${result.responseTime}ms)`);
+      console.log(`🏥 Health Check: ${model} - ${result.isHealthy ? '✅' : '❌'} (${result.responseTime}ms)`);
       
       if (!result.isHealthy) {
-        console.warn(`⚠️ Model ${model.type} is unhealthy: ${result.error}`);
+        console.warn(`⚠️ Model ${model} is unhealthy: ${result.error}`);
       }
       
     } catch (error) {
-      console.error(`Health check failed for ${model.type}:`, error);
+      console.error(`Health check failed for ${model}:`, error);
       results.push({
-        model: model.type,
+        model: model,
         isHealthy: false,
         responseTime: 0,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -331,7 +331,7 @@ export async function getHealthyModelsForTask(task: string): Promise<AIModel[]> 
       record.model_capabilities?.strengths?.includes(task)
     );
     
-    return suitableModels.map(record => ({ type: record.model }));
+    return suitableModels.map(record => record.model as AIModel);
     
   } catch (error) {
     console.error('Error getting healthy models for task:', error);
