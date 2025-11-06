@@ -135,7 +135,7 @@ export async function analyzeImage(
       success: true,
       extracted_text: extractedText,
       full_text: fullText,
-      labels: labels.map(l => l.name),
+      labels: labels.map((l: any) => l.name),
       objects: objects,
     };
 
