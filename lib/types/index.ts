@@ -258,6 +258,8 @@ export interface BehavioralPattern {
   missed_checkin_streak: number;
   declining_progress_days: number;
   high_stress_days: number;
+  xp_earned?: number;
+  milestone_completed_count?: number;
 }
 
 export interface RiskPrediction {
