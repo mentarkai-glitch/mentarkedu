@@ -27,6 +27,7 @@ interface Job {
   job_is_remote?: boolean;
   job_employment_type: string;
   required_skills?: string[];
+  experience_level?: string;
 }
 
 interface ARK {

@@ -54,13 +54,13 @@ const emotions: EmotionData[] = [
 ];
 
 const energyLevels = [
-  { value: 1, label: 'Exhausted', emoji: '😴', icon: Moon, color: 'slate' },
-  { value: 2, label: 'Tired', emoji: '😪', icon: Coffee, color: 'gray' },
-  { value: 3, label: 'Okay', emoji: '😐', icon: Meh, color: 'yellow' },
-  { value: 4, label: 'Good', emoji: '🙂', icon: Sun, color: 'lime' },
-  { value: 5, label: 'Energized', emoji: '⚡', icon: Zap, color: 'cyan' },
-  { value: 6, label: 'Supercharged', emoji: '🚀', icon: Target, color: 'purple' },
-  { value: 7, label: 'Unstoppable', emoji: '💥', icon: Sparkles, color: 'pink' }
+  { value: 1, label: 'Exhausted', emoji: '😴', icon: Moon, color: 'slate', description: 'Completely drained' },
+  { value: 2, label: 'Tired', emoji: '😪', icon: Coffee, color: 'gray', description: 'Feeling low on energy' },
+  { value: 3, label: 'Okay', emoji: '😐', icon: Meh, color: 'yellow', description: 'Moderate energy levels' },
+  { value: 4, label: 'Good', emoji: '🙂', icon: Sun, color: 'lime', description: 'Feeling good and ready' },
+  { value: 5, label: 'Energized', emoji: '⚡', icon: Zap, color: 'cyan', description: 'Full of energy!' },
+  { value: 6, label: 'Supercharged', emoji: '🚀', icon: Target, color: 'purple', description: 'Extremely energized' },
+  { value: 7, label: 'Unstoppable', emoji: '💥', icon: Sparkles, color: 'pink', description: 'Unstoppable energy!' }
 ];
 
 const progressLevels = [

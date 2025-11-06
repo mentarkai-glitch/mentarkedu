@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       // If user doesn't exist, create them as a student with a demo institute
       if (!userProfile) {
         // Create or get a default demo institute
-        let instituteId: string;
+        let instituteId: string | undefined;
         const { data: existingInstitute } = await supabase
           .from('institutes')
           .select('id')
@@ -44,9 +44,17 @@ export async function GET(request: Request) {
           
           if (instError) {
             console.error('Error creating institute:', instError);
+            // Skip user creation if institute creation fails
+            return NextResponse.redirect(`${origin}/dashboard`);
           } else {
-            instituteId = newInstitute?.id || '';
+            instituteId = newInstitute?.id;
           }
+        }
+
+        // Only create user if we have an institute ID
+        if (!instituteId) {
+          console.error('No institute ID available');
+          return NextResponse.redirect(`${origin}/dashboard`);
         }
 
         // Create user record

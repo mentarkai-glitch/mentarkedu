@@ -61,8 +61,8 @@ export async function GET(request: NextRequest) {
         low: { max: 39 },
       };
       const threshold = riskThresholds[riskLevel as keyof typeof riskThresholds];
-      if (threshold.min) query = query.gte("risk_score", threshold.min);
-      if (threshold.max) query = query.lte("risk_score", threshold.max);
+      if (threshold && "min" in threshold) query = query.gte("risk_score", threshold.min);
+      if (threshold && "max" in threshold) query = query.lte("risk_score", threshold.max);
     }
 
     const { data: students, error } = await query;

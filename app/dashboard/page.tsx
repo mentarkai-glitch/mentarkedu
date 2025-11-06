@@ -169,7 +169,7 @@ export default function DashboardPage() {
               className="font-display text-5xl font-bold mb-4"
             >
               <AnimatedText 
-                text={`Welcome to your Quantum Journey, ${displayName}!`}
+                children={`Welcome to your Quantum Journey, ${displayName}!`}
                 className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent"
               />
             </motion.h1>
