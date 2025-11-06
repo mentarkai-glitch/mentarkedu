@@ -1,0 +1,554 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Users, 
+  BarChart3, 
+  CreditCard, 
+  BookOpen,
+  TrendingUp,
+  Target,
+  AlertTriangle,
+  Award,
+  UserPlus,
+  Plus,
+  FileText,
+  Home
+} from "lucide-react";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+// Import components
+import { KPICard } from "@/components/admin/KPICard";
+import { TeacherList } from "@/components/admin/TeacherList";
+import { BillingCard } from "@/components/admin/BillingCard";
+import { PlanComparison } from "@/components/admin/PlanComparison";
+import { BatchHealthHeatmap } from "@/components/admin/BatchHealthHeatmap";
+
+interface Analytics {
+  overview: {
+    total_students: number;
+    total_teachers: number;
+    active_arks: number;
+    completed_arks: number;
+    completion_rate: number;
+    engagement_rate: number;
+    growth_rate: number;
+    avg_students_per_teacher: number;
+  };
+  risk_distribution: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+  student_distribution: {
+    by_grade: Record<string, number>;
+    by_batch: Record<string, number>;
+  };
+}
+
+export default function AdminDashboard() {
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [billing, setBilling] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showAddTeacher, setShowAddTeacher] = useState(false);
+  const [showPlanChange, setShowPlanChange] = useState(false);
+
+  useEffect(() => {
+    fetchAnalytics();
+    fetchTeachers();
+    fetchBilling();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch('/api/admin/analytics');
+      const data = await response.json();
+      if (data.success) {
+        setAnalytics(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTeachers = async () => {
+    try {
+      const response = await fetch('/api/admin/teachers');
+      const data = await response.json();
+      if (data.success) {
+        setTeachers(data.data.teachers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch teachers:', error);
+    }
+  };
+
+  const fetchBilling = async () => {
+    try {
+      const response = await fetch('/api/admin/billing');
+      const data = await response.json();
+      if (data.success) {
+        setBilling(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch billing:', error);
+    }
+  };
+
+  const handleAddTeacher = async (formData: any) => {
+    try {
+      const response = await fetch('/api/admin/teachers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (response.ok) {
+        fetchTeachers();
+        setShowAddTeacher(false);
+      }
+    } catch (error) {
+      console.error('Failed to add teacher:', error);
+    }
+  };
+
+  const handlePlanChange = async (newPlan: 'neuro' | 'quantum') => {
+    try {
+      const response = await fetch('/api/admin/billing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_type: newPlan })
+      });
+      
+      if (response.ok) {
+        fetchBilling();
+        setShowPlanChange(false);
+      }
+    } catch (error) {
+      console.error('Failed to update plan:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading dashboard...</div>
+      </div>
+    );
+  }
+
+  const gradeChartData = analytics?.student_distribution.by_grade 
+    ? Object.entries(analytics.student_distribution.by_grade).map(([grade, count]) => ({
+        grade: `Grade ${grade}`,
+        students: count
+      }))
+    : [];
+
+  const riskChartData = [
+    { name: 'High Risk', value: analytics?.risk_distribution.high || 0, color: '#EF4444' },
+    { name: 'Medium Risk', value: analytics?.risk_distribution.medium || 0, color: '#F59E0B' },
+    { name: 'Low Risk', value: analytics?.risk_distribution.low || 0, color: '#10B981' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-black">
+      {/* Header */}
+      <header className="border-b border-slate-700 bg-slate-800/50 backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <img src="/logo.png" alt="Mentark" className="h-8 w-8 rounded-lg" />
+            </Link>
+            <span className="font-display text-xl font-bold text-white">
+              Admin Dashboard
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+                <Home className="w-4 h-4 mr-2" />
+                Home
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Welcome Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"></div>
+            
+            <CardHeader className="pt-8">
+              <CardTitle className="text-3xl text-white mb-2">
+                Institute Analytics & Management
+              </CardTitle>
+              <p className="text-lg text-slate-300">
+                Monitor your institute&apos;s performance and manage resources effectively.
+              </p>
+            </CardHeader>
+          </Card>
+        </motion.div>
+
+        {/* Main Tabs */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border border-slate-700">
+            <TabsTrigger value="overview">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="teachers">
+              <Users className="h-4 w-4 mr-2" />
+              Teachers
+            </TabsTrigger>
+            <TabsTrigger value="templates">
+              <BookOpen className="h-4 w-4 mr-2" />
+              Templates
+            </TabsTrigger>
+            <TabsTrigger value="billing">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Billing
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <KPICard
+                title="Total Students"
+                value={analytics?.overview.total_students || 0}
+                subtitle="Active learners"
+                icon={Users}
+                trend={{ value: analytics?.overview.growth_rate || 0, label: 'growth' }}
+                gradient="from-blue-500 to-cyan-500"
+                iconColor="text-white"
+              />
+              
+              <KPICard
+                title="Total Teachers"
+                value={analytics?.overview.total_teachers || 0}
+                subtitle={`${analytics?.overview.avg_students_per_teacher.toFixed(1)} students/teacher`}
+                icon={Users}
+                gradient="from-purple-500 to-pink-500"
+                iconColor="text-white"
+              />
+              
+              <KPICard
+                title="Active ARKs"
+                value={analytics?.overview.active_arks || 0}
+                subtitle={`${analytics?.overview.completed_arks || 0} completed`}
+                icon={Target}
+                gradient="from-green-500 to-emerald-500"
+                iconColor="text-white"
+              />
+              
+              <KPICard
+                title="Engagement Rate"
+                value={`${analytics?.overview.engagement_rate || 0}%`}
+                subtitle="Last 30 days"
+                icon={TrendingUp}
+                gradient="from-orange-500 to-yellow-500"
+                iconColor="text-white"
+              />
+            </div>
+
+            {/* Batch Health */}
+            <BatchHealthHeatmap />
+
+            {/* Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Student Distribution by Grade */}
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Students by Grade</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={gradeChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="grade" stroke="#9CA3AF" />
+                      <YAxis stroke="#9CA3AF" />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
+                        labelStyle={{ color: '#fff' }}
+                      />
+                      <Bar dataKey="students" fill="#06B6D4" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Risk Distribution */}
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Student Risk Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={riskChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {riskChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Stats */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Quick Stats</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-700/30 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{analytics?.overview.completion_rate || 0}%</p>
+                    <p className="text-sm text-gray-400 mt-1">ARK Completion</p>
+                  </div>
+                  <div className="bg-slate-700/30 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{analytics?.risk_distribution.high || 0}</p>
+                    <p className="text-sm text-gray-400 mt-1">High Risk Students</p>
+                  </div>
+                  <div className="bg-slate-700/30 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{analytics?.overview.total_teachers || 0}</p>
+                    <p className="text-sm text-gray-400 mt-1">Active Teachers</p>
+                  </div>
+                  <div className="bg-slate-700/30 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{analytics?.overview.growth_rate.toFixed(1) || 0}%</p>
+                    <p className="text-sm text-gray-400 mt-1">Monthly Growth</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Teachers Tab */}
+          <TabsContent value="teachers">
+            {showAddTeacher ? (
+              <Card className="bg-slate-800/50 border-slate-700 mb-6">
+                <CardHeader>
+                  <CardTitle className="text-white">Add New Teacher</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      handleAddTeacher({
+                        email: formData.get('email'),
+                        full_name: formData.get('full_name'),
+                        specialization: (formData.get('specialization') as string)?.split(',').map(s => s.trim()) || [],
+                        assigned_batches: (formData.get('assigned_batches') as string)?.split(',').map(s => s.trim()) || []
+                      });
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <Label className="text-white">Full Name</Label>
+                      <Input
+                        name="full_name"
+                        placeholder="John Doe"
+                        required
+                        className="bg-slate-700 border-slate-600 text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-white">Email</Label>
+                      <Input
+                        name="email"
+                        type="email"
+                        placeholder="teacher@example.com"
+                        required
+                        className="bg-slate-700 border-slate-600 text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-white">Specialization (comma-separated)</Label>
+                      <Input
+                        name="specialization"
+                        placeholder="Mathematics, Physics"
+                        className="bg-slate-700 border-slate-600 text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-white">Assigned Batches (comma-separated)</Label>
+                      <Input
+                        name="assigned_batches"
+                        placeholder="2024, 2025"
+                        className="bg-slate-700 border-slate-600 text-white"
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button type="submit" className="bg-cyan-500 hover:bg-cyan-600">
+                        Add Teacher
+                      </Button>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        onClick={() => setShowAddTeacher(false)}
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            ) : null}
+            
+            <TeacherList 
+              teachers={teachers}
+              onAddTeacher={() => setShowAddTeacher(true)}
+              onAssignBatch={(teacherId) => {
+                // TODO: Open assign batch modal
+                console.log('Assign batch to teacher:', teacherId);
+              }}
+            />
+          </TabsContent>
+
+          {/* Templates Tab */}
+          <TabsContent value="templates">
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white">ARK Templates</CardTitle>
+                  <Link href="/dashboard/admin/templates/create">
+                    <Button className="bg-cyan-500 hover:bg-cyan-600">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Template
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 text-lg">Template Management</p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Create reusable ARK templates for your students.
+                  </p>
+                  <Link href="/dashboard/admin/templates/create">
+                    <Button className="mt-4 bg-cyan-500 hover:bg-cyan-600">
+                      Create Your First Template
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Billing Tab */}
+          <TabsContent value="billing" className="space-y-6">
+            {billing && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <BillingCard
+                  billing={billing.billing}
+                  actualStudentCount={billing.actual_student_count}
+                  pricing={billing.pricing}
+                  onUpgrade={() => setShowPlanChange(true)}
+                  onDowngrade={() => setShowPlanChange(true)}
+                />
+                
+                {/* Payment History */}
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-white">Payment History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {billing.payment_history.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                        <p className="text-gray-400">No payment history yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {billing.payment_history.map((payment: any) => (
+                          <div key={payment.id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                            <div>
+                              <p className="text-white font-medium">₹{payment.amount.toLocaleString()}</p>
+                              <p className="text-sm text-gray-400">
+                                {new Date(payment.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Badge className={
+                              payment.status === 'completed' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                              payment.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                              'bg-red-500/20 text-red-400 border-red-500/30'
+                            }>
+                              {payment.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Plan Comparison */}
+            {showPlanChange && billing && (
+              <div className="mt-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Change Plan</h3>
+                <PlanComparison
+                  currentPlan={billing.billing.plan_type}
+                  onSelectPlan={handlePlanChange}
+                />
+              </div>
+            )}
+
+            {!showPlanChange && billing && (
+              <div className="text-center">
+                <Button
+                  onClick={() => setShowPlanChange(true)}
+                  variant="outline"
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  Compare Plans & Upgrade
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+

@@ -1,0 +1,14 @@
+{
+    "mcpServers": {
+      "supabase": {
+        "url": "https://mcp.supabase.com/mcp?project_ref=fdaalltjojwqxxcjombo"
+      },
+      "TestSprite": {
+        "command": "npx",
+        "args": ["@testsprite/testsprite-mcp@latest"],
+        "env": {
+          "API_KEY": "sk-user-uYlQ2IUqMvXeikBi7V2gv3xYMzaZAG7MTqsaqChksF6ElEZwhd7fG9bh99zY0pf_Z-ujOAONkTCwDzdBggTbFAfGOQSHj5VC9B9-B11agOFzzKMO6kQbDwlxQQlmPAoonqE"
+        }
+      }
+    }
+  }

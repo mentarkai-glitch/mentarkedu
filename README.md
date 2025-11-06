@@ -373,5 +373,3 @@ This project is proprietary software. All rights reserved.
 <p align="center">
   <strong>Beyond marks. Toward meaning. 💙</strong>
 </p>
-#   m e n t a r k e d u  
- 

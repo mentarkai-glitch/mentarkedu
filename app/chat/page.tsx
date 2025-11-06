@@ -1,0 +1,842 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { 
+  Send, 
+  Bot, 
+  User, 
+  Sparkles, 
+  Heart, 
+  Brain, 
+  Zap, 
+  Moon, 
+  Lightbulb,
+  Star,
+  MessageCircle,
+  Settings,
+  Home,
+  ArrowLeft,
+  Loader2,
+  Mic,
+  Paperclip,
+  Smile,
+  Target,
+  Plus,
+  ArrowRight,
+  Eye,
+  Calendar,
+  TrendingUp,
+  BookOpen,
+  Rocket,
+  Shield,
+  Play,
+  Pause,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
+  Activity,
+  Layers,
+  Grid3X3,
+  BarChart3,
+  Clock,
+  Award,
+  Flame,
+  Cpu,
+  Database,
+  Network,
+  Wifi,
+  WifiOff
+} from "lucide-react";
+import type { MentorPersona } from "@/lib/types";
+import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  persona?: MentorPersona;
+  imageUrl?: string;
+  imageAnalysis?: {
+    extracted_text?: string;
+    labels?: string[];
+    objects?: Array<{ name: string; confidence: number }>;
+  };
+}
+
+interface ARK {
+  id: string;
+  title: string;
+  category: string;
+  progress: number;
+  nextMilestone: string;
+  dueDate: string;
+  status: 'active' | 'completed' | 'paused';
+  color: string;
+  gradient: string;
+  icon: any;
+}
+
+// Enhanced persona data with icons and colors
+const mentorPersonas = [
+  {
+    id: 'friendly',
+    name: 'Friendly Guide',
+    emoji: '😊',
+    icon: Heart,
+    description: 'Warm and encouraging',
+    color: 'pink',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    greeting: "Hey there! I'm here to support you with a warm heart and encouraging words. What's on your mind today? 💕"
+  },
+  {
+    id: 'strict',
+    name: 'Disciplined Coach',
+    emoji: '💪',
+    icon: Zap,
+    description: 'Direct and results-focused',
+    color: 'orange',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    greeting: "Let's get serious about your goals. I'm here to push you to achieve your full potential. Ready to work hard? 💪"
+  },
+  {
+    id: 'calm',
+    name: 'Mindful Mentor',
+    emoji: '🧘',
+    icon: Moon,
+    description: 'Patient and centered',
+    color: 'blue',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    greeting: "Take a deep breath. I'm here to help you find clarity and peace in your journey. What brings you here today? 🌙"
+  },
+  {
+    id: 'logical',
+    name: 'Analytical Advisor',
+    emoji: '🤔',
+    icon: Brain,
+    description: 'Systematic and data-driven',
+    color: 'purple',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    greeting: "Let's approach this logically. I'll help you analyze situations and make informed decisions. What challenge are we solving? 🧠"
+  },
+  {
+    id: 'spiritual',
+    name: 'Wisdom Keeper',
+    emoji: '✨',
+    icon: Star,
+    description: 'Philosophical and purpose-driven',
+    color: 'emerald',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    greeting: "Welcome, seeker. Let's explore the deeper meaning behind your journey and discover your true purpose. What wisdom do you seek? ✨"
+  }
+];
+
+// Sample ARK data
+const sampleARKs: ARK[] = [
+  {
+    id: '1',
+    title: 'Academic Excellence',
+    category: 'Academic',
+    progress: 65,
+    nextMilestone: 'Complete data structures module',
+    dueDate: '2024-02-15',
+    status: 'active',
+    color: 'yellow',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    icon: Target
+  },
+  {
+    id: '2',
+    title: 'Career Preparation',
+    category: 'Career',
+    progress: 30,
+    nextMilestone: 'Complete engineering fundamentals',
+    dueDate: '2024-03-01',
+    status: 'active',
+    color: 'blue',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    icon: TrendingUp
+  },
+  {
+    id: '3',
+    title: 'Personal Growth',
+    category: 'Personal',
+    progress: 80,
+    nextMilestone: 'Complete mindfulness practices',
+    dueDate: '2024-01-30',
+    status: 'active',
+    color: 'green',
+    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+    icon: Heart
+  }
+];
+
+export default function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState(mentorPersonas[0]);
+  const [showPersonaSelector, setShowPersonaSelector] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(true);
+  const [showARKs, setShowARKs] = useState(true);
+  const [arks, setArks] = useState<ARK[]>(sampleARKs);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Get current user
+  useEffect(() => {
+    const supabase = createClient();
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
+
+  // Initialize with persona greeting
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{
+        role: "assistant",
+        content: selectedPersona.greeting,
+        timestamp: new Date(),
+        persona: selectedPersona.id as MentorPersona
+      }]);
+    }
+  }, [selectedPersona, messages.length]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Simulate connection status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsConnected(Math.random() > 0.1); // 90% chance of being connected
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const base64Data = base64.split(',')[1];
+
+      const response = await fetch("/api/vision/analyze-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64Data,
+          features: ["text", "labels", "objects"],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const userMessage: Message = {
+          role: "user",
+          content: "I've uploaded an image for you to analyze.",
+          timestamp: new Date(),
+          imageUrl: base64,
+          imageAnalysis: data.data,
+        };
+
+        setMessages((prev) => [...prev, userMessage]);
+
+        const chatResponse = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: `I've uploaded an image. Here's what was detected: ${data.data.extracted_text || 'No text detected'}. Labels: ${data.data.labels?.join(', ') || 'No labels'}. Please analyze this image and provide insights.`,
+            persona: selectedPersona.id,
+            session_id: user?.id || "demo-session",
+            user_id: user?.id,
+          }),
+        });
+
+        const chatData = await chatResponse.json();
+
+        if (chatData.success) {
+          const aiMessage: Message = {
+            role: "assistant",
+            content: chatData.data.response,
+            timestamp: new Date(),
+            persona: selectedPersona.id as MentorPersona
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+        }
+      } else {
+        throw new Error(data.error || "Failed to analyze image");
+      }
+    } catch (error) {
+      console.error("Image upload error:", error);
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "Sorry, I couldn't analyze the image. Please try uploading a clearer image or try again later.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading || uploadingImage) return;
+
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          persona: selectedPersona.id,
+          session_id: user?.id || "demo-session",
+          user_id: user?.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const aiMessage: Message = {
+          role: "assistant",
+          content: data.data.response,
+          timestamp: new Date(),
+          persona: selectedPersona.id as MentorPersona
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      } else {
+        throw new Error(data.error || "Failed to get response");
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "Sorry, I'm having trouble connecting right now. Please try again in a moment.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const quickQuestions = [
+    { text: "How can I improve my study habits?", emoji: "📚" },
+    { text: "I'm feeling stressed about exams", emoji: "😰" },
+    { text: "Help me create a learning plan", emoji: "🎯" },
+    { text: "What career should I pursue?", emoji: "💼" },
+    { text: "I need motivation", emoji: "🔥" },
+    { text: "How to manage time better?", emoji: "⏰" }
+  ];
+
+  return (
+    <div className="flex h-screen flex-col bg-black">
+      {/* Enhanced Header */}
+      <header className="border-b border-yellow-500/20 glass backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard">
+              <Button variant="ghost" size="sm" className="text-yellow-400 hover:bg-yellow-500/10 border-yellow-500/20">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+            </Link>
+            
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img src="/logo.png" alt="Mentark" className="h-8 w-8 rounded-lg" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <span className="font-display text-xl font-bold text-white">
+                  AI Mentor Chat
+                </span>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  {isConnected ? (
+                    <>
+                      <Wifi className="w-3 h-3 text-green-500" />
+                      <span>Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-3 h-3 text-red-500" />
+                      <span>Connecting...</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => setShowARKs(!showARKs)}
+              variant="outline"
+              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+            >
+              <Layers className="w-4 h-4 mr-2" />
+              {showARKs ? 'Hide ARKs' : 'Show ARKs'}
+            </Button>
+
+            <Button
+              onClick={() => setShowPersonaSelector(!showPersonaSelector)}
+              variant="outline"
+              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+            >
+              <selectedPersona.icon className="w-4 h-4 mr-2" />
+              {selectedPersona.name}
+            </Button>
+
+            <Link href="/ark/create">
+              <Button className="bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold text-sm neon-glow">
+                <Plus className="h-4 w-4 mr-1" />
+                Create ARK
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Persona Selector */}
+      <AnimatePresence>
+        {showPersonaSelector && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-b border-yellow-500/20 glass backdrop-blur-xl"
+          >
+            <div className="container mx-auto px-4 py-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Choose Your Mentor</h3>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                {mentorPersonas.map((persona) => (
+                  <motion.div
+                    key={persona.id}
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => {
+                      setSelectedPersona(persona);
+                      setShowPersonaSelector(false);
+                      setMessages([{
+                        role: "assistant",
+                        content: persona.greeting,
+                        timestamp: new Date(),
+                        persona: persona.id as MentorPersona
+                      }]);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <Card className={`h-full border-2 transition-all ${
+                      selectedPersona.id === persona.id
+                        ? `border-${persona.color}-500 bg-${persona.color}-500/10`
+                        : 'glass border-yellow-500/20 hover:border-yellow-500/50'
+                    }`}>
+                      <CardContent className="p-4 text-center">
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${persona.gradient} flex items-center justify-center text-2xl mb-2 mx-auto shadow-lg`}>
+                          {persona.emoji}
+                        </div>
+                        <h4 className="text-sm font-bold text-white mb-1">
+                          {persona.name}
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          {persona.description}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ARK Management Section */}
+      <AnimatePresence>
+        {showARKs && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-b border-yellow-500/20 glass backdrop-blur-xl"
+          >
+            <div className="container mx-auto px-4 py-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Target className="h-6 w-6 text-yellow-500" />
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">ARK Management</h2>
+                  <Badge variant="outline" className="border-yellow-500/50 text-yellow-500">
+                    <Eye className="h-3 w-3 mr-1" />
+                    {arks.filter(ark => ark.status === 'active').length} Active
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Link href="/ark/create">
+                    <Button className="bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold neon-glow hover:shadow-yellow-500/50 transition-all">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create ARK
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              
+              {/* ARK Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {arks.map((ark, index) => (
+                  <motion.div
+                    key={ark.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="glass border-yellow-500/20 hover:border-yellow-500/50 transition-all group cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className={`w-10 h-10 bg-gradient-to-br ${ark.gradient} rounded-lg flex items-center justify-center shadow-lg`}>
+                            <ark.icon className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-white group-hover:text-yellow-400 transition-colors">
+                              {ark.title}
+                            </h3>
+                            <p className="text-sm text-slate-400">{ark.category}</p>
+                          </div>
+                          <Badge variant="outline" className={`border-${ark.color}-500/50 text-${ark.color}-500`}>
+                            {ark.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="mb-4">
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-slate-300">Progress</span>
+                            <span className={`text-${ark.color}-500 font-semibold`}>{ark.progress}%</span>
+                          </div>
+                          <Progress 
+                            value={ark.progress} 
+                            className="h-2 bg-slate-800"
+                          />
+                        </div>
+                        
+                        <div className="mb-4">
+                          <p className="text-xs text-slate-400 mb-2">Next Milestone:</p>
+                          <p className="text-sm text-white font-medium">{ark.nextMilestone}</p>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                            <Calendar className="h-3 w-3" />
+                            <span>Due {ark.dueDate}</span>
+                          </div>
+                          <Button variant="ghost" size="sm" className={`text-${ark.color}-500 hover:text-${ark.color}-400 hover:bg-${ark.color}-500/10`}>
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+
+                {/* Create New ARK Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: arks.length * 0.1 }}
+                >
+                  <Card className="glass border-2 border-dashed border-yellow-500/30 hover:border-yellow-500/50 transition-all cursor-pointer group h-full">
+                    <CardContent className="p-6 text-center flex flex-col justify-center h-full">
+                      <div className="w-12 h-12 bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:from-yellow-500/40 group-hover:to-yellow-600/40 transition-all">
+                        <Plus className="h-6 w-6 text-yellow-400 group-hover:text-yellow-500 transition-colors" />
+                      </div>
+                      <h3 className="text-white font-semibold mb-1">Create New ARK</h3>
+                      <p className="text-slate-400 text-sm mb-2">Personalized learning roadmap</p>
+                      <p className="text-xs text-slate-500">AI-powered goal planning</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-3 mt-6">
+                <Link href="/daily-checkin">
+                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
+                    <Heart className="h-4 w-4 mr-2" />
+                    Daily Check-in
+                  </Button>
+                </Link>
+                <Link href="/career-dna/analyze">
+                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
+                    <Brain className="h-4 w-4 mr-2" />
+                    Career DNA
+                  </Button>
+                </Link>
+                <Link href="/journal">
+                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    My Journal
+                  </Button>
+                </Link>
+                <Link href="/train-ai-model">
+                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Train AI Model
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="container mx-auto max-w-4xl space-y-6">
+          <AnimatePresence>
+            {messages.map((message, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <Card className={`max-w-[80%] ${
+                  message.role === "user"
+                    ? "bg-gradient-cyan-blue border-0 neon-glow"
+                    : "glass border-yellow-500/20 backdrop-blur-sm"
+                }`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      {message.role === "assistant" && (
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${selectedPersona.gradient} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                          <Bot className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {message.role === "user" ? (
+                            <User className="w-4 h-4 text-white" />
+                          ) : (
+                            <selectedPersona.icon className="w-4 h-4 text-slate-400" />
+                          )}
+                          <span className={`text-sm font-semibold ${
+                            message.role === "user" ? "text-white" : "text-slate-200"
+                          }`}>
+                            {message.role === "user" ? "You" : selectedPersona.name}
+                          </span>
+                          <span className={`text-xs ${
+                            message.role === "user" ? "text-yellow-100" : "text-slate-500"
+                          }`}>
+                            {message.timestamp.toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {message.imageUrl && (
+                            <div className="relative">
+                              <img
+                                src={message.imageUrl}
+                                alt="Uploaded image"
+                                className="max-w-full h-auto rounded-lg border border-yellow-500/20"
+                              />
+                              {message.imageAnalysis && (
+                                <div className="mt-2 p-2 glass rounded text-xs text-slate-300">
+                                  {message.imageAnalysis.extracted_text && (
+                                    <p><strong>Text:</strong> {message.imageAnalysis.extracted_text}</p>
+                                  )}
+                                  {message.imageAnalysis.labels && message.imageAnalysis.labels.length > 0 && (
+                                    <p><strong>Labels:</strong> {message.imageAnalysis.labels.join(', ')}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <p className={`whitespace-pre-wrap leading-relaxed ${
+                            message.role === "user" ? "text-white" : "text-slate-200"
+                          }`}>
+                            {message.content}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <Card className="max-w-[80%] glass border-yellow-500/20 backdrop-blur-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${selectedPersona.gradient} flex items-center justify-center shadow-lg`}>
+                      <Bot className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-200">
+                        {selectedPersona.name} is thinking...
+                      </span>
+                      <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Quick Questions */}
+      {messages.length <= 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="border-t border-yellow-500/20 glass backdrop-blur-xl"
+        >
+          <div className="container mx-auto px-4 py-4">
+            <p className="text-sm text-slate-400 mb-3 text-center">Try asking:</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {quickQuestions.map((q, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.6 + index * 0.1 }}
+                >
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50 transition-all"
+                    onClick={() => setInput(q.text)}
+                  >
+                    {q.emoji} {q.text}
+                  </Badge>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Enhanced Input Area */}
+      <div className="border-t border-yellow-500/20 glass backdrop-blur-xl">
+        <div className="container mx-auto max-w-4xl p-4">
+          <div className="flex gap-3">
+            <div className="flex gap-2">
+              <ImageUploadButton 
+                onImageUpload={handleImageUpload}
+                disabled={loading || uploadingImage}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                disabled={true}
+              >
+                <Mic className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <Input
+              placeholder="Ask your mentor anything... (Press Enter to send)"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
+              className="flex-1 glass border-yellow-500/20 text-white placeholder:text-slate-400 focus:border-yellow-500/50 h-12"
+            />
+            
+            <Button
+              onClick={sendMessage}
+              disabled={!input.trim() || loading || uploadingImage}
+              className="bg-gradient-cyan-blue text-black hover:opacity-90 disabled:opacity-50 h-12 px-6 neon-glow"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : uploadingImage ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center gap-4">
+              <span>Powered by AI • Your conversations are private and secure</span>
+              <div className="flex items-center gap-1">
+                {isConnected ? (
+                  <>
+                    <Wifi className="w-3 h-3 text-green-500" />
+                    <span>Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-3 h-3 text-red-500" />
+                    <span>Connecting...</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-3 h-3" />
+              <span>Mentark AI</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
