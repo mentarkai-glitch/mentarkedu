@@ -148,8 +148,8 @@ Return ONLY a JSON array:
 
       // Fallback insights if AI fails
       if (insights.length === 0) {
-        const arksArray = arks || [];
-        const checkInsArray = checkIns || [];
+        const arksArray: any[] = arks ?? [];
+        const checkInsArray: any[] = checkIns ?? [];
         insights = generateFallbackInsights(student, arksArray, checkInsArray);
       }
 
@@ -167,8 +167,8 @@ Return ONLY a JSON array:
       console.error("AI insights generation error:", error);
       
       // Return fallback insights
-      const arksArray = arks || [];
-      const checkInsArray = checkIns || [];
+      const arksArray: any[] = arks ?? [];
+      const checkInsArray: any[] = checkIns ?? [];
       const fallbackInsights = generateFallbackInsights(student, arksArray, checkInsArray);
       
       return successResponse({
