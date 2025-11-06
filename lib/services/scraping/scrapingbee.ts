@@ -180,7 +180,7 @@ export class ScrapingBeeService {
   /**
    * Parse HTML and extract structured data
    */
-  parseHTML(html: string): cheerio.CheerioAPI {
+  parseHTML(html: string): cheerio.Root {
     return cheerio.load(html);
   }
 
