@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
       message,
       contextString,
       context,
-      conversationHistory || []
+      conversationHistory || [],
+      user?.id
     );
 
     return NextResponse.json({
