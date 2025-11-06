@@ -159,10 +159,18 @@ export async function sendBulkPushNotifications(
       },
     };
 
-    const response = await messaging.sendMulticast({
+    // Use sendEach for multiple tokens (sendMulticast may not be available in all Firebase Admin SDK versions)
+    const response = await (messaging as any).sendMulticast?.({
       tokens,
       ...message,
-    });
+    }) || await Promise.all(
+      tokens.map(token => 
+        messaging.send({
+          token,
+          ...message,
+        }).catch((error: any) => ({ success: false, error: error.message }))
+      )
+    );
 
     console.log(`✅ Bulk push notifications sent: ${response.successCount} success, ${response.failureCount} failed`);
     
@@ -170,8 +178,8 @@ export async function sendBulkPushNotifications(
       success: response.successCount,
       failed: response.failureCount,
       errors: response.responses
-        .map((resp, index) => ({ token: tokens[index], error: resp.error }))
-        .filter(resp => resp.error)
+        .map((resp: any, index: number) => ({ token: tokens[index], error: resp.error }))
+        .filter((resp: any) => resp.error)
     };
   } catch (error) {
     console.error('❌ Failed to send bulk push notifications:', error);

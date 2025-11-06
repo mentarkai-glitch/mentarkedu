@@ -67,7 +67,7 @@ async function getDatabaseSuggestions(
   suggestionType: string
 ): Promise<string[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('ark_suggestion_overrides')

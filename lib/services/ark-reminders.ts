@@ -86,11 +86,14 @@ export async function scheduleTaskReminders(task: ReminderTask): Promise<Reminde
         user_id: task.user_id,
         reminder_type: 'task_reminder',
         title: task.title,
-        message: generateReminderMessage(task, hoursBefore, taskValue),
+        message: generateReminderMessage(task, hoursBefore, { 
+          score: taskValue, 
+          category: taskValue >= 10 ? 'critical' : taskValue >= 7 ? 'high' : taskValue >= 4 ? 'medium' : 'low' 
+        }),
         scheduled_for: reminderTime.toISOString(),
         channels: channels,
         priority: task.priority,
-        value_score: taskValue.score,
+        value_score: taskValue,
         status: 'scheduled'
       })
       .select()
@@ -191,7 +194,7 @@ export async function processScheduledReminders(): Promise<{
             fcm_token: fcmToken.fcm_token,
             title: reminder.title,
             body: reminder.message,
-            type: 'ark_reminder',
+            type: "ark_reminder",
             data: {
               ark_id: reminder.ark_id,
               reminder_id: reminder.id,

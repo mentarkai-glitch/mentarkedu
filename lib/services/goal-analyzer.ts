@@ -4,6 +4,7 @@
  */
 
 import { aiOrchestrator } from '@/lib/ai/orchestrator';
+import type { AIContext } from '@/lib/types';
 
 export interface AnalyzedGoal {
   exam?: string;
@@ -25,12 +26,12 @@ export async function analyzeGoal(
   try {
     const prompt = buildAnalysisPrompt(goalText, category);
     
-    const response = await aiOrchestrator.generate({
-      model: 'claude-sonnet-4-5-20250929',
-      prompt,
-      temperature: 0.3,
-      maxTokens: 300
-    });
+    const context: AIContext = {
+      task: "insights",
+      user_id: undefined,
+      metadata: { goalText, category, model: 'claude-sonnet-4-5-20250929', temperature: 0.3, maxTokens: 300 }
+    };
+    const response = await aiOrchestrator(context, prompt);
 
     // Parse structured response
     const analyzed = parseAnalysis(response.content, goalText);

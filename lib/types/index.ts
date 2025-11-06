@@ -260,6 +260,7 @@ export interface BehavioralPattern {
   high_stress_days: number;
   xp_earned?: number;
   milestone_completed_count?: number;
+  intervention_count?: number;
 }
 
 export interface RiskPrediction {
@@ -647,6 +648,7 @@ export interface TeacherEffectiveness {
 // ==================== NOTIFICATION TYPES ====================
 
 export type NotificationType =
+  | "ark_reminder"
   | "daily_checkin"
   | "ark_milestone"
   | "teacher_message"

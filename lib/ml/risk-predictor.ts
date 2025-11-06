@@ -77,12 +77,12 @@ function extractFeatures(patterns: BehavioralPattern[], profile: any) {
     // Performance features
     arkProgressRate: avg(recent30Days.map(p => p.ark_progress_delta)),
     progressDeclineDays: recent30Days.filter(p => p.declining_progress_days > 0).length,
-    xpEarnedRate: avg(recent30Days.map(p => p.xp_earned || 0)),
-    milestoneCompletionRate: avg(recent30Days.map(p => p.milestone_completed_count || 0)),
+    xpEarnedRate: avg(recent30Days.map(p => p.xp_earned ?? 0)),
+    milestoneCompletionRate: avg(recent30Days.map(p => p.milestone_completed_count ?? 0)),
     
     // Social features
     chatActivityRate: avg(recent30Days.map(p => p.chat_message_count)),
-    interventionCount: sum(recent30Days.map(p => p.intervention_count)),
+    interventionCount: sum(recent30Days.map(p => p.intervention_count ?? 0)),
     
     // Motivation features
     avgMotivation: profile.onboarding_profile?.motivation_level || 7,
