@@ -196,7 +196,7 @@ Return ONLY a JSON object:
 
     try {
       const aiContext: AIContext = {
-        task: "career_guide",
+        task: "insights",
         user_id: studentId,
         session_id: `form_filler_${Date.now()}`,
         metadata: {

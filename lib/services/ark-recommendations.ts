@@ -121,7 +121,7 @@ For each recommended ARK, provide:
 Return only the JSON object with 3-5 recommendations.`;
 
   const context: AIContext = {
-    task: "ark_recommendation",
+    task: "resource_recommendation",
     user_id: userId,
     metadata: {
       type,

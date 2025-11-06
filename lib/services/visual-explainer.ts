@@ -56,7 +56,7 @@ Return ONLY a JSON object:
 
     try {
       const aiContext: AIContext = {
-        task: "visual_explanation",
+        task: "insights",
         session_id: `visual_explainer_${Date.now()}`,
         metadata: {
           system_prompt: "You are a visual learning designer creating clear, effective diagrams.",

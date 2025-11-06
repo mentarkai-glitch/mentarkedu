@@ -97,7 +97,7 @@ ${allSkills.slice(0, 20).join(', ') || 'None yet'}
 Return only the JSON object.`;
 
   const context: AIContext = {
-    task: "career_analysis",
+    task: "insights",
     user_id: userId,
     metadata: {
       career_path: careerPath,
@@ -196,7 +196,7 @@ export async function calculateConfidenceScore(
 Return only the JSON object.`;
 
   const context: AIContext = {
-    task: "career_analysis",
+    task: "insights",
     user_id: userId,
     metadata: {
       completion_rate: completionRate,

@@ -75,7 +75,7 @@ Return only the JSON object.`;
 
     // Get AI analysis
     const context: AIContext = {
-      task: "career_analysis",
+      task: "insights",
       user_id: user.id,
       metadata: {
         student_profile,

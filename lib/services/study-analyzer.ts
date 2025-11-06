@@ -85,7 +85,7 @@ Return ONLY a JSON object:
 
     try {
       const aiContext: AIContext = {
-        task: "academic_analysis",
+        task: "insights",
         user_id: studentContext?.userId,
         session_id: `study_analyzer_${Date.now()}`,
         metadata: {
@@ -166,7 +166,7 @@ Return ONLY a JSON object:
 
     try {
       const aiContext: AIContext = {
-        task: "academic_planning",
+        task: "roadmap",
         session_id: `study_planner_${Date.now()}`,
         metadata: {
           system_prompt: "You are an expert study planner creating realistic, effective schedules.",
@@ -231,7 +231,7 @@ Return ONLY a JSON array:
 
     try {
       const aiContext: AIContext = {
-        task: "academic_assessment",
+        task: "insights",
         session_id: `practice_gen_${Date.now()}`,
         metadata: {
           system_prompt: "You are an expert educator creating targeted practice questions.",

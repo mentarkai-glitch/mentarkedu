@@ -104,7 +104,7 @@ Provide:
 
     try {
       const aiContext: AIContext = {
-        task: "academic_explanation",
+        task: "mentor_chat",
         user_id: context.userId,
         session_id: `doubt_solver_${Date.now()}`,
         metadata: {
@@ -161,7 +161,7 @@ Be encouraging, clear, and adjust complexity to the student's level.`;
 
     try {
       const aiContext: AIContext = {
-        task: "academic_explanation",
+        task: "mentor_chat",
         user_id: context.userId,
         session_id: `doubt_solver_${Date.now()}`,
         metadata: {
@@ -213,7 +213,7 @@ Provide:
 
     try {
       const aiContext: AIContext = {
-        task: "academic_explanation",
+        task: "mentor_chat",
         user_id: context.userId,
         session_id: `doubt_solver_hybrid_${Date.now()}`,
         metadata: {
