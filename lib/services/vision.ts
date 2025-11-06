@@ -271,9 +271,9 @@ async function analyzeJournalWithAI(
     const insightsText = insightsData.data.response;
     const insights = insightsText
       .split('\n')
-      .filter(line => line.trim().length > 0 && (line.includes('•') || line.includes('-') || line.includes('1.') || line.includes('2.')))
-      .map(line => line.replace(/^[\s•\-1-9.]+\s*/, '').trim())
-      .filter(insight => insight.length > 10);
+      .filter((line: string) => line.trim().length > 0 && (line.includes('•') || line.includes('-') || line.includes('1.') || line.includes('2.')))
+      .map((line: string) => line.replace(/^[\s•\-1-9.]+\s*/, '').trim())
+      .filter((insight: string) => insight.length > 10);
 
     return {
       insights: insights.length > 0 ? insights : [
