@@ -4,10 +4,10 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -15,7 +15,8 @@ export async function GET(
       return errorResponse("Unauthorized", 401);
     }
 
-    const studentId = params.id;
+    const { id } = await params;
+    const studentId = id;
 
     // Verify teacher has access to this student
     const { data: assignment, error: assignmentError } = await supabase
