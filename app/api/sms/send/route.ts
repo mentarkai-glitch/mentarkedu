@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
             .insert({
               student_id: studentId,
               phone_number: phoneValidation.formatted,
-              twilio_sid: result.sid,
+              twilio_sid: result.request_id || null,
               status: 'active'
             })
             .select('id')
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
               conversation_id: conversationId,
               direction: 'outbound',
               message: message,
-              twilio_sid: result.sid,
+              twilio_sid: result.request_id || null,
               status: 'sent'
             });
 
