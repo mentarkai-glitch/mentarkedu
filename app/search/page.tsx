@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Search, Sparkles, ExternalLink, BookOpen, Target, TrendingUp, Lightbulb, ArrowRight } from "lucide-react";
@@ -26,7 +26,7 @@ interface SearchResult {
   confidence: number;
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
@@ -302,6 +302,34 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black">
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Sparkles className="h-10 w-10 text-yellow-400" />
+              <h1 className="text-4xl font-bold text-white font-display">Mentark Search</h1>
+            </div>
+            <p className="text-slate-300 text-lg">
+              Don&apos;t just search. Get answers that lead to action.
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-yellow-500 border-t-transparent"></div>
+              <p className="text-white mt-4 text-lg">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <SearchPageContent />
+    </Suspense>
   );
 }
 
