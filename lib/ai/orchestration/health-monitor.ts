@@ -327,9 +327,13 @@ export async function getHealthyModelsForTask(task: string): Promise<AIModel[]> 
     }
     
     // Filter by task suitability
-    const suitableModels = data.filter(record => 
-      record.model_capabilities?.strengths?.includes(task)
-    );
+    const suitableModels = data.filter(record => {
+      // Handle model_capabilities as array (Supabase join type inference)
+      const capabilities = Array.isArray(record.model_capabilities) 
+        ? record.model_capabilities[0] 
+        : record.model_capabilities;
+      return capabilities?.strengths?.includes(task);
+    });
     
     return suitableModels.map(record => record.model as AIModel);
     
