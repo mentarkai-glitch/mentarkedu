@@ -296,6 +296,7 @@ export interface SentimentRecord {
   overall_sentiment: number; // -1 to 1
   emotional_valence: number;
   arousal_level: number;
+  avg_energy_level?: number; // Optional: 0-10 scale
   joy: number;
   sadness: number;
   anger: number;

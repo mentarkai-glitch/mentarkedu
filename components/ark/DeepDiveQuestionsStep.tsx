@@ -13,7 +13,6 @@ import { getMergedSuggestions } from '@/lib/services/ark-suggestion-service';
 import { getAllSuggestions } from '@/lib/data/ark-suggestions';
 import { 
   getCategoryQuestions,
-  getQuestionSequence,
   type ARKQuestion
 } from '@/lib/data/ark-questions';
 import { shouldShowQuestion } from '@/lib/services/ark-question-orchestrator';

@@ -62,7 +62,7 @@ export function PlanComparison({ currentPlan, onSelectPlan }: PlanComparisonProp
               isCurrentPlan ? 'ring-2 ring-cyan-400' : ''
             }`}
           >
-            {plan.popular && (
+            {'popular' in plan && plan.popular && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
                   <Star className="h-3 w-3 mr-1" />
