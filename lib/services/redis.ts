@@ -54,6 +54,13 @@ export interface AnalyticsData {
 
 class RedisService {
   /**
+   * Get Redis instance, return null if not available
+   */
+  getRedisInstance(): Redis | null {
+    return redis;
+  }
+
+  /**
    * Cache AI responses with intelligent key generation
    */
   async cacheAIResponse(
@@ -62,17 +69,23 @@ class RedisService {
     options: CacheOptions = {}
   ): Promise<void> {
     try {
+      const redisInstance = this.getRedisInstance();
+      if (!redisInstance) {
+        console.warn('Redis not available, skipping cache');
+        return;
+      }
+
       // Generate cache key based on prompt hash and context
       const cacheKey = this.generateAIResponseKey(prompt, response.userTier, response.taskType);
       
       // Set cache with TTL (default 1 hour)
       const ttl = options.ttl || 3600;
-      await redis.setex(cacheKey, ttl, JSON.stringify(response));
+      await redisInstance.setex(cacheKey, ttl, JSON.stringify(response));
       
       // Add to cache tags for bulk operations
       if (options.tags) {
         for (const tag of options.tags) {
-          await redis.sadd(`cache_tags:${tag}`, cacheKey);
+          await redisInstance.sadd(`cache_tags:${tag}`, cacheKey);
         }
       }
     } catch (error) {
@@ -88,13 +101,14 @@ class RedisService {
     userTier: string,
     taskType: string
   ): Promise<AIResponseCache | null> {
-    if (!redis) {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) {
       return null;
     }
     
     try {
       const cacheKey = this.generateAIResponseKey(prompt, userTier, taskType);
-      const cached = await redis.get(cacheKey);
+      const cached = await redisInstance.get(cacheKey);
       
       if (cached) {
         // Handle both string and already-parsed objects
@@ -115,13 +129,16 @@ class RedisService {
    * Store session data
    */
   async storeSession(sessionData: SessionData, ttl: number = 3600): Promise<void> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return;
+    
     try {
       const sessionKey = `session:${sessionData.userId}:${sessionData.sessionId}`;
-      await redis.setex(sessionKey, ttl, JSON.stringify(sessionData));
+      await redisInstance.setex(sessionKey, ttl, JSON.stringify(sessionData));
       
       // Also store user's active sessions
-      await redis.sadd(`user_sessions:${sessionData.userId}`, sessionData.sessionId);
-      await redis.expire(`user_sessions:${sessionData.userId}`, ttl);
+      await redisInstance.sadd(`user_sessions:${sessionData.userId}`, sessionData.sessionId);
+      await redisInstance.expire(`user_sessions:${sessionData.userId}`, ttl);
     } catch (error) {
       console.error('Error storing session:', error);
     }
@@ -131,9 +148,12 @@ class RedisService {
    * Get session data
    */
   async getSession(userId: string, sessionId: string): Promise<SessionData | null> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return null;
+    
     try {
       const sessionKey = `session:${userId}:${sessionId}`;
-      const sessionData = await redis.get(sessionKey);
+      const sessionData = await redisInstance.get(sessionKey);
       
       if (sessionData) {
         return JSON.parse(sessionData as string);
@@ -149,13 +169,16 @@ class RedisService {
    * Update session activity
    */
   async updateSessionActivity(userId: string, sessionId: string): Promise<void> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return;
+    
     try {
       const sessionKey = `session:${userId}:${sessionId}`;
       const sessionData = await this.getSession(userId, sessionId);
       
       if (sessionData) {
         sessionData.lastActivity = Date.now();
-        await redis.setex(sessionKey, 3600, JSON.stringify(sessionData));
+        await redisInstance.setex(sessionKey, 3600, JSON.stringify(sessionData));
       }
     } catch (error) {
       console.error('Error updating session activity:', error);
@@ -171,25 +194,30 @@ class RedisService {
     limit: number = 100,
     window: number = 3600
   ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) {
+      return { allowed: true, remaining: limit, resetTime: Date.now() + (window * 1000) };
+    }
+    
     try {
       const rateLimitKey = `rate_limit:${userId}:${endpoint}`;
-      const current = await redis.get(rateLimitKey);
+      const current = await redisInstance.get(rateLimitKey);
       
       if (current === null) {
         // First request in window
-        await redis.setex(rateLimitKey, window, 1);
+        await redisInstance.setex(rateLimitKey, window, 1);
         return { allowed: true, remaining: limit - 1, resetTime: Date.now() + (window * 1000) };
       }
       
       const count = parseInt(current as string);
       if (count >= limit) {
         // Rate limit exceeded
-        const ttl = await redis.ttl(rateLimitKey);
+        const ttl = await redisInstance.ttl(rateLimitKey);
         return { allowed: false, remaining: 0, resetTime: Date.now() + (ttl * 1000) };
       }
       
       // Increment counter
-      await redis.incr(rateLimitKey);
+      await redisInstance.incr(rateLimitKey);
       return { allowed: true, remaining: limit - count - 1, resetTime: Date.now() + (window * 1000) };
     } catch (error) {
       console.error('Error checking rate limit:', error);
@@ -201,18 +229,21 @@ class RedisService {
    * Store analytics data
    */
   async storeAnalytics(model: string, analytics: AnalyticsData): Promise<void> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return;
+    
     try {
       const date = new Date().toISOString().split('T')[0];
       const analyticsKey = `analytics:${model}:${date}`;
       
       // Store daily analytics
-      await redis.hincrby(analyticsKey, 'requests', analytics.requests);
-      await redis.hincrby(analyticsKey, 'tokensUsed', analytics.tokensUsed);
-      await redis.hincrbyfloat(analyticsKey, 'cost', analytics.cost);
-      await redis.hincrby(analyticsKey, 'totalResponseTime', analytics.avgResponseTime);
+      await redisInstance.hincrby(analyticsKey, 'requests', analytics.requests);
+      await redisInstance.hincrby(analyticsKey, 'tokensUsed', analytics.tokensUsed);
+      await redisInstance.hincrbyfloat(analyticsKey, 'cost', analytics.cost);
+      await redisInstance.hincrby(analyticsKey, 'totalResponseTime', analytics.avgResponseTime);
       
       // Set expiration to 30 days
-      await redis.expire(analyticsKey, 30 * 24 * 3600);
+      await redisInstance.expire(analyticsKey, 30 * 24 * 3600);
     } catch (error) {
       console.error('Error storing analytics:', error);
     }
@@ -222,11 +253,14 @@ class RedisService {
    * Get analytics data
    */
   async getAnalytics(model: string, date?: string): Promise<AnalyticsData | null> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return null;
+    
     try {
       const targetDate = date || new Date().toISOString().split('T')[0];
       const analyticsKey = `analytics:${model}:${targetDate}`;
       
-      const data = await redis.hgetall(analyticsKey);
+      const data = await redisInstance.hgetall(analyticsKey);
       
       if (Object.keys(data).length === 0) {
         return null;
@@ -250,9 +284,12 @@ class RedisService {
    * Cache user preferences
    */
   async cacheUserPreferences(userId: string, preferences: any, ttl: number = 86400): Promise<void> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return;
+    
     try {
       const preferencesKey = `user_preferences:${userId}`;
-      await redis.setex(preferencesKey, ttl, JSON.stringify(preferences));
+      await redisInstance.setex(preferencesKey, ttl, JSON.stringify(preferences));
     } catch (error) {
       console.error('Error caching user preferences:', error);
     }
@@ -262,9 +299,12 @@ class RedisService {
    * Get user preferences
    */
   async getUserPreferences(userId: string): Promise<any | null> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return null;
+    
     try {
       const preferencesKey = `user_preferences:${userId}`;
-      const preferences = await redis.get(preferencesKey);
+      const preferences = await redisInstance.get(preferencesKey);
       
       if (preferences) {
         return JSON.parse(preferences as string);
@@ -280,12 +320,15 @@ class RedisService {
    * Invalidate cache by tags
    */
   async invalidateCacheByTags(tags: string[]): Promise<void> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return;
+    
     try {
       for (const tag of tags) {
-        const keys = await redis.smembers(`cache_tags:${tag}`);
+        const keys = await redisInstance.smembers(`cache_tags:${tag}`);
         if (keys.length > 0) {
-          await redis.del(...keys);
-          await redis.del(`cache_tags:${tag}`);
+          await redisInstance.del(...keys);
+          await redisInstance.del(`cache_tags:${tag}`);
         }
       }
     } catch (error) {
@@ -319,20 +362,16 @@ class RedisService {
    * Health check for Redis connection
    */
   async healthCheck(): Promise<boolean> {
+    const redisInstance = this.getRedisInstance();
+    if (!redisInstance) return false;
+    
     try {
-      await redis.ping();
+      await redisInstance.ping();
       return true;
     } catch (error) {
       console.error('Redis health check failed:', error);
       return false;
     }
-  }
-
-  /**
-   * Get Redis instance for advanced operations
-   */
-  getRedisInstance(): Redis {
-    return redis;
   }
 }
 
