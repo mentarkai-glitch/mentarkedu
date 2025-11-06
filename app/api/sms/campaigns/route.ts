@@ -113,7 +113,9 @@ export async function POST(request: NextRequest) {
       
       // Replace template variables
       if (template.variables && template.variables.length > 0) {
-        const profileData = student.users?.profile_data || {};
+        // Handle users as array (TypeScript inference issue with Supabase joins)
+        const studentUser = Array.isArray(student.users) ? student.users[0] : student.users;
+        const profileData = studentUser?.profile_data || {};
         template.variables.forEach(variable => {
           const cleanVar = variable.replace(/[{}]/g, '');
           const value = profileData[cleanVar] || cleanVar;
