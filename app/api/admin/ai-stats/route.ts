@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const costAnalytics = await getCostAnalytics('day');
     
     // Get model performance stats for all models
-    const modelStats = {};
+    const modelStats: Record<string, any> = {};
     const models = ['gpt-4o', 'o1-preview', 'claude-opus', 'gemini-pro', 'claude-sonnet', 'gpt-4o-mini', 'mistral-large', 'llama-3.1'];
     
     for (const model of models) {
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const costSavingsPercentage = potentialCost > 0 ? (costSavings / potentialCost) * 100 : 0;
     
     // Get top performing models by task
-    const taskPerformance = {};
+    const taskPerformance: Record<string, any> = {};
     const tasks = ['mentor_chat', 'roadmap', 'emotion', 'insights', 'research', 'prediction', 'resource_recommendation'];
     
     for (const task of tasks) {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         .limit(50);
       
       if (taskDecisions && taskDecisions.length > 0) {
-        const modelScores = {};
+        const modelScores: Record<string, { total: number; count: number }> = {};
         taskDecisions.forEach(decision => {
           if (!modelScores[decision.selected_model]) {
             modelScores[decision.selected_model] = { total: 0, count: 0 };
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
           modelScores[decision.selected_model].count += 1;
         });
         
-        const avgScores = Object.entries(modelScores).map(([model, data]: [string, any]) => ({
+        const avgScores = Object.entries(modelScores).map(([model, data]) => ({
           model,
           avgScore: data.total / data.count,
           requests: data.count
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       .order('timestamp', { ascending: true });
     
     // Process trends data
-    const dailyTrends = {};
+    const dailyTrends: Record<string, { cost: number; requests: number; success: number }> = {};
     if (usageTrends) {
       usageTrends.forEach(log => {
         const date = new Date(log.timestamp).toISOString().split('T')[0];
