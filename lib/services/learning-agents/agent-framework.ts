@@ -50,7 +50,7 @@ export abstract class BaseAgent {
     this.supabase = null; // Will be initialized in execute
   }
 
-  abstract async execute(context: AgentContext): Promise<AgentResult>;
+  abstract execute(context: AgentContext): Promise<AgentResult>;
 
   abstract getType(): AgentType;
 
