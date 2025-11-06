@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         // Handle users as array (TypeScript inference issue with Supabase joins)
         const studentUser = Array.isArray(student.users) ? student.users[0] : student.users;
         const profileData = studentUser?.profile_data || {};
-        template.variables.forEach(variable => {
+        template.variables.forEach((variable: string) => {
           const cleanVar = variable.replace(/[{}]/g, '');
           const value = profileData[cleanVar] || cleanVar;
           message = message.replace(new RegExp(variable, 'g'), value);
