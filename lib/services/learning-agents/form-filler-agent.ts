@@ -83,10 +83,11 @@ export class FormFillerAgent extends BaseAgent {
       );
 
       // Step 2: Auto-fill form data
-      const formData = await this.generateFormData(student, course, examScores, formTemplate);
+      const examScoresArray = examScores || [];
+      const formData = await this.generateFormData(student, course, examScoresArray, formTemplate);
 
       // Step 3: Check required documents
-      const documents = await this.checkDocuments(student, examScores);
+      const documents = await this.checkDocuments(student, examScoresArray);
 
       // Step 4: Generate AI recommendations
       const aiRecommendations = await this.generateAIRecommendations(
