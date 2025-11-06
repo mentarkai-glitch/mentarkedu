@@ -101,7 +101,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center overflow-x-hidden w-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
           <p className="text-white">Loading your journey...</p>
@@ -118,10 +118,10 @@ export default function DashboardPage() {
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black overflow-x-hidden w-full">
       {/* Header */}
       <header className="border-b border-yellow-500/20 glass backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4">
+        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4 w-full max-w-full">
           <div className="flex items-center gap-2 sm:gap-4">
             <motion.div
               initial={{ scale: 0 }}
@@ -143,7 +143,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 lg:py-12">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 lg:py-12 w-full max-w-full">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

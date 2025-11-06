@@ -470,23 +470,24 @@ export default function ARKDetailPage() {
   const todayTotalHours = todayTasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 overflow-x-hidden w-full">
       {/* Header Navigation */}
-      <div className="border-b border-slate-700 bg-slate-900/50 sticky top-0 z-10 backdrop-blur-sm">
-        <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-            <Link href="/dashboard/student/arks">
-              <Button variant="ghost" className="text-white hover:bg-slate-800">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to ARKs
+      <div className="border-b border-slate-700 bg-slate-900/50 sticky top-0 z-10 backdrop-blur-sm w-full">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4 w-full max-w-full">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 w-full">
+            <Link href="/dashboard/student/arks" className="flex-shrink-0">
+              <Button variant="ghost" className="text-white hover:bg-slate-800 text-xs sm:text-sm">
+                <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Back to ARKs</span>
+                <span className="sm:hidden">Back</span>
               </Button>
             </Link>
-            <div className="flex gap-2">
-              <Button variant="outline" className="border-slate-600">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
+            <div className="flex gap-2 flex-shrink-0">
+              <Button variant="outline" className="border-slate-600 text-xs sm:text-sm p-2 sm:px-3">
+                <Share2 className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Share</span>
               </Button>
-              <Button variant="outline" className="border-slate-600">
+              <Button variant="outline" className="border-slate-600 p-2 sm:px-3">
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </div>
@@ -495,7 +496,7 @@ export default function ARKDetailPage() {
       </div>
 
       {/* Hero Section */}
-      <div className="container mx-auto px-8 py-6">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 w-full max-w-full">
         <ARKHeroSection 
           ark={ark} 
           stats={{
@@ -507,7 +508,7 @@ export default function ARKDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 w-full max-w-full">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Left Sidebar - Quick Stats */}
           <div className="lg:col-span-1">
@@ -555,25 +556,31 @@ export default function ARKDetailPage() {
             />
 
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 glass border border-yellow-500/30 bg-slate-900/50 text-xs sm:text-sm">
-                <TabsTrigger value="overview" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="timeline" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Timeline
-                </TabsTrigger>
-                <TabsTrigger value="resources" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Resources
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Analytics
-                </TabsTrigger>
-              </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="w-full overflow-x-auto">
+                <TabsList className="inline-flex w-full min-w-max glass border border-yellow-500/30 bg-slate-900/50 text-xs sm:text-sm sm:grid sm:grid-cols-4">
+                  <TabsTrigger value="overview" className="flex-shrink-0 px-2 sm:px-4 data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Overview</span>
+                    <span className="sm:hidden">Overview</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="timeline" className="flex-shrink-0 px-2 sm:px-4 data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Timeline</span>
+                    <span className="sm:hidden">Timeline</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="resources" className="flex-shrink-0 px-2 sm:px-4 data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                    <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Resources</span>
+                    <span className="sm:hidden">Resources</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="flex-shrink-0 px-2 sm:px-4 data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                    <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Analytics</span>
+                    <span className="sm:hidden">Analytics</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="mt-6">

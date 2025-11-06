@@ -31,7 +31,6 @@ import {
   Target,
   Plus,
   ArrowRight,
-  Eye,
   Calendar,
   TrendingUp,
   BookOpen,
@@ -43,7 +42,6 @@ import {
   CheckCircle,
   AlertCircle,
   Activity,
-  Layers,
   Grid3X3,
   BarChart3,
   Clock,
@@ -71,18 +69,6 @@ interface Message {
   };
 }
 
-interface ARK {
-  id: string;
-  title: string;
-  category: string;
-  progress: number;
-  nextMilestone: string;
-  dueDate: string;
-  status: 'active' | 'completed' | 'paused';
-  color: string;
-  gradient: string;
-  icon: any;
-}
 
 // Enhanced persona data with icons and colors
 const mentorPersonas = [
@@ -138,45 +124,6 @@ const mentorPersonas = [
   }
 ];
 
-// Sample ARK data
-const sampleARKs: ARK[] = [
-  {
-    id: '1',
-    title: 'Academic Excellence',
-    category: 'Academic',
-    progress: 65,
-    nextMilestone: 'Complete data structures module',
-    dueDate: '2024-02-15',
-    status: 'active',
-    color: 'yellow',
-    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-    icon: Target
-  },
-  {
-    id: '2',
-    title: 'Career Preparation',
-    category: 'Career',
-    progress: 30,
-    nextMilestone: 'Complete engineering fundamentals',
-    dueDate: '2024-03-01',
-    status: 'active',
-    color: 'blue',
-    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-    icon: TrendingUp
-  },
-  {
-    id: '3',
-    title: 'Personal Growth',
-    category: 'Personal',
-    progress: 80,
-    nextMilestone: 'Complete mindfulness practices',
-    dueDate: '2024-01-30',
-    status: 'active',
-    color: 'green',
-    gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-    icon: Heart
-  }
-];
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -187,8 +134,6 @@ export default function ChatPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(true);
-  const [showARKs, setShowARKs] = useState(true);
-  const [arks, setArks] = useState<ARK[]>(sampleARKs);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get current user
@@ -372,35 +317,35 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen flex-col bg-black">
       {/* Enhanced Header */}
-      <header className="border-b border-yellow-500/20 glass backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4">
-          <div className="flex items-center gap-2 sm:gap-4">
+      <header className="border-b border-yellow-500/20 glass backdrop-blur-xl overflow-hidden">
+        <div className="w-full max-w-full mx-auto flex h-16 items-center justify-between px-2 sm:px-4 overflow-x-auto">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 min-w-0 flex-shrink-0">
             <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="text-yellow-400 hover:bg-yellow-500/10 border-yellow-500/20 p-2 sm:px-3">
-                <ArrowLeft className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Dashboard</span>
+              <Button variant="ghost" size="sm" className="text-yellow-400 hover:bg-yellow-500/10 border-yellow-500/20 p-1.5 sm:p-2 md:px-3 flex-shrink-0">
+                <ArrowLeft className="w-4 h-4 sm:mr-1 md:mr-2" />
+                <span className="hidden sm:inline text-xs md:text-sm">Dashboard</span>
               </Button>
             </Link>
             
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="relative">
-                <img src="/logo.png" alt="Mentark" className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg" />
-                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0">
+              <div className="relative flex-shrink-0">
+                <img src="/logo.png" alt="Mentark" className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 rounded-lg" />
+                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
-              <div className="hidden sm:block">
-                <span className="font-display text-lg sm:text-xl font-bold text-white">
+              <div className="hidden sm:block min-w-0">
+                <span className="font-display text-sm sm:text-base md:text-lg lg:text-xl font-bold text-white truncate block">
                   AI Mentor Chat
                 </span>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
+                <div className="flex items-center gap-1 sm:gap-2 text-xs text-slate-400">
                   {isConnected ? (
                     <>
-                      <Wifi className="w-3 h-3 text-green-500" />
-                      <span>Connected</span>
+                      <Wifi className="w-3 h-3 text-green-500 flex-shrink-0" />
+                      <span className="hidden md:inline">Connected</span>
                     </>
                   ) : (
                     <>
-                      <WifiOff className="w-3 h-3 text-red-500" />
-                      <span>Connecting...</span>
+                      <WifiOff className="w-3 h-3 text-red-500 flex-shrink-0" />
+                      <span className="hidden md:inline">Connecting...</span>
                     </>
                   )}
                 </div>
@@ -408,31 +353,32 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4">
-            <Button
-              onClick={() => setShowARKs(!showARKs)}
-              variant="outline"
-              size="sm"
-              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-2 sm:px-3 text-xs sm:text-sm"
-            >
-              <Layers className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden lg:inline">{showARKs ? 'Hide ARKs' : 'Show ARKs'}</span>
-            </Button>
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-4 flex-shrink-0">
+            <Link href="/dashboard/student/arks" className="flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-1.5 sm:p-2 md:px-3 text-xs flex-shrink-0"
+              >
+                <Target className="w-3 h-3 sm:w-4 sm:h-4 md:mr-2" />
+                <span className="hidden sm:inline text-xs">My ARKs</span>
+              </Button>
+            </Link>
 
             <Button
               onClick={() => setShowPersonaSelector(!showPersonaSelector)}
               variant="outline"
               size="sm"
-              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-2 sm:px-3 text-xs sm:text-sm"
+              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 p-1.5 sm:p-2 md:px-3 text-xs flex-shrink-0"
             >
-              <selectedPersona.icon className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden md:inline">{selectedPersona.name}</span>
+              <selectedPersona.icon className="w-3 h-3 sm:w-4 sm:h-4 md:mr-2" />
+              <span className="hidden lg:inline text-xs">{selectedPersona.name}</span>
             </Button>
 
-            <Link href="/ark/create" className="hidden sm:block">
+            <Link href="/ark/create" className="hidden md:block flex-shrink-0">
               <Button className="bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold text-xs sm:text-sm neon-glow px-2 sm:px-3">
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                <span className="hidden lg:inline">Create ARK</span>
+                <span className="hidden xl:inline">Create ARK</span>
               </Button>
             </Link>
           </div>
@@ -486,145 +432,6 @@ export default function ChatPage() {
                     </Card>
                   </motion.div>
                 ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ARK Management Section */}
-      <AnimatePresence>
-        {showARKs && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="border-b border-yellow-500/20 glass backdrop-blur-xl"
-          >
-            <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="relative">
-                    <Target className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                  </div>
-                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">ARK Management</h2>
-                  <Badge variant="outline" className="border-yellow-500/50 text-yellow-500 text-xs">
-                    <Eye className="h-3 w-3 mr-1" />
-                    {arks.filter(ark => ark.status === 'active').length} Active
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                  <Link href="/ark/create" className="flex-1 sm:flex-initial">
-                    <Button className="w-full sm:w-auto bg-gradient-cyan-blue hover:opacity-90 text-black font-semibold neon-glow hover:shadow-yellow-500/50 transition-all text-xs sm:text-sm">
-                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                      <span className="sm:inline">Create ARK</span>
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-              
-              {/* ARK Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {arks.map((ark, index) => (
-                  <motion.div
-                    key={ark.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card className="glass border-yellow-500/20 hover:border-yellow-500/50 transition-all group cursor-pointer h-full">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className={`w-10 h-10 bg-gradient-to-br ${ark.gradient} rounded-lg flex items-center justify-center shadow-lg`}>
-                            <ark.icon className="h-5 w-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-white group-hover:text-yellow-400 transition-colors">
-                              {ark.title}
-                            </h3>
-                            <p className="text-sm text-slate-400">{ark.category}</p>
-                          </div>
-                          <Badge variant="outline" className={`border-${ark.color}-500/50 text-${ark.color}-500`}>
-                            {ark.status}
-                          </Badge>
-                        </div>
-                        
-                        <div className="mb-4">
-                          <div className="flex justify-between text-sm mb-2">
-                            <span className="text-slate-300">Progress</span>
-                            <span className={`text-${ark.color}-500 font-semibold`}>{ark.progress}%</span>
-                          </div>
-                          <Progress 
-                            value={ark.progress} 
-                            className="h-2 bg-slate-800"
-                          />
-                        </div>
-                        
-                        <div className="mb-4">
-                          <p className="text-xs text-slate-400 mb-2">Next Milestone:</p>
-                          <p className="text-sm text-white font-medium">{ark.nextMilestone}</p>
-                        </div>
-                        
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1 text-xs text-slate-400">
-                            <Calendar className="h-3 w-3" />
-                            <span>Due {ark.dueDate}</span>
-                          </div>
-                          <Button variant="ghost" size="sm" className={`text-${ark.color}-500 hover:text-${ark.color}-400 hover:bg-${ark.color}-500/10`}>
-                            <ArrowRight className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-
-                {/* Create New ARK Card */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: arks.length * 0.1 }}
-                >
-                  <Card className="glass border-2 border-dashed border-yellow-500/30 hover:border-yellow-500/50 transition-all cursor-pointer group h-full">
-                    <CardContent className="p-6 text-center flex flex-col justify-center h-full">
-                      <div className="w-12 h-12 bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:from-yellow-500/40 group-hover:to-yellow-600/40 transition-all">
-                        <Plus className="h-6 w-6 text-yellow-400 group-hover:text-yellow-500 transition-colors" />
-                      </div>
-                      <h3 className="text-white font-semibold mb-1">Create New ARK</h3>
-                      <p className="text-slate-400 text-sm mb-2">Personalized learning roadmap</p>
-                      <p className="text-xs text-slate-500">AI-powered goal planning</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="flex flex-wrap gap-2 sm:gap-3 mt-4 sm:mt-6">
-                <Link href="/daily-checkin">
-                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
-                    <Heart className="h-4 w-4 mr-2" />
-                    Daily Check-in
-                  </Button>
-                </Link>
-                <Link href="/career-dna/analyze">
-                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
-                    <Brain className="h-4 w-4 mr-2" />
-                    Career DNA
-                  </Button>
-                </Link>
-                <Link href="/journal">
-                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    My Journal
-                  </Button>
-                </Link>
-                <Link href="/train-ai-model">
-                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Train AI Model
-                  </Button>
-                </Link>
               </div>
             </div>
           </motion.div>

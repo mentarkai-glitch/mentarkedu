@@ -146,7 +146,7 @@ export default function DailyCheckInPage() {
   // Welcome Screen
   if (currentStep === 0) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-3 sm:p-4">
+      <div className="min-h-screen bg-black flex items-center justify-center p-3 sm:p-4 overflow-x-hidden w-full">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -310,7 +310,7 @@ export default function DailyCheckInPage() {
   const CurrentIcon = currentStepData.icon;
 
   return (
-    <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-4 overflow-x-hidden w-full">
       <motion.div
         key={currentStep}
         initial={{ opacity: 0, x: 20 }}

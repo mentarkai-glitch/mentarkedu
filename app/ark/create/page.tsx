@@ -235,7 +235,7 @@ export default function StudentARKCreation() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center overflow-x-hidden w-full">
         <div className="text-center">
           <Loader2 className="h-12 w-12 text-yellow-400 animate-spin mx-auto mb-4" />
           <p className="text-white text-lg">Loading your profile...</p>
@@ -545,10 +545,10 @@ export default function StudentARKCreation() {
   const progressPercentage = (currentStep / TOTAL_STEPS) * 100;
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black overflow-x-hidden w-full">
       {/* Header */}
       <header className="bg-slate-800/50 border-b border-slate-700 backdrop-blur-xl">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 w-full max-w-full">
           <div className="flex items-center justify-between">
             <Link href="/dashboard/student" className="flex items-center gap-2 sm:gap-3">
               <img src="/logo.png" alt="Mentark" className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg" />
@@ -566,7 +566,7 @@ export default function StudentARKCreation() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 lg:py-12">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 lg:py-12 w-full max-w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}

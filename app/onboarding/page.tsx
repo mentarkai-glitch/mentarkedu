@@ -248,7 +248,7 @@ export default function OnboardingPage() {
   // PHASE 1: Welcome Screen
   if (currentPhase === 'welcome') {
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4 overflow-x-hidden w-full">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -322,7 +322,7 @@ export default function OnboardingPage() {
   // PHASE 2: Category Selection
   if (currentPhase === 'category') {
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4 overflow-x-hidden w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -391,7 +391,7 @@ export default function OnboardingPage() {
   // PHASE 3: Grade Selection
   if (currentPhase === 'grade') {
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4 overflow-x-hidden w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -464,7 +464,7 @@ export default function OnboardingPage() {
     const currentQuestion = questions[currentStep];
     
     return (
-      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4">
+      <div className="min-h-screen bg-black via-purple-900 to-slate-900 flex items-center justify-center p-3 sm:p-4 overflow-x-hidden w-full">
         <motion.div
           key={currentStep}
           initial={{ opacity: 0, x: 20 }}

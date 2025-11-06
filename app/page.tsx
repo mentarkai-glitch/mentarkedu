@@ -28,8 +28,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-black">
       {/* Navigation */}
-      <nav className="border-b border-border bg-background/50 backdrop-blur-xl sticky top-0 z-30">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <nav className="border-b border-border bg-background/50 backdrop-blur-xl sticky top-0 z-30 w-full overflow-x-hidden">
+        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4 w-full max-w-full">
           <Link href="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="Mentark Quantum" className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg" />
             <span className="font-display text-lg sm:text-xl font-bold text-gradient-cyan">
@@ -65,7 +65,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 text-center w-full max-w-full overflow-x-hidden">
         <AnimatedText delay={0.2}>
           <Badge className="mb-4 border-yellow-500/30 bg-yellow-500/10 text-yellow-400 neon-glow">
             AI-Powered B2B Mentorship Platform
@@ -131,7 +131,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
+      <section id="features" className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 w-full max-w-full overflow-x-hidden">
         <div className="mb-12 sm:mb-16 text-center">
           <AnimatedText delay={1.4}>
             <Badge className="mb-4 border-yellow-500/30 bg-yellow-500/10 text-yellow-400 neon-glow text-xs sm:text-sm">
@@ -645,7 +645,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 w-full max-w-full overflow-x-hidden">
         <div className="mb-8 sm:mb-12 text-center">
           <h2 className="font-display text-3xl font-bold md:text-4xl">Simple, Transparent Pricing</h2>
           <p className="mt-4 text-slate-400">Choose the plan that fits your institute</p>
@@ -710,7 +710,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-12 sm:py-16 md:py-20 text-center">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 text-center w-full max-w-full overflow-x-hidden">
         <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 p-6 sm:p-8 md:p-12">
           <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold px-2">
             Ready to Transform Your Institute?
@@ -737,8 +737,8 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-slate-400">
+      <footer className="border-t border-border bg-card/50 py-8 w-full overflow-x-hidden">
+        <div className="container mx-auto px-3 sm:px-4 text-center text-sm text-slate-400 w-full max-w-full">
           <p>© 2025 Mentark Quantum. All rights reserved.</p>
           <p className="mt-2">Beyond marks. Toward meaning. 💙</p>
         </div>

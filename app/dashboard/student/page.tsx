@@ -243,25 +243,25 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black overflow-x-hidden w-full">
       {/* Top Header Bar */}
-      <header className="border-b-2 border-yellow-500/30 bg-black backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <h1 className="font-display text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+      <header className="border-b-2 border-yellow-500/30 bg-black backdrop-blur-xl w-full">
+        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8 w-full max-w-full">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+            <h1 className="font-display text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent truncate">
               <span className="hidden sm:inline">{getGreeting()}, </span>
               {user?.user_metadata?.first_name || 'Student'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 flex-shrink-0">
             <div className="hidden sm:flex items-center gap-2 text-yellow-200">
-              <TimeIcon className="w-4 h-4" />
-              <span className="text-xs sm:text-sm">{currentTime.toLocaleTimeString()}</span>
+              <TimeIcon className="w-4 h-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm hidden md:inline">{currentTime.toLocaleTimeString()}</span>
             </div>
             <Link href="/chat">
               <Button size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold text-xs sm:text-sm">
-                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1 md:mr-2" />
                 <span className="hidden sm:inline">Quick Chat</span>
               </Button>
             </Link>
@@ -269,7 +269,7 @@ export default function StudentDashboard() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 w-full max-w-full">
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -331,37 +331,40 @@ export default function StudentDashboard() {
           transition={{ delay: 0.1 }}
           className="mb-8"
         >
-          <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700">
+          <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700 overflow-hidden">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="w-full sm:w-auto">
-                  <div className="flex items-center gap-3 sm:gap-4 mb-2">
-                    <div className="text-3xl sm:text-4xl font-bold text-yellow-400">{stats.level}</div>
-                    <div>
-                      <div className="text-base sm:text-lg font-semibold text-white">Level {stats.level}</div>
-                      <div className="text-xs sm:text-sm text-slate-400">{stats.xp.toLocaleString()} XP</div>
+              <div className="flex flex-col gap-4 sm:gap-6">
+                {/* Level Section */}
+                <div className="w-full">
+                  <div className="flex items-center gap-3 sm:gap-4 mb-3">
+                    <div className="text-3xl sm:text-4xl font-bold text-yellow-400 flex-shrink-0">{stats.level}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base sm:text-lg font-semibold text-white truncate">Level {stats.level}</div>
+                      <div className="text-xs sm:text-sm text-slate-400 truncate">{stats.xp.toLocaleString()} XP</div>
                     </div>
                   </div>
-                  <div className="w-full sm:w-64">
+                  <div className="w-full">
                     <div className="flex justify-between text-xs sm:text-sm text-slate-400 mb-2">
-                      <span>Level {stats.level}</span>
-                      <span>{Math.round((stats.xp % 1000) / 10)}% to next level</span>
+                      <span className="truncate">Level {stats.level}</span>
+                      <span className="ml-2 flex-shrink-0">{Math.round((stats.xp % 1000) / 10)}% to next</span>
                     </div>
-                    <Progress value={(stats.xp % 1000) / 10} className="h-2" />
+                    <Progress value={(stats.xp % 1000) / 10} className="h-2 w-full" />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center w-full sm:w-auto">
-                  <div>
-                    <div className="text-xl sm:text-2xl font-bold text-cyan-400">{stats.streak}</div>
-                    <div className="text-xs text-slate-400">Day Streak</div>
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 text-center w-full border-t border-slate-700 pt-4">
+                  <div className="min-w-0">
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-cyan-400 truncate">{stats.streak}</div>
+                    <div className="text-xs text-slate-400 mt-1 break-words">Day Streak</div>
                   </div>
-                  <div>
-                    <div className="text-xl sm:text-2xl font-bold text-purple-400">{stats.arksActive}</div>
-                    <div className="text-xs text-slate-400">Active ARKs</div>
+                  <div className="min-w-0">
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-purple-400 truncate">{stats.arksActive}</div>
+                    <div className="text-xs text-slate-400 mt-1 break-words">Active ARKs</div>
                   </div>
-                  <div>
-                    <div className="text-xl sm:text-2xl font-bold text-green-400">{stats.weeklyProgress}%</div>
-                    <div className="text-xs text-slate-400">Weekly Progress</div>
+                  <div className="min-w-0">
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-green-400 truncate">{stats.weeklyProgress}%</div>
+                    <div className="text-xs text-slate-400 mt-1 break-words">Weekly Progress</div>
                   </div>
                 </div>
               </div>
@@ -371,16 +374,18 @@ export default function StudentDashboard() {
 
 
         {/* Tabbed Content */}
-        <Tabs defaultValue="overview" className="mb-8">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 glass border border-yellow-500/30 bg-slate-900/50 text-xs sm:text-sm">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="gamification">Gamification</TabsTrigger>
-            <TabsTrigger value="career-dna">Career DNA</TabsTrigger>
-            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-            <TabsTrigger value="peer-matching">Peer Matching</TabsTrigger>
-            <TabsTrigger value="risk-analysis">Risk Analysis</TabsTrigger>
-            <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="overview" className="mb-8 w-full">
+          <div className="w-full overflow-x-auto">
+            <TabsList className="inline-flex w-full min-w-max glass border border-yellow-500/30 bg-slate-900/50 text-xs sm:text-sm sm:grid sm:grid-cols-5 lg:grid-cols-7">
+              <TabsTrigger value="overview" className="flex-shrink-0 px-2 sm:px-4">Overview</TabsTrigger>
+              <TabsTrigger value="gamification" className="flex-shrink-0 px-2 sm:px-4">Gamification</TabsTrigger>
+              <TabsTrigger value="career-dna" className="flex-shrink-0 px-2 sm:px-4">Career DNA</TabsTrigger>
+              <TabsTrigger value="leaderboard" className="flex-shrink-0 px-2 sm:px-4">Leaderboard</TabsTrigger>
+              <TabsTrigger value="peer-matching" className="flex-shrink-0 px-2 sm:px-4">Peers</TabsTrigger>
+              <TabsTrigger value="risk-analysis" className="flex-shrink-0 px-2 sm:px-4">Risk</TabsTrigger>
+              <TabsTrigger value="sentiment" className="flex-shrink-0 px-2 sm:px-4">Sentiment</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview">

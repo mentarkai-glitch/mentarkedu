@@ -122,31 +122,35 @@ export default function StudyAnalyzerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
+    <div className="min-h-screen bg-black p-3 sm:p-4 md:p-8 overflow-x-hidden">
+      <div className="container mx-auto max-w-6xl w-full">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <Target className="w-8 h-8 text-yellow-400" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4 sm:mb-6">
+            <div className="p-2 sm:p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30 flex-shrink-0">
+              <Target className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400" />
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent break-words">
                 Study Analyzer
               </h1>
-              <p className="text-slate-400">AI-powered gap detection & personalized study plans</p>
+              <p className="text-xs sm:text-sm md:text-base text-slate-400 break-words">AI-powered gap detection & personalized study plans</p>
             </div>
           </div>
 
           <Tabs value={tab} onValueChange={setTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-yellow-500/30">
-              <TabsTrigger value="analyze">📝 Upload Materials</TabsTrigger>
-              <TabsTrigger value="gaps" disabled={gaps.length === 0}>
-                🎯 Knowledge Gaps
-              </TabsTrigger>
-              <TabsTrigger value="plan" disabled={!plan}>
-                📅 Study Plan
-              </TabsTrigger>
-            </TabsList>
+            <div className="w-full overflow-x-auto">
+              <TabsList className="inline-flex w-full min-w-max bg-slate-900/50 border border-yellow-500/30 sm:grid sm:grid-cols-3">
+                <TabsTrigger value="analyze" className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4">
+                  <span className="hidden sm:inline">📝 </span>Upload
+                </TabsTrigger>
+                <TabsTrigger value="gaps" disabled={gaps.length === 0} className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4">
+                  <span className="hidden sm:inline">🎯 </span>Gaps
+                </TabsTrigger>
+                <TabsTrigger value="plan" disabled={!plan} className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4">
+                  <span className="hidden sm:inline">📅 </span>Plan
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="analyze" className="mt-6">
               <Card className="bg-slate-900/50 border-yellow-500/30">
@@ -155,24 +159,24 @@ export default function StudyAnalyzerPage() {
                   <CardDescription>Add your notes, syllabus, or textbook content for AI analysis</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="subject">Subject</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="w-full min-w-0">
+                      <Label htmlFor="subject" className="text-sm">Subject</Label>
                       <Input
                         id="subject"
                         placeholder="e.g., Physics, Math"
                         value={currentMaterial.subject}
                         onChange={(e) => setCurrentMaterial({ ...currentMaterial, subject: e.target.value })}
-                        className="bg-slate-800 border-slate-700"
+                        className="bg-slate-800 border-slate-700 w-full text-sm sm:text-base"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="type">Type</Label>
+                    <div className="w-full min-w-0">
+                      <Label htmlFor="type" className="text-sm">Type</Label>
                       <Select
                         value={currentMaterial.type}
                         onValueChange={(value) => setCurrentMaterial({ ...currentMaterial, type: value })}
                       >
-                        <SelectTrigger className="bg-slate-800 border-slate-700">
+                        <SelectTrigger className="bg-slate-800 border-slate-700 w-full text-sm sm:text-base">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
