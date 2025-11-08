@@ -276,7 +276,9 @@ export interface RiskPrediction {
   recommended_interventions: any[];
   early_warning_flags: string[];
   model_version: string;
+  model_source?: string;
   confidence_score: number;
+  metadata?: Record<string, any>;
 }
 
 export interface RiskAlert {
@@ -337,6 +339,141 @@ export interface EventSentimentCorrelation {
   occurrence_count: number;
   typical_delay_hours: number;
   consistency_score: number;
+}
+
+// ==================== PHASE 7 SIDEBAR TYPES ====================
+
+export type AgendaEnergyTarget = "low" | "medium" | "high";
+export type AgendaStatus = "planned" | "in_progress" | "completed" | "skipped";
+export type AgendaSource = "manual" | "ai" | "mentor";
+
+export interface DailyAgendaItem {
+  id: string;
+  student_id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  start_at?: string;
+  end_at?: string;
+  energy_target?: AgendaEnergyTarget;
+  priority: number;
+  status: AgendaStatus;
+  source: AgendaSource;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TaskDependencyType = "blocking" | "supporting";
+
+export interface DailyTaskDependency {
+  id: string;
+  agenda_item_id: string;
+  depends_on_item_id: string;
+  dependency_type: TaskDependencyType;
+  created_at: string;
+}
+
+export type EnergySnapshotSource = "checkin" | "sensor" | "manual";
+
+export interface EnergySnapshot {
+  id: string;
+  student_id: string;
+  captured_at: string;
+  energy_score: number;
+  focus_score?: number;
+  notes?: string;
+  source: EnergySnapshotSource;
+}
+
+export interface ProductivityMetric {
+  id: string;
+  student_id: string;
+  metric_date: string;
+  planned_minutes: number;
+  actual_minutes: number;
+  deep_work_minutes: number;
+  context_switches: number;
+  ai_suggestions_accepted: number;
+  ai_suggestions_rejected: number;
+  created_at: string;
+}
+
+export type StudySessionType = "solo" | "group" | "mentor";
+
+export interface StudySession {
+  id: string;
+  student_id: string;
+  ark_id?: string;
+  session_type: StudySessionType;
+  material_type?: string;
+  started_at: string;
+  ended_at?: string;
+  notes?: string;
+  tags?: string[];
+  created_at: string;
+}
+
+export interface StudyPerformanceSnapshot {
+  id: string;
+  student_id: string;
+  session_id?: string;
+  snapshot_date: string;
+  engagement_score?: number;
+  retention_score?: number;
+  completion_rate?: number;
+  difficulty_rating?: number;
+  ml_confidence?: number;
+  created_at: string;
+}
+
+export interface LearningPathNode {
+  id: string;
+  student_id: string;
+  topic_id: string;
+  topic_name?: string;
+  mastery_level: number;
+  last_assessed_at?: string;
+  recommended_next?: any;
+  created_at: string;
+}
+
+export interface StudyPathProgressEntry {
+  topicId: string;
+  topicName?: string;
+  masteryLevel: number;
+  lastAssessedAt?: string;
+  recommendedNext?: any;
+}
+
+export type RecommendationAction = "accepted" | "snoozed" | "dismissed" | "ignored";
+
+export interface ContentRecommendation {
+  id: string;
+  student_id: string;
+  resource_id?: string;
+  resource_type?: string;
+  source?: string;
+  score?: number;
+  presented_at: string;
+  action?: RecommendationAction;
+  feedback_notes?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
+export type SpacedRepetitionOrigin = "study_session" | "practice_questions" | "manual";
+
+export interface SpacedRepetitionQueueItem {
+  id: string;
+  student_id: string;
+  card_identifier: string;
+  origin: SpacedRepetitionOrigin;
+  due_at: string;
+  interval_days: number;
+  ease_factor: number;
+  success_streak: number;
+  last_reviewed_at?: string;
+  created_at: string;
 }
 
 export interface SentimentAnomaly {

@@ -1,14 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ClipboardCheck, Building2, GraduationCap, FileText, CheckCircle, AlertCircle, Sparkles, Download } from 'lucide-react';
+import {
+  ClipboardCheck,
+  Building2,
+  GraduationCap,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Sparkles,
+  Download,
+  Share2,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface College {
   id: string;
@@ -30,6 +44,10 @@ interface FormData {
   ai_recommendations: string[];
 }
 
+const FORM_STORAGE_KEY = 'mentark-form-filler-selection-v1';
+const HISTORY_STORAGE_KEY = 'mentark-form-filler-history-v1';
+const MAX_HISTORY = 5;
+
 export default function FormFillerPage() {
   const [loading, setLoading] = useState(false);
   const [colleges, setColleges] = useState<College[]>([]);
@@ -38,16 +56,63 @@ export default function FormFillerPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [formData, setFormData] = useState<FormData | null>(null);
   const [error, setError] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
+  const [history, setHistory] = useState<Array<{ collegeId: string; courseId: string; timestamp: string }>>([]);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadColleges();
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(FORM_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as { collegeId: string; courseId: string };
+          setSelectedCollege(parsed.collegeId || '');
+          setSelectedCourse(parsed.courseId || '');
+        }
+        const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        }
+      } catch (err) {
+        console.warn('Failed to restore form filler state', err);
+      }
+      const updateStatus = () => setIsOnline(navigator.onLine);
+      updateStatus();
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      return () => {
+        window.removeEventListener('online', updateStatus);
+        window.removeEventListener('offline', updateStatus);
+      };
+    }
   }, []);
 
   useEffect(() => {
     if (selectedCollege) {
       loadCourses();
     }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        FORM_STORAGE_KEY,
+        JSON.stringify({ collegeId: selectedCollege, courseId: selectedCourse })
+      );
+    }
   }, [selectedCollege]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        FORM_STORAGE_KEY,
+        JSON.stringify({ collegeId: selectedCollege, courseId: selectedCourse })
+      );
+    }
+  }, [selectedCourse]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+  }, [history]);
 
   const loadColleges = async () => {
     try {
@@ -62,6 +127,7 @@ export default function FormFillerPage() {
   };
 
   const loadCourses = async () => {
+    if (!isOnline) return;
     try {
       const response = await fetch(`/api/colleges/${selectedCollege}/courses`);
       const data = await response.json();
@@ -77,6 +143,10 @@ export default function FormFillerPage() {
   const handleFillForm = async () => {
     if (!selectedCollege || !selectedCourse) {
       setError('Please select both college and course');
+      return;
+    }
+    if (!isOnline) {
+      setError('You appear to be offline. Reconnect to generate form data.');
       return;
     }
 
@@ -108,14 +178,57 @@ export default function FormFillerPage() {
       
       if (data.success) {
         setFormData(data.data);
+        setHistory((prev) => [
+          { collegeId: selectedCollege, courseId: selectedCourse, timestamp: new Date().toISOString() },
+          ...prev.filter((item) => !(item.collegeId === selectedCollege && item.courseId === selectedCourse)),
+        ].slice(0, MAX_HISTORY));
+        toast.success('Form data ready');
       } else {
         setError(data.message || 'Failed to generate form data');
       }
     } catch (error) {
       console.error('Form fill error:', error);
       setError('Failed to fill form. Please try again.');
+      toast.error('Unable to generate form data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (!formData) {
+      toast.info('No form data yet', {
+        description: 'Generate a form before exporting.',
+      });
+      return;
+    }
+    setExporting(true);
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        college: colleges.find((c) => c.id === selectedCollege)?.name,
+        course: courses.find((c) => c.id === selectedCourse)?.name,
+        data: formData,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'mentark-form-filler.json';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      toast.success('Export ready', {
+        description: 'Form helper JSON saved to your downloads.',
+      });
+    } catch (err) {
+      console.error('Export form data error', err);
+      toast.error('Export failed', {
+        description: 'Please retry after checking your connection.',
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -123,15 +236,35 @@ export default function FormFillerPage() {
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <ClipboardCheck className="w-8 h-8 text-yellow-400" />
+          <OfflineBanner
+            isOnline={isOnline}
+            message="You are offline. Form data will be cached until you reconnect."
+            className="mb-4"
+          />
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
+                <ClipboardCheck className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                  Form Filler
+                </h1>
+                <p className="text-slate-400">AI-powered college admission form assistant</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                Form Filler
-              </h1>
-              <p className="text-slate-400">AI-powered college admission form assistant</p>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+              {isOnline ? (
+                <>
+                  <Wifi className="h-4 w-4 text-green-400" />
+                  <span>Connected to form services</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-4 w-4 text-red-400" />
+                  <span className="text-red-300">Offline &mdash; selections are saved locally</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -142,6 +275,17 @@ export default function FormFillerPage() {
               <CardDescription>Choose a college and course to auto-fill admission forms</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {history.length > 0 && (
+                <div className="text-xs text-slate-500 flex flex-wrap gap-2">
+                  <span>Recent runs:</span>
+                  {history.map((item) => (
+                    <Badge key={item.timestamp} variant="outline" className="text-slate-300">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block text-slate-300">
@@ -312,12 +456,40 @@ export default function FormFillerPage() {
 
               {/* Actions */}
               <div className="flex gap-4">
-                <Button className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download PDF
+                <Button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                >
+                  {exporting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2" />
+                      Preparing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export JSON
+                    </>
+                  )}
                 </Button>
-                <Button variant="outline" className="flex-1 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10">
-                  Share Form
+                <Button
+                  variant="outline"
+                  className="flex-1 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && navigator.share) {
+                      navigator
+                        .share({
+                          title: 'Mentark Form Data',
+                          text: 'AI-generated form plan ready to review.',
+                        })
+                        .catch(() => {});
+                    } else {
+                      toast('Share not supported on this device');
+                    }
+                  }}
+                >
+                  <Share2 className="w-4 h-4 mr-2" /> Share Overview
                 </Button>
               </div>
             </div>

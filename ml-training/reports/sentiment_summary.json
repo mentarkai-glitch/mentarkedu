@@ -1,0 +1,8 @@
+{
+  "model_type": "sentiment",
+  "label_type": "sentiment",
+  "timestamp": "2025-11-08T04:28:42.710360",
+  "samples": 0,
+  "status": "skipped",
+  "reason": "Insufficient data: need at least 200 samples, found 0."
+}

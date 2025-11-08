@@ -168,10 +168,9 @@ export default function DashboardPage() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="font-display text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4"
             >
-              <AnimatedText 
-                children={`Welcome to your Quantum Journey, ${displayName}!`}
-                className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent"
-              />
+              <AnimatedText className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+                {`Welcome to your Quantum Journey, ${displayName}!`}
+              </AnimatedText>
             </motion.h1>
             
             <motion.p

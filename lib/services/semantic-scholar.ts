@@ -3,9 +3,11 @@
  * Academic paper search and citation
  */
 
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 
 const SEMANTIC_SCHOLAR_API_BASE = "https://api.semanticscholar.org/graph/v1";
+const SEMANTIC_SCHOLAR_API_KEY = process.env.SEMANTIC_SCHOLAR_API_KEY;
+const RATE_LIMIT_MS = 1000; // 1 request per second as per Semantic Scholar quota
 
 export interface SemanticScholarPaper {
   paperId: string;
@@ -28,6 +30,40 @@ export interface SemanticScholarResult {
 }
 
 export class SemanticScholarService {
+  private readonly client: AxiosInstance;
+  private lastRequestTime = 0;
+
+  constructor() {
+    this.client = axios.create({
+      baseURL: SEMANTIC_SCHOLAR_API_BASE,
+      headers: SEMANTIC_SCHOLAR_API_KEY
+        ? { "x-api-key": SEMANTIC_SCHOLAR_API_KEY }
+        : undefined,
+    });
+
+    if (!SEMANTIC_SCHOLAR_API_KEY) {
+      console.warn(
+        "⚠️ Semantic Scholar API key missing. Set SEMANTIC_SCHOLAR_API_KEY to enable academic search."
+      );
+    }
+  }
+
+  private async throttleRequests() {
+    const now = Date.now();
+    const timeSinceLast = now - this.lastRequestTime;
+
+    if (timeSinceLast < RATE_LIMIT_MS) {
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_MS - timeSinceLast));
+    }
+
+    this.lastRequestTime = Date.now();
+  }
+
+  private async get<T = any>(path: string, params?: Record<string, unknown>) {
+    await this.throttleRequests();
+    return this.client.get<T>(path, { params });
+  }
+
   /**
    * Search for academic papers
    */
@@ -46,16 +82,15 @@ export class SemanticScholarService {
     const sortBy = options?.sortBy || "relevance";
 
     try {
-      const response = await axios.get(`${SEMANTIC_SCHOLAR_API_BASE}/paper/search`, {
-        params: {
-          query,
-          limit,
-          fields: fields.join(","),
-          year: options?.yearMin || options?.yearMax
+      const response = await this.get("/paper/search", {
+        query,
+        limit,
+        fields: fields.join(","),
+        year:
+          options?.yearMin || options?.yearMax
             ? `${options.yearMin || ""}-${options.yearMax || ""}`
             : undefined,
-          sort: sortBy,
-        },
+        sort: sortBy,
       });
 
       const papers = response.data.data || [];
@@ -86,14 +121,10 @@ export class SemanticScholarService {
    */
   async getPaper(paperId: string): Promise<SemanticScholarPaper | null> {
     try {
-      const response = await axios.get(
-        `${SEMANTIC_SCHOLAR_API_BASE}/paper/${paperId}`,
-        {
-          params: {
-            fields: "title,abstract,year,authors,url,citationCount,influentialCitationCount,venue",
-          },
-        }
-      );
+      const response = await this.get(`/paper/${paperId}`, {
+        fields:
+          "title,abstract,year,authors,url,citationCount,influentialCitationCount,venue",
+      });
 
       const paper = response.data;
       return {
@@ -118,15 +149,10 @@ export class SemanticScholarService {
    */
   async getCitations(paperId: string, limit: number = 20): Promise<SemanticScholarPaper[]> {
     try {
-      const response = await axios.get(
-        `${SEMANTIC_SCHOLAR_API_BASE}/paper/${paperId}/citations`,
-        {
-          params: {
-            limit,
-            fields: "title,abstract,year,authors,url,citationCount",
-          },
-        }
-      );
+      const response = await this.get(`/paper/${paperId}/citations`, {
+        limit,
+        fields: "title,abstract,year,authors,url,citationCount",
+      });
 
       const citations = response.data.data || [];
       return citations.map((citation: any) => ({
@@ -150,15 +176,10 @@ export class SemanticScholarService {
    */
   async getReferences(paperId: string, limit: number = 20): Promise<SemanticScholarPaper[]> {
     try {
-      const response = await axios.get(
-        `${SEMANTIC_SCHOLAR_API_BASE}/paper/${paperId}/references`,
-        {
-          params: {
-            limit,
-            fields: "title,abstract,year,authors,url,citationCount",
-          },
-        }
-      );
+      const response = await this.get(`/paper/${paperId}/references`, {
+        limit,
+        fields: "title,abstract,year,authors,url,citationCount",
+      });
 
       const references = response.data.data || [];
       return references.map((ref: any) => ({

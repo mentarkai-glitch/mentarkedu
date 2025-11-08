@@ -1,0 +1,8 @@
+{
+  "model_type": "difficulty",
+  "label_type": "ark_difficulty",
+  "timestamp": "2025-11-08T04:28:42.571701",
+  "samples": 0,
+  "status": "skipped",
+  "reason": "Insufficient data: need at least 50 samples, found 0."
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { PostHogProvider } from "@/components/providers/PostHogProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -52,7 +53,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body className="font-sans antialiased">
-        {children}
+        <PostHogProvider>{children}</PostHogProvider>
         <Toaster position="top-right" richColors />
       </body>
     </html>

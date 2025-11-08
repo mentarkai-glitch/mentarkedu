@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Target, Upload, FileText, Calendar, TrendingUp, Brain, Download, Clock } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Target, Upload, FileText, Calendar, Brain, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 interface KnowledgeGap {
   topic: string;
@@ -40,17 +40,13 @@ interface StudyPlan {
   expectedOutcome: string;
 }
 
-export default function StudyAnalyzerPage() {
+export default function StudyWorkspacePage() {
   const [tab, setTab] = useState('analyze');
   const [loading, setLoading] = useState(false);
-  
-  // Analyze state
   const [materials, setMaterials] = useState<Array<{ content: string; type: string; subject: string }>>([]);
   const [currentMaterial, setCurrentMaterial] = useState({ content: '', type: 'notes', subject: '' });
   const [gaps, setGaps] = useState<KnowledgeGap[]>([]);
   const [summary, setSummary] = useState('');
-  
-  // Plan state
   const [plan, setPlan] = useState<StudyPlan | null>(null);
   const [constraints, setConstraints] = useState({
     availableHoursPerDay: 4,
@@ -60,14 +56,14 @@ export default function StudyAnalyzerPage() {
 
   const handleAddMaterial = () => {
     if (currentMaterial.content && currentMaterial.subject) {
-      setMaterials([...materials, currentMaterial]);
+      setMaterials((prev) => [...prev, currentMaterial]);
       setCurrentMaterial({ content: '', type: 'notes', subject: '' });
     }
   };
 
   const handleAnalyzeGaps = async () => {
     if (materials.length === 0) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch('/api/study-analyzer/gaps', {
@@ -75,7 +71,7 @@ export default function StudyAnalyzerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ materials }),
       });
-      
+
       const data = await response.json();
       if (data.success) {
         setGaps(data.data.gaps);
@@ -90,7 +86,7 @@ export default function StudyAnalyzerPage() {
 
   const handleGeneratePlan = async () => {
     if (gaps.length === 0) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch('/api/study-analyzer/plan', {
@@ -98,7 +94,7 @@ export default function StudyAnalyzerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gaps, constraints }),
       });
-      
+
       const data = await response.json();
       if (data.success) {
         setPlan(data.data);
@@ -113,11 +109,16 @@ export default function StudyAnalyzerPage() {
 
   const getImportanceColor = (importance: string) => {
     switch (importance) {
-      case 'critical': return 'bg-red-500/20 text-red-400 border-red-500/50';
-      case 'high': return 'bg-orange-500/20 text-orange-400 border-orange-500/50';
-      case 'medium': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
-      case 'low': return 'bg-green-500/20 text-green-400 border-green-500/50';
-      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+      case 'critical':
+        return 'bg-red-500/20 text-red-400 border-red-500/50';
+      case 'high':
+        return 'bg-orange-500/20 text-orange-400 border-orange-500/50';
+      case 'medium':
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
+      case 'low':
+        return 'bg-green-500/20 text-green-400 border-green-500/50';
+      default:
+        return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
     }
   };
 
@@ -131,9 +132,11 @@ export default function StudyAnalyzerPage() {
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent break-words">
-                Study Analyzer
+                Study Workspace
               </h1>
-              <p className="text-xs sm:text-sm md:text-base text-slate-400 break-words">AI-powered gap detection & personalized study plans</p>
+              <p className="text-xs sm:text-sm md:text-base text-slate-400 break-words">
+                Upload materials, identify knowledge gaps, and generate AI-guided study plans.
+              </p>
             </div>
           </div>
 
@@ -156,22 +159,26 @@ export default function StudyAnalyzerPage() {
               <Card className="bg-slate-900/50 border-yellow-500/30">
                 <CardHeader>
                   <CardTitle className="text-yellow-400">Step 1: Upload Your Study Materials</CardTitle>
-                  <CardDescription>Add your notes, syllabus, or textbook content for AI analysis</CardDescription>
+                  <CardDescription>Add your notes, syllabus, or textbook content for AI analysis.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="w-full min-w-0">
-                      <Label htmlFor="subject" className="text-sm">Subject</Label>
+                      <Label htmlFor="subject" className="text-sm">
+                        Subject
+                      </Label>
                       <Input
                         id="subject"
                         placeholder="e.g., Physics, Math"
                         value={currentMaterial.subject}
-                        onChange={(e) => setCurrentMaterial({ ...currentMaterial, subject: e.target.value })}
+                        onChange={(event) => setCurrentMaterial({ ...currentMaterial, subject: event.target.value })}
                         className="bg-slate-800 border-slate-700 w-full text-sm sm:text-base"
                       />
                     </div>
                     <div className="w-full min-w-0">
-                      <Label htmlFor="type" className="text-sm">Type</Label>
+                      <Label htmlFor="type" className="text-sm">
+                        Type
+                      </Label>
                       <Select
                         value={currentMaterial.type}
                         onValueChange={(value) => setCurrentMaterial({ ...currentMaterial, type: value })}
@@ -196,7 +203,7 @@ export default function StudyAnalyzerPage() {
                       placeholder="Paste your study content here..."
                       rows={6}
                       value={currentMaterial.content}
-                      onChange={(e) => setCurrentMaterial({ ...currentMaterial, content: e.target.value })}
+                      onChange={(event) => setCurrentMaterial({ ...currentMaterial, content: event.target.value })}
                       className="bg-slate-800 border-slate-700 font-mono text-sm"
                     />
                   </div>
@@ -212,20 +219,19 @@ export default function StudyAnalyzerPage() {
                   {materials.length > 0 && (
                     <div className="space-y-2">
                       <Label>Added Materials ({materials.length})</Label>
-                      {materials.map((mat, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700">
+                      {materials.map((material, index) => (
+                        <div
+                          key={`${material.subject}-${index}`}
+                          className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700"
+                        >
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4 text-yellow-400" />
-                            <span className="text-sm font-medium">{mat.subject}</span>
+                            <span className="text-sm font-medium">{material.subject}</span>
                             <Badge variant="outline" className="text-xs">
-                              {mat.type}
+                              {material.type}
                             </Badge>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setMaterials(materials.filter((_, i) => i !== idx))}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => setMaterials(materials.filter((_, i) => i !== index))}>
                             Remove
                           </Button>
                         </div>
@@ -249,20 +255,16 @@ export default function StudyAnalyzerPage() {
               <Card className="bg-slate-900/50 border-yellow-500/30">
                 <CardHeader>
                   <CardTitle className="text-yellow-400">Step 2: Knowledge Gap Analysis</CardTitle>
-                  <CardDescription>{summary || 'Review identified gaps and generate your study plan'}</CardDescription>
+                  <CardDescription>{summary || 'Review identified gaps and generate your study plan.'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {gaps.map((gap, idx) => (
-                    <div key={idx} className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                  {gaps.map((gap, index) => (
+                    <div key={`${gap.topic}-${index}`} className="p-4 bg-slate-800 rounded-lg border border-slate-700">
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold text-lg text-white">{gap.topic}</h3>
-                        <Badge className={getImportanceColor(gap.importance)}>
-                          {gap.importance}
-                        </Badge>
+                        <Badge className={getImportanceColor(gap.importance)}>{gap.importance}</Badge>
                       </div>
-                      <p className="text-sm text-slate-400 mb-2">
-                        ⏱️ {gap.estimatedTime} • Priority: {gap.priority}
-                      </p>
+                      <p className="text-sm text-slate-400 mb-2">⏱️ {gap.estimatedTime} • Priority: {gap.priority}</p>
                       {gap.dependencies && gap.dependencies.length > 0 && (
                         <div className="mt-2">
                           <span className="text-xs text-slate-500">Prerequisites: </span>
@@ -272,7 +274,7 @@ export default function StudyAnalyzerPage() {
                     </div>
                   ))}
 
-                  <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-lg border border-amber-500/30">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-lg border border-amber-500/30">
                     <div>
                       <Label>Hours/Day</Label>
                       <Input
@@ -280,7 +282,7 @@ export default function StudyAnalyzerPage() {
                         min={1}
                         max={12}
                         value={constraints.availableHoursPerDay}
-                        onChange={(e) => setConstraints({ ...constraints, availableHoursPerDay: parseInt(e.target.value) })}
+                        onChange={(event) => setConstraints({ ...constraints, availableHoursPerDay: parseInt(event.target.value, 10) })}
                         className="bg-slate-800 border-slate-700"
                       />
                     </div>
@@ -288,7 +290,7 @@ export default function StudyAnalyzerPage() {
                       <Label>Urgency</Label>
                       <Select
                         value={constraints.urgency}
-                        onValueChange={(value: any) => setConstraints({ ...constraints, urgency: value })}
+                        onValueChange={(value: 'low' | 'medium' | 'high') => setConstraints({ ...constraints, urgency: value })}
                       >
                         <SelectTrigger className="bg-slate-800 border-slate-700">
                           <SelectValue />
@@ -341,8 +343,8 @@ export default function StudyAnalyzerPage() {
                     </CardHeader>
                   </Card>
 
-                  {plan.topics.map((day, idx) => (
-                    <Card key={idx} className="bg-slate-900/50 border-yellow-500/30">
+                  {plan.topics.map((day, index) => (
+                    <Card key={`plan-day-${day.day}-${index}`} className="bg-slate-900/50 border-yellow-500/30">
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-yellow-400">Day {day.day}</CardTitle>
@@ -357,8 +359,8 @@ export default function StudyAnalyzerPage() {
                         <div>
                           <Label className="text-sm font-semibold mb-2 block">Topics to Cover</Label>
                           <div className="flex flex-wrap gap-2">
-                            {day.topics.map((topic, tIdx) => (
-                              <Badge key={tIdx} variant="outline" className="bg-slate-800">
+                            {day.topics.map((topic, topicIndex) => (
+                              <Badge key={`${topic}-${topicIndex}`} variant="outline" className="bg-slate-800">
                                 {topic}
                               </Badge>
                             ))}
@@ -369,9 +371,9 @@ export default function StudyAnalyzerPage() {
                           <div>
                             <Label className="text-sm font-semibold mb-2 block">📚 Recommended Resources</Label>
                             <div className="space-y-2">
-                              {day.resources.map((resource, rIdx) => (
+                              {day.resources.map((resource, resourceIndex) => (
                                 <div
-                                  key={rIdx}
+                                  key={`${resource.title}-${resourceIndex}`}
                                   className="flex items-center gap-2 p-2 bg-slate-800 rounded border border-slate-700"
                                 >
                                   <FileText className="w-4 h-4 text-yellow-400" />
@@ -401,8 +403,10 @@ export default function StudyAnalyzerPage() {
                     </CardHeader>
                     <CardContent>
                       <ul className="list-disc list-inside space-y-2 text-slate-300">
-                        {plan.recommendations.map((rec, idx) => (
-                          <li key={idx} className="text-sm">{rec}</li>
+                        {plan.recommendations.map((recommendation, index) => (
+                          <li key={`${recommendation}-${index}`} className="text-sm">
+                            {recommendation}
+                          </li>
                         ))}
                       </ul>
                     </CardContent>
@@ -411,9 +415,27 @@ export default function StudyAnalyzerPage() {
               )}
             </TabsContent>
           </Tabs>
+
+          <Card className="mt-8 bg-slate-900/60 border-yellow-500/20">
+            <CardHeader>
+              <CardTitle className="text-yellow-400">Need deeper analytics?</CardTitle>
+              <CardDescription>
+                Visit the Study Analyzer for live signals, session logging, and AI recommendations tailored to your current path.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <p className="text-sm text-slate-400 flex-1 min-w-[200px]">
+                Log deep-work blocks, monitor mastery trends, and let Mentark suggest your next move.
+              </p>
+              <Link href="/dashboard/student/study-analyzer">
+                <Button className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-semibold hover:from-yellow-400 hover:to-orange-400">
+                  Open Study Analyzer
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         </motion.div>
       </div>
     </div>
   );
 }
-

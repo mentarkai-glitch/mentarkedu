@@ -1,8 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileQuestion, Plus, Trash2, Sparkles, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
+import {
+  FileQuestion,
+  Plus,
+  Trash2,
+  Sparkles,
+  CheckCircle,
+  XCircle,
+  Lightbulb,
+  Target,
+  AlertTriangle,
+  History,
+  Wifi,
+  WifiOff,
+  RefreshCcw,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface Mistake {
   topic: string;
@@ -26,10 +41,43 @@ interface PracticeQuestion {
   difficulty: string;
 }
 
+type DifficultyLevel = 'easy' | 'medium' | 'hard';
+
+const MISTAKE_STORAGE_KEY = 'mentark-practice-mistakes-v1';
+const LAST_RESULTS_KEY = 'mentark-practice-results-v1';
+
+const QUICK_MISTAKE_TEMPLATES: Array<Mistake & { difficulty?: DifficultyLevel }> = [
+  {
+    topic: 'Quadratic Equations',
+    question: 'Solve x^2 - 5x + 6 = 0',
+    attemptedAnswer: 'x = 3 only',
+    correctAnswer: 'x = 2 or x = 3',
+    difficulty: 'easy',
+  },
+  {
+    topic: 'Photosynthesis',
+    question: 'Name the primary pigment responsible for photosynthesis.',
+    attemptedAnswer: 'Chlorophyll-b',
+    correctAnswer: 'Chlorophyll-a',
+    difficulty: 'medium',
+  },
+  {
+    topic: 'Dynamic Programming',
+    question: 'Explain why memoization reduces time complexity for Fibonacci.',
+    attemptedAnswer: 'Because we use recursion',
+    correctAnswer: 'Memoization caches results to avoid recomputing overlapping subproblems',
+    difficulty: 'hard',
+  },
+];
+
 export default function PracticeQuestionsPage() {
   const [tab, setTab] = useState('mistakes');
   const [loading, setLoading] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+  const [questionCount, setQuestionCount] = useState(5);
+  const [isOnline, setIsOnline] = useState(true);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+   
   // Mistakes state
   const [mistakes, setMistakes] = useState<Mistake[]>([]);
   const [currentMistake, setCurrentMistake] = useState<Mistake>({
@@ -43,41 +91,168 @@ export default function PracticeQuestionsPage() {
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
+  const [pastResults, setPastResults] = useState<PracticeQuestion[]>([]);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+  const [recentSummary, setRecentSummary] = useState<{ correct: number; total: number; accuracy: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const storedMistakes = localStorage.getItem(MISTAKE_STORAGE_KEY);
+      if (storedMistakes) {
+        setMistakes(JSON.parse(storedMistakes) as Mistake[]);
+      }
+
+      const storedResults = localStorage.getItem(LAST_RESULTS_KEY);
+      if (storedResults) {
+        const parsed = JSON.parse(storedResults) as {
+          questions: PracticeQuestion[];
+          generatedAt: string;
+          summary?: { correct: number; total: number; accuracy: number };
+        };
+        setPastResults(parsed.questions);
+        setGeneratedAt(parsed.generatedAt);
+        if (parsed.summary) {
+          setRecentSummary(parsed.summary);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to restore practice state', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(MISTAKE_STORAGE_KEY, JSON.stringify(mistakes));
+    } catch (err) {
+      console.warn('Failed to persist mistakes', err);
+    }
+  }, [mistakes]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || questions.length === 0 || !showResults || !scoreSummary) return;
+    try {
+      localStorage.setItem(
+        LAST_RESULTS_KEY,
+        JSON.stringify({
+          questions,
+          generatedAt: generatedAt ?? new Date().toISOString(),
+          summary: scoreSummary,
+        })
+      );
+    } catch (err) {
+      console.warn('Failed to persist results', err);
+    }
+  }, [questions, showResults, generatedAt, scoreSummary]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateStatus = () => setIsOnline(navigator.onLine);
+    updateStatus();
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    return () => {
+      window.removeEventListener('online', updateStatus);
+      window.removeEventListener('offline', updateStatus);
+    };
+  }, []);
+
+  const scoreSummary = useMemo(() => {
+    if (!showResults || questions.length === 0) return null;
+    const correct = questions.reduce((acc, q, idx) => {
+      const answer = selectedAnswers[idx];
+      return answer === q.correctAnswer ? acc + 1 : acc;
+    }, 0);
+    const accuracy = Math.round((correct / questions.length) * 100);
+    return { correct, total: questions.length, accuracy };
+  }, [questions, selectedAnswers, showResults]);
+
+  const displaySummary = scoreSummary ?? recentSummary;
 
   const handleAddMistake = () => {
-    if (currentMistake.topic && currentMistake.question && currentMistake.correctAnswer) {
-      setMistakes([...mistakes, currentMistake]);
-      setCurrentMistake({ topic: '', question: '', attemptedAnswer: '', correctAnswer: '' });
+    if (!currentMistake.topic || !currentMistake.question || !currentMistake.correctAnswer) {
+      setError('Please fill in topic, question, and correct answer before adding.');
+      return;
     }
+
+    setError(null);
+    setMistakes([...mistakes, currentMistake]);
+    setCurrentMistake({ topic: '', question: '', attemptedAnswer: '', correctAnswer: '' });
+  };
+
+  const handleQuickTemplate = (template: Mistake) => {
+    setCurrentMistake({
+      topic: template.topic,
+      question: template.question,
+      attemptedAnswer: template.attemptedAnswer,
+      correctAnswer: template.correctAnswer,
+    });
   };
 
   const handleGenerateQuestions = async () => {
-    if (mistakes.length === 0) return;
-    
+    if (mistakes.length === 0) {
+      setError('Add a mistake so we know what to practise.');
+      return;
+    }
+    if (!isOnline) {
+      setError('You are offline. Reconnect to generate questions.');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch('/api/study-analyzer/practice-questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mistakes, count: 5 }),
+        credentials: 'include',
+        body: JSON.stringify({ mistakes, count: questionCount }),
       });
       
+      if (!response.ok) {
+        throw new Error(`Practice service returned ${response.status}`);
+      }
+
       const data = await response.json();
       if (data.success) {
         setQuestions(data.data.questions);
         setTab('practice');
         setSelectedAnswers({});
         setShowResults(false);
+        setGeneratedAt(new Date().toISOString());
+        setPastResults(data.data.questions);
+        setRecentSummary(null);
       }
     } catch (error) {
       console.error('Question generation error:', error);
+      setError('We hit a snag generating practice. Try again in a moment.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmitAnswers = () => {
+    if (questions.length === 0) return;
+    const answered = Object.keys(selectedAnswers).length === questions.length;
+    if (!answered) {
+      setError('Answer all questions before submitting.');
+      return;
+    }
+    setError(null);
     setShowResults(true);
+    const correct = questions.reduce((acc, q, idx) => {
+      const answer = selectedAnswers[idx];
+      return answer === q.correctAnswer ? acc + 1 : acc;
+    }, 0);
+    const summary = {
+      correct,
+      total: questions.length,
+      accuracy: Math.round((correct / questions.length) * 100),
+    };
+    setRecentSummary(summary);
+    setGeneratedAt((prev) => prev ?? new Date().toISOString());
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -93,23 +268,111 @@ export default function PracticeQuestionsPage() {
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <FileQuestion className="w-8 h-8 text-yellow-400" />
+          <OfflineBanner
+            isOnline={isOnline}
+            message="You are offline. Practice generation will resume when you reconnect."
+            className="mb-4"
+          />
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
+                <FileQuestion className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                  Practice Questions
+                </h1>
+                <p className="text-slate-400">AI-generated targeted practice from your mistakes</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                Practice Questions
-              </h1>
-              <p className="text-slate-400">AI-generated targeted practice from your mistakes</p>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+              {isOnline ? (
+                <>
+                  <Wifi className="h-4 w-4 text-green-400" />
+                  <span>Connected for question generation</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-4 w-4 text-red-400" />
+                  <span className="text-red-300">Offline &mdash; drafting mode only</span>
+                </>
+              )}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Recorded mistakes</span>
+                  <History className="h-4 w-4 text-yellow-300" />
+                </div>
+                <p className="mt-3 text-3xl font-semibold text-white">{mistakes.length}</p>
+                <p className="text-xs text-slate-500 mt-1">Keep logging tricky questions to sharpen practice.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between text-xs text-yellow-200">
+                  <span>Last session</span>
+                  <Target className="h-4 w-4" />
+                </div>
+                <p className="mt-3 text-2xl font-semibold text-white">
+                  {displaySummary ? `${displaySummary.accuracy}%` : '—'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {generatedAt
+                    ? `Generated ${new Date(generatedAt).toLocaleString()}`
+                    : 'Generate a practice set to see progress.'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Question count</span>
+                  <RefreshCcw className="h-4 w-4 text-slate-300" />
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={3}
+                    max={10}
+                    value={questionCount}
+                    onChange={(e) => {
+                      const next = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(next)) {
+                        setQuestionCount(Math.min(10, Math.max(3, next)));
+                      }
+                    }}
+                    className="w-20 bg-slate-950 border-slate-700 text-white"
+                  />
+                  <span className="text-xs text-slate-500">Questions per set</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Ready to practise</span>
+                  <Sparkles className="h-4 w-4 text-yellow-300" />
+                </div>
+                <p className="mt-3 text-2xl font-semibold text-white">{questions.length > 0 ? 'Yes' : 'No'}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {questions.length > 0 ? 'Review and submit your answers.' : 'Add mistakes and generate fresh questions.'}
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           <Tabs value={tab} onValueChange={setTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-slate-900/50 border border-yellow-500/30">
               <TabsTrigger value="mistakes">📝 Record Mistakes</TabsTrigger>
               <TabsTrigger value="practice" disabled={questions.length === 0}>
-                🎯 Practice
+                🎯 Practice {questions.length > 0 ? `(${questions.length})` : ''}
               </TabsTrigger>
             </TabsList>
 
@@ -238,86 +501,4 @@ export default function PracticeQuestionsPage() {
                                   setSelectedAnswers({ ...selectedAnswers, [idx]: optIdx });
                                 }
                               }}
-                              className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                                showResults && optIdx === q.correctAnswer
-                                  ? 'bg-green-500/20 border-green-500'
-                                  : showResults && optIdx === selectedAnswers[idx] && optIdx !== q.correctAnswer
-                                  ? 'bg-red-500/20 border-red-500'
-                                  : selectedAnswers[idx] === optIdx
-                                  ? 'bg-yellow-500/20 border-yellow-500'
-                                  : 'bg-slate-800 border-slate-700 hover:border-yellow-500/50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                {showResults && optIdx === q.correctAnswer && (
-                                  <CheckCircle className="w-5 h-5 text-green-400" />
-                                )}
-                                {showResults && optIdx === selectedAnswers[idx] && optIdx !== q.correctAnswer && (
-                                  <XCircle className="w-5 h-5 text-red-400" />
-                                )}
-                                <span className="text-white">{String.fromCharCode(65 + optIdx)}. {option}</span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-
-                        {showResults && (
-                          <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
-                            <div className="flex items-start gap-2">
-                              <Lightbulb className="w-5 h-5 text-yellow-400 mt-0.5" />
-                              <div>
-                                <p className="text-sm font-semibold text-yellow-400 mb-1">Explanation</p>
-                                <p className="text-sm text-slate-300">{q.explanation}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  {!showResults && (
-                    <Button
-                      onClick={handleSubmitAnswers}
-                      className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
-                    >
-                      Submit Answers
-                    </Button>
-                  )}
-
-                  {showResults && (
-                    <div className="text-center space-y-4">
-                      <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
-                        <CardContent className="pt-6">
-                          <p className="text-2xl font-bold text-yellow-400 mb-2">
-                            Score: {Object.values(selectedAnswers).filter((ans, idx) => ans === questions[idx].correctAnswer).length} / {questions.length}
-                          </p>
-                          <p className="text-slate-400">
-                            Keep practicing to master these concepts!
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Button
-                        onClick={() => {
-                          setQuestions([]);
-                          setMistakes([]);
-                          setTab('mistakes');
-                          setShowResults(false);
-                        }}
-                        variant="outline"
-                        className="w-full border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
-                      >
-                        Generate New Questions
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
-
+                              className={`

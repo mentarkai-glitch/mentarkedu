@@ -60,7 +60,7 @@ export function RecommendationsSection({ userId, type = 'general', careerPath }:
       const response = await fetch(`/api/recommendations/arks?${params.toString()}`);
       const data = await response.json();
       if (data.success) {
-        setRecommendations(data.recommendations);
+        setRecommendations(Array.isArray(data.recommendations) ? data.recommendations : []);
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);

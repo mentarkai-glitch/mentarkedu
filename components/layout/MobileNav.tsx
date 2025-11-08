@@ -59,30 +59,26 @@ export function MobileNav() {
 
                 {/* Menu Items */}
                 <nav className="space-y-4">
-                  <Link
-                    href="/search"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
-                  >
-                    <Sparkles className="h-5 w-5 text-yellow-400" />
-                    <span className="text-white">Smart Search</span>
-                  </Link>
-
-                  <Link
-                    href="/chat"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
-                  >
-                    <span className="text-white">Try AI Chat</span>
-                  </Link>
-
-                  <Link
-                    href="#features"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
-                  >
-                    <span className="text-white">Features</span>
-                  </Link>
+                  {[
+                    { href: "/features", label: "Features" },
+                    { href: "#why-mentark", label: "Why Mentark" },
+                    { href: "#manifesto", label: "Manifesto" },
+                    { href: "#quantum", label: "Mentark Quantum" },
+                    { href: "#neuro", label: "Mentark Neuro" },
+                    { href: "#pricing", label: "Pricing" },
+                    { href: "/payments", label: "Payments" },
+                    { href: "#contact", label: "Contact" },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
+                    >
+                      <Sparkles className="h-5 w-5 text-yellow-400" />
+                      <span className="text-white">{item.label}</span>
+                    </Link>
+                  ))}
 
                   <div className="pt-4 border-t border-slate-800 space-y-3">
                     <Link href="/auth/login" onClick={() => setIsOpen(false)}>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,47 +10,55 @@ import {
   Clock,
   CheckCircle2,
   Circle,
-  Play,
   TrendingUp,
   Flame,
   Trophy,
   Target,
   BookOpen,
-  Brain,
-  Award,
-  AlertCircle,
   Sparkles,
-  Coffee,
-  Moon,
-  Sun,
   Zap,
   Rocket,
   ArrowRight,
-  ChevronRight,
-  Bell,
-  BellOff,
-  Check,
-  RefreshCw
+  Plus,
+  ListChecks,
+  Brain
 } from "lucide-react";
+import Link from "next/link";
+import { trackEvent } from "@/lib/services/analytics";
 
-interface DailyTask {
+interface AgendaItem {
   id: string;
-  task_title: string;
-  task_description?: string;
-  task_type: string;
-  task_date: string;
-  is_completed: boolean;
-  estimated_hours: number;
-  priority: string;
-  ark_title?: string;
-  milestone_title?: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  start_at: string | null;
+  end_at: string | null;
+  energy_target: string | null;
+  priority: number;
+  status: string;
+  source: string;
 }
 
-interface ARKProgress {
-  ark_id: string;
-  title: string;
-  progress: number;
-  next_milestone?: string;
+interface AgendaDependency {
+  agenda_item_id: string;
+  depends_on_item_id: string;
+  dependency_type: string;
+}
+
+interface EnergyBand {
+  band: string;
+  score: number;
+}
+
+interface ProductivityRow {
+  student_id: string;
+  metric_date: string;
+  agenda_items: number;
+  planned_minutes_calc: number | null;
+  planned_minutes: number | null;
+  actual_minutes: number | null;
+  deep_work_minutes: number | null;
+  context_switches: number | null;
 }
 
 interface DailyStats {
@@ -60,144 +67,211 @@ interface DailyStats {
   hoursSpent: number;
   hoursPlanned: number;
   streaks: number;
-  motivation_level?: number;
-  energy_level?: number;
+  energyByBand: Record<string, number>;
+}
+
+interface LearningPathNodeMini {
+  topicId: string;
+  topicName: string;
+  masteryLevel: number;
+  recommendedNext?: {
+    nextResources?: string[];
+    [key: string]: unknown;
+  } | null;
+}
+
+interface RecommendationItem {
+  id: string;
+  resource_id?: string;
+  resource_type?: string;
+  source?: string;
+  score?: number;
+  presented_at: string;
+  action?: string;
+  feedback_notes?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface QueueItem {
+  id: string;
+  card_identifier: string;
+  origin: string;
+  due_at: string;
+  interval_days: number;
+  ease_factor: number;
+  success_streak: number;
+  last_reviewed_at?: string;
 }
 
 export default function DailyAssistantPage() {
-  const [today, setToday] = useState(new Date());
-  const [tasks, setTasks] = useState<DailyTask[]>([]);
-  const [activeARKs, setActiveARKs] = useState<ARKProgress[]>([]);
+  const [today] = useState(new Date());
+  const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([]);
+  const [dependencies, setDependencies] = useState<AgendaDependency[]>([]);
+  const [energyBands, setEnergyBands] = useState<EnergyBand[]>([]);
+  const [productivityRows, setProductivityRows] = useState<ProductivityRow[]>([]);
+  const [learningPath, setLearningPath] = useState<LearningPathNodeMini[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
   const [stats, setStats] = useState<DailyStats>({
     tasksCompleted: 0,
     totalTasks: 0,
     hoursSpent: 0,
     hoursPlanned: 0,
-    streaks: 0
+    streaks: 0,
+    energyByBand: {},
   });
   const [loading, setLoading] = useState(true);
+  const hasTrackedLoad = useRef(false);
 
   useEffect(() => {
     fetchDailyData();
-  }, [today]);
+  }, []);
 
   const fetchDailyData = async () => {
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      setLoading(true);
 
-      if (!user) return;
+      const [agendaRes, insightsRes, studyRes] = await Promise.all([
+        fetch("/api/daily-assistant/agenda"),
+        fetch("/api/daily-assistant/insights?days=14"),
+        fetch("/api/study-analyzer/recommendations"),
+      ]);
 
-      // Fetch today's tasks
-      const todayStr = today.toISOString().split('T')[0];
-      const { data: tasksData } = await supabase
-        .from('ark_timeline')
-        .select(`
-          *,
-          arks!inner(id, title),
-          ark_milestones(id, title)
-        `)
-        .eq('task_date', todayStr)
-        .order('priority', { ascending: false });
+      let agendaJson: any = null;
+      let insightsJson: any = null;
+      let studyJson: any = null;
 
-      if (tasksData) {
-        const formattedTasks = tasksData.map((task: any) => ({
-          id: task.id,
-          task_title: task.task_title,
-          task_description: task.task_description,
-          task_type: task.task_type,
-          task_date: task.task_date,
-          is_completed: task.is_completed,
-          estimated_hours: task.estimated_hours,
-          priority: task.priority,
-          ark_title: task.arks.title,
-          milestone_title: task.ark_milestones?.title
-        }));
-        setTasks(formattedTasks);
-        
-        // Calculate stats
-        const completed = formattedTasks.filter((t: any) => t.is_completed).length;
-        const planned = formattedTasks.reduce((sum: number, t: any) => sum + t.estimated_hours, 0);
-        setStats({
-          tasksCompleted: completed,
-          totalTasks: formattedTasks.length,
-          hoursSpent: completed * planned / formattedTasks.length,
-          hoursPlanned: planned,
-          streaks: 0
+      if (agendaRes.ok) {
+        agendaJson = await agendaRes.json();
+        if (agendaJson.success) {
+          setAgendaItems(agendaJson.data.items || []);
+          setDependencies(agendaJson.data.dependencies || []);
+        }
+      }
+
+      if (insightsRes.ok) {
+        insightsJson = await insightsRes.json();
+        if (insightsJson.success) {
+          setEnergyBands(insightsJson.data.energy_bands || []);
+          setProductivityRows(insightsJson.data.productivity || []);
+        }
+      }
+
+      if (studyRes.ok) {
+        studyJson = await studyRes.json();
+        if (studyJson.success) {
+          setLearningPath(studyJson.data.learning_path || []);
+          setRecommendations(studyJson.data.recommendations || []);
+          setQueueItems(studyJson.data.spaced_repetition_queue || []);
+        }
+      }
+
+      if (!hasTrackedLoad.current && agendaJson?.success) {
+        trackEvent("daily_assistant_loaded", {
+          agenda_items: agendaJson?.data?.items?.length ?? 0,
+          energy_bands: insightsJson?.data?.energy_bands?.length ?? 0,
+          recommendations: studyJson?.data?.recommendations?.length ?? 0,
         });
+        hasTrackedLoad.current = true;
       }
-
-      // Fetch active ARKs
-      const { data: arksData } = await supabase
-        .from('arks')
-        .select('id, title, progress')
-        .eq('student_id', user.id)
-        .eq('status', 'active')
-        .limit(3);
-
-      if (arksData) {
-        setActiveARKs(arksData.map(ark => ({
-          ark_id: ark.id,
-          title: ark.title,
-          progress: ark.progress || 0
-        })));
-      }
-
     } catch (error) {
       console.error("Failed to fetch daily data:", error);
+      trackEvent("daily_assistant_load_failed", {
+        message: error instanceof Error ? error.message : "unknown_error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleTaskComplete = async (taskId: string, currentStatus: boolean) => {
+  useEffect(() => {
+    computeStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agendaItems, productivityRows, energyBands]);
+
+  const computeStats = (
+    items: AgendaItem[] = agendaItems,
+    productivity: ProductivityRow[] = productivityRows,
+    energy: EnergyBand[] = energyBands
+  ) => {
+    const completed = items.filter((item) => item.status === "completed").length;
+    const total = items.length;
+
+    const plannedMinutes =
+      productivity.length > 0
+        ? productivity[0].planned_minutes ??
+          productivity[0].planned_minutes_calc ??
+          (items.length * 30)
+        : items.length * 30;
+
+    const actualMinutes =
+      productivity.length > 0
+        ? productivity[0].actual_minutes ?? completed * 30
+        : completed * 30;
+
+    const bandScores: Record<string, number> = {};
+    energy.forEach((band) => {
+      bandScores[band.band] = Number(band.score.toFixed(2));
+    });
+
+    setStats({
+      tasksCompleted: completed,
+      totalTasks: total,
+      hoursSpent: Number((actualMinutes / 60).toFixed(1)),
+      hoursPlanned: Number((plannedMinutes / 60).toFixed(1)),
+      streaks: 0,
+      energyByBand: bandScores,
+    });
+  };
+
+  const handleToggleStatus = async (item: AgendaItem) => {
+    const nextStatus = item.status === "completed" ? "planned" : "completed";
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('ark_timeline')
-        .update({ 
-          is_completed: !currentStatus,
-          completed_at: !currentStatus ? new Date().toISOString() : null
-        })
-        .eq('id', taskId);
+      const response = await fetch("/api/daily-assistant/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item: {
+            ...item,
+            status: nextStatus,
+          },
+        }),
+      });
 
-      if (error) throw error;
-      await fetchDailyData();
+      if (response.ok) {
+        const updatedItems = agendaItems.map((agenda) =>
+          agenda.id === item.id ? { ...agenda, status: nextStatus } : agenda
+        );
+        setAgendaItems(updatedItems);
+      }
     } catch (error) {
-      console.error("Failed to update task:", error);
+      console.error("Failed to update agenda item status:", error);
     }
   };
 
-  const getTaskTypeIcon = (type: string) => {
-    const icons: Record<string, any> = {
-      learning: BookOpen,
-      practice: Target,
-      assessment: CheckCircle2,
-      review: RefreshCw,
-      rest: Moon,
-      checkpoint: Award,
-      celebration: Trophy
-    };
-    return icons[type] || Circle;
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'high':
-        return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-      case 'medium':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      default:
-        return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+  const getPriorityColor = (priority: number) => {
+    if (priority <= 1) {
+      return "bg-red-500/20 text-red-400 border-red-500/30";
     }
+    if (priority === 2) {
+      return "bg-orange-500/20 text-orange-400 border-orange-500/30";
+    }
+    if (priority === 3) {
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+    }
+    return "bg-slate-500/20 text-slate-400 border-slate-500/30";
   };
 
-  const incompleteTasks = tasks.filter(t => !t.is_completed);
+  const sortedAgenda = [...agendaItems].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+
+  const dependencyMap = dependencies.reduce<Record<string, AgendaDependency[]>>((acc, dep) => {
+    acc[dep.agenda_item_id] = acc[dep.agenda_item_id] || [];
+    acc[dep.agenda_item_id].push(dep);
+    return acc;
+  }, {});
+
   const completionRate = stats.totalTasks > 0 ? (stats.tasksCompleted / stats.totalTasks) * 100 : 0;
+  const energyBandEntries = Object.entries(stats.energyByBand);
 
   if (loading) {
     return (
@@ -270,21 +344,46 @@ export default function DailyAssistantPage() {
           </Card>
         </div>
 
-        {/* Today's Tasks */}
+        {/* Energy Insights */}
+        {energyBandEntries.length > 0 && (
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Zap className="w-6 h-6 text-cyan-300" />
+                Energy Insights (last 7 days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {energyBandEntries.map(([band, score]) => (
+                <div key={band} className="p-4 rounded-lg bg-slate-900/60 border border-slate-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-white font-semibold capitalize">{band}</h4>
+                    <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
+                      {Number(score).toFixed(1)}
+                    </Badge>
+                  </div>
+                  <Progress value={Math.min(100, Math.max(0, Number(score) * 20))} className="h-2" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Today&apos;s Tasks */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Calendar className="w-6 h-6 text-yellow-400" />
               Today&apos;s Tasks
-              {incompleteTasks.length > 0 && (
+              {sortedAgenda.filter((item) => item.status !== "completed").length > 0 && (
                 <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 ml-2">
-                  {incompleteTasks.length} remaining
+                  {sortedAgenda.filter((item) => item.status !== "completed").length} remaining
                 </Badge>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {tasks.length === 0 ? (
+            {sortedAgenda.length === 0 ? (
               <div className="text-center py-12">
                 <CheckCircle2 className="w-16 h-16 text-slate-700 mx-auto mb-4" />
                 <p className="text-slate-400 mb-2">No tasks scheduled for today!</p>
@@ -292,60 +391,72 @@ export default function DailyAssistantPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {tasks.map((task) => {
-                  const Icon = getTaskTypeIcon(task.task_type);
+                {sortedAgenda.map((item) => {
+                  const start = item.start_at ? new Date(item.start_at) : null;
+                  const end = item.end_at ? new Date(item.end_at) : null;
                   return (
                     <div
-                      key={task.id}
+                      key={item.id}
                       className={`flex items-start gap-4 p-4 rounded-lg border transition-all ${
-                        task.is_completed
+                        item.status === "completed"
                           ? 'bg-green-500/10 border-green-500/30'
                           : 'bg-slate-900/50 border-slate-700 hover:border-yellow-500/30'
                       }`}
                     >
                       <div className={`p-2 rounded-lg ${
-                        task.is_completed
+                        item.status === "completed"
                           ? 'bg-green-500/20 text-green-400'
                           : 'bg-slate-700 text-slate-400'
                       }`}>
-                        <Icon className="w-5 h-5" />
+                        <Clock className="w-5 h-5" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <h4 className={`font-semibold ${
-                              task.is_completed ? 'text-green-400 line-through' : 'text-white'
+                              item.status === "completed" ? 'text-green-400 line-through' : 'text-white'
                             }`}>
-                              {task.task_title}
+                              {item.title}
                             </h4>
-                            {task.ark_title && (
-                              <p className="text-slate-400 text-sm mt-1">{task.ark_title}</p>
+                            {item.description && (
+                              <p className="text-slate-400 text-sm mt-1">{item.description}</p>
                             )}
-                            {task.task_description && (
-                              <p className="text-slate-400 text-sm mt-1">{task.task_description}</p>
+                            {dependencyMap[item.id] && dependencyMap[item.id].length > 0 && (
+                              <p className="text-xs text-slate-500 mt-2">
+                                Depends on {dependencyMap[item.id].length} task
+                                {dependencyMap[item.id].length > 1 ? "s" : ""}
+                              </p>
                             )}
                           </div>
-                          <Badge className={getPriorityColor(task.priority)}>
-                            {task.priority}
+                          <Badge className={getPriorityColor(item.priority ?? 0)}>
+                            Priority {item.priority ?? 0}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-slate-400">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{task.estimated_hours}h</span>
-                          </div>
-                          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                            {task.task_type}
+                          {start && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>
+                                {start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                {end ? ` - ${end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                              </span>
+                            </div>
+                          )}
+                          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 capitalize">
+                            {item.energy_target ?? "unspecified"}
+                          </Badge>
+                          <Badge className="bg-slate-700 text-slate-300 border-slate-600 capitalize">
+                            {item.source}
                           </Badge>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleTaskComplete(task.id, task.is_completed)}
-                        className={task.is_completed ? 'text-green-400' : 'text-slate-400'}
+                        onClick={() => handleToggleStatus(item)}
+                        className={item.status === "completed" ? 'text-green-400' : 'text-slate-400'}
                       >
-                        {task.is_completed ? (
+                        {item.status === "completed" ? (
                           <CheckCircle2 className="w-5 h-5" />
                         ) : (
                           <Circle className="w-5 h-5" />
@@ -359,26 +470,31 @@ export default function DailyAssistantPage() {
           </CardContent>
         </Card>
 
-        {/* Active ARKs Progress */}
-        {activeARKs.length > 0 && (
+        {/* Learning Path Progress */}
+        {learningPath.length > 0 && (
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Rocket className="w-6 h-6 text-yellow-400" />
-                Your Active ARKs
+                Learning Path Highlights
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {activeARKs.map((ark) => (
-                  <div key={ark.ark_id} className="flex items-center gap-4 p-4 rounded-lg bg-slate-900/50 border border-slate-700 hover:border-yellow-500/30 transition-all">
+                {learningPath.map((node) => (
+                  <div key={node.topicId} className="flex items-center gap-4 p-4 rounded-lg bg-slate-900/50 border border-slate-700 hover:border-yellow-500/30 transition-all">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center">
                       <BookOpen className="w-6 h-6 text-black" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-white font-semibold mb-1">{ark.title}</h4>
-                      <Progress value={ark.progress} className="h-2" />
-                      <p className="text-xs text-slate-400 mt-1">{ark.progress}% complete</p>
+                      <h4 className="text-white font-semibold mb-1">{node.topicName}</h4>
+                      <Progress value={node.masteryLevel} className="h-2" />
+                      <p className="text-xs text-slate-400 mt-1">{Math.round(node.masteryLevel)}% mastery</p>
+                      {node.recommendedNext?.nextResources && (
+                        <p className="text-xs text-slate-500 mt-2">
+                          Next: {node.recommendedNext.nextResources.join(", ")}
+                        </p>
+                      )}
                     </div>
                     <Button variant="ghost" size="sm">
                       <ArrowRight className="w-4 h-4" />
@@ -390,54 +506,80 @@ export default function DailyAssistantPage() {
           </Card>
         )}
 
-        {/* Motivation Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Recommendations & Queue */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-purple-400" />
-                Daily Motivation
+                AI Recommendations
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-slate-300 mb-4">
-                &quot;Every expert was once a beginner. Keep pushing forward!&quot;
-              </p>
-              <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-                <Brain className="w-4 h-4 mr-2" />
-                Get Personalized Motivation
-              </Button>
+            <CardContent className="space-y-4">
+              {recommendations.length === 0 ? (
+                <p className="text-slate-400 text-sm">
+                  Complete more study sessions to unlock tailored recommendations.
+                </p>
+              ) : (
+                recommendations.slice(0, 3).map((rec) => {
+                  const summaryText =
+                    typeof rec.metadata?.summary === "string" ? rec.metadata.summary : undefined;
+                  const recommendationCopy =
+                    rec.feedback_notes || summaryText || "AI recommends reviewing this resource today.";
+
+                  return (
+                    <div key={rec.id} className="p-4 rounded-lg bg-slate-900/50 border border-purple-500/30">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-white font-semibold capitalize">
+                          {rec.resource_type || "Resource"}
+                        </h4>
+                        {rec.score !== undefined && (
+                          <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                            Score {(rec.score * 100).toFixed(0)}%
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-400">{recommendationCopy}</p>
+                    </div>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/30">
+          <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Zap className="w-6 h-6 text-cyan-400" />
-                Quick Actions
+                <TrendingUp className="w-6 h-6 text-blue-400" />
+                Spaced Repetition Queue
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start border-slate-600 hover:bg-slate-700">
-                  <Play className="w-4 h-4 mr-2" />
-                  Continue Learning
-                </Button>
-                <Button variant="outline" className="w-full justify-start border-slate-600 hover:bg-slate-700">
-                  <Award className="w-4 h-4 mr-2" />
-                  View Achievements
-                </Button>
-                <Button variant="outline" className="w-full justify-start border-slate-600 hover:bg-slate-700">
-                  <Brain className="w-4 h-4 mr-2" />
-                  Ask AI Mentor
-                </Button>
-              </div>
+            <CardContent className="space-y-4">
+              {queueItems.length === 0 ? (
+                <p className="text-slate-400 text-sm">
+                  You&apos;re all caught up. Reviewed cards will show up here when they are due again.
+                </p>
+              ) : (
+                queueItems.slice(0, 4).map((card) => (
+                  <div key={card.id} className="flex items-center justify-between p-3 bg-slate-900/40 border border-blue-500/30 rounded-lg">
+                    <div>
+                      <p className="text-sm text-white font-medium">{card.card_identifier}</p>
+                      <p className="text-xs text-slate-400">
+                        Due {new Date(card.due_at).toLocaleString()} • Interval {card.interval_days}d
+                      </p>
+                    </div>
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                      Streak {card.success_streak}
+                    </Badge>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Upcoming Tasks Preview */}
-        {incompleteTasks.length > 0 && (
+        {sortedAgenda.filter((item) => item.status !== "completed").length > 0 && (
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -447,18 +589,23 @@ export default function DailyAssistantPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {incompleteTasks.slice(0, 5).map((task) => (
-                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-700">
-                    <Circle className="w-4 h-4 text-slate-500" />
-                    <div className="flex-1">
-                      <p className="text-white text-sm font-semibold">{task.task_title}</p>
-                      <p className="text-slate-400 text-xs">{task.ark_title}</p>
+                {sortedAgenda
+                  .filter((item) => item.status !== "completed")
+                  .slice(0, 5)
+                  .map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-700">
+                      <Circle className="w-4 h-4 text-slate-500" />
+                      <div className="flex-1">
+                        <p className="text-white text-sm font-semibold">{item.title}</p>
+                        {item.description && (
+                          <p className="text-slate-400 text-xs">{item.description}</p>
+                        )}
+                      </div>
+                      <Badge className={getPriorityColor(item.priority ?? 0)}>
+                        Priority {item.priority ?? 0}
+                      </Badge>
                     </div>
-                    <Badge className={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
               </div>
             </CardContent>
           </Card>
@@ -467,4 +614,3 @@ export default function DailyAssistantPage() {
     </div>
   );
 }
-

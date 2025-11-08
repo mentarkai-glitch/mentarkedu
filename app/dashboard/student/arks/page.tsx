@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -77,6 +77,34 @@ export default function MyARKsPage() {
     const matchesFilter = filter === "all" || ark.status === filter;
     return matchesSearch && matchesFilter;
   });
+
+  const statusCounts = useMemo(() => {
+    return {
+      all: arks.length,
+      active: arks.filter((ark) => ark.status === "active").length,
+      completed: arks.filter((ark) => ark.status === "completed").length,
+      paused: arks.filter((ark) => ark.status === "paused").length,
+    } as Record<typeof filter, number> & { all: number };
+  }, [arks]);
+
+  const timelineARKs = useMemo(
+    () =>
+      [...filteredARKs].sort((a, b) => {
+        const aTime = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        const bTime = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        return aTime - bTime;
+      }),
+    [filteredARKs]
+  );
+
+  const formatDueDate = (date?: string) => {
+    if (!date) return "No due date";
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) {
+      return "No due date";
+    }
+    return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {

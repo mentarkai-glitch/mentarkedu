@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BookOpen, Sparkles, FileText, Calendar, CheckCircle2, 
   Lightbulb, ExternalLink, Clock, Target, BookMarked,
   HelpCircle, TrendingUp, Download, Share2, AlertCircle,
-  ListChecks
+  ListChecks, History
 } from 'lucide-react';
+import JSZip from 'jszip';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getAllSubjects, getSubjectById, type SubjectInfo } from '@/lib/data/project-subjects';
+import { toast } from 'sonner';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface ProjectHelp {
   overview: string;
@@ -32,6 +35,61 @@ interface ProjectHelp {
   troubleshooting?: any;
   additional_tips?: string[];
 }
+
+type ProjectTemplate = {
+  title: string;
+  subjectId: string;
+  projectType: string;
+  description: string;
+  requirements: string;
+  gradeLevel: string;
+};
+
+type ProjectHistoryItem = {
+  generatedAt: string;
+  subjectId: string;
+  projectType: string;
+  description: string;
+  requirements: string;
+  deadline: string;
+  gradeLevel: string;
+  wordLimit: string;
+  format: string;
+  questions: string[];
+  modelUsed?: string;
+  help: ProjectHelp;
+};
+
+const FORM_STORAGE_KEY = 'mentark-project-helper-form-v1';
+const HISTORY_STORAGE_KEY = 'mentark-project-helper-history-v1';
+const MAX_HISTORY = 5;
+
+const PROJECT_TEMPLATES: ProjectTemplate[] = [
+  {
+    title: 'Physics Lab Report',
+    subjectId: 'physics',
+    projectType: 'Lab Report',
+    description: 'Investigate the relationship between current and resistance using Ohm`s law with detailed observations.',
+    requirements: 'Include hypothesis, materials list, data table, calculations, and error analysis.',
+    gradeLevel: 'Grade 11',
+  },
+  {
+    title: 'History Documentary',
+    subjectId: 'history',
+    projectType: 'Multimedia Presentation',
+    description: 'Create a short documentary on causes and consequences of World War I with interviews and archival footage summary.',
+    requirements: 'Include timeline, key events, primary sources, and reflective conclusion.',
+    gradeLevel: 'Grade 10',
+  },
+  {
+    title: 'Computer Science Capstone',
+    subjectId: 'computer_science',
+    projectType: 'Software Project',
+    description: 'Design and prototype a mobile app that helps students track studying habits and mental wellbeing.',
+    requirements: 'Needs feature list, user personas, wireframes, tech stack recommendation, and testing plan.',
+    gradeLevel: 'Undergraduate',
+  },
+];
 
 export default function ProjectsPage() {
   const [loading, setLoading] = useState(false);
@@ -49,14 +107,174 @@ export default function ProjectsPage() {
   const [subjectInfo, setSubjectInfo] = useState<SubjectInfo | null>(null);
   const [error, setError] = useState('');
   const [modelUsed, setModelUsed] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
+  const [history, setHistory] = useState<ProjectHistoryItem[]>([]);
+  const [exporting, setExporting] = useState(false);
 
-  const subjects = getAllSubjects();
+  const subjects = useMemo(() => getAllSubjects(), []);
+  const displayHistory = useMemo(() => history.slice(0, MAX_HISTORY), [history]);
 
-  const handleSubjectChange = (subjectId: string) => {
+  const applyTemplate = (template: ProjectTemplate) => {
+    handleSubjectChange(template.subjectId, false);
+    setProjectType(template.projectType);
+    setDescription(template.description);
+    setRequirements(template.requirements);
+    setGradeLevel(template.gradeLevel);
+    setDeadline('');
+    setWordLimit('');
+    setFormat('');
+    setQuestions(['']);
+    setProjectHelp(null);
+    setError('');
+  };
+
+  const handleHistoryLoad = (item: ProjectHistoryItem) => {
+    handleSubjectChange(item.subjectId, false);
+    setProjectType(item.projectType);
+    setDescription(item.description);
+    setRequirements(item.requirements);
+    setDeadline(item.deadline);
+    setGradeLevel(item.gradeLevel);
+    setWordLimit(item.wordLimit);
+    setFormat(item.format);
+    setQuestions(item.questions.length ? item.questions : ['']);
+    setProjectHelp(item.help);
+    setModelUsed(item.modelUsed || '');
+    setActiveTab('overview');
+    setError('');
+  };
+
+  const handleExport = async () => {
+    if (!projectHelp) return;
+    setExporting(true);
+    try {
+      const zip = new JSZip();
+      const overviewMd = `# Project Overview\n\n${projectHelp.overview}\n\n## Key Components\n\n${projectHelp.breakdown ? JSON.stringify(projectHelp.breakdown, null, 2) : 'N/A'}\n`;
+      const planJson = {
+        generatedAt: new Date().toISOString(),
+        subject: subjectInfo?.name ?? selectedSubject,
+        projectType,
+        description,
+        requirements,
+        deadline,
+        gradeLevel,
+        wordLimit,
+        format,
+        questions,
+        modelUsed,
+        projectHelp,
+      };
+      zip.file('project-overview.md', overviewMd);
+      zip.file('project-plan.json', JSON.stringify(planJson, null, 2));
+      if (projectHelp.answer_specific_questions?.length) {
+        zip.file('questions-and-answers.json', JSON.stringify(projectHelp.answer_specific_questions, null, 2));
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${(subjectInfo?.name || 'project').toLowerCase().replace(/\s+/g, '-')}-helper.zip`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      toast.success('Project pack exported');
+    } catch (err) {
+      console.error('Export error', err);
+      toast.error('Failed to export project pack');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedForm = localStorage.getItem(FORM_STORAGE_KEY);
+      if (storedForm) {
+        const parsed = JSON.parse(storedForm) as {
+          selectedSubject: string;
+          projectType: string;
+          description: string;
+          requirements: string;
+          deadline: string;
+          gradeLevel: string;
+          wordLimit: string;
+          format: string;
+          questions: string[];
+        };
+        setSelectedSubject(parsed.selectedSubject || '');
+        setProjectType(parsed.projectType || '');
+        setDescription(parsed.description || '');
+        setRequirements(parsed.requirements || '');
+        setDeadline(parsed.deadline || '');
+        setGradeLevel(parsed.gradeLevel || '');
+        setWordLimit(parsed.wordLimit || '');
+        setFormat(parsed.format || '');
+        setQuestions(parsed.questions?.length ? parsed.questions : ['']);
+        if (parsed.selectedSubject) {
+          const subject = getSubjectById(parsed.selectedSubject);
+          setSubjectInfo(subject || null);
+        }
+      }
+
+      const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (storedHistory) {
+        setHistory(JSON.parse(storedHistory) as ProjectHistoryItem[]);
+      }
+    } catch (err) {
+      console.warn('Failed to restore project helper state', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateStatus = () => setIsOnline(navigator.onLine);
+    updateStatus();
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    return () => {
+      window.removeEventListener('online', updateStatus);
+      window.removeEventListener('offline', updateStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(
+        FORM_STORAGE_KEY,
+        JSON.stringify({
+          selectedSubject,
+          projectType,
+          description,
+          requirements,
+          deadline,
+          gradeLevel,
+          wordLimit,
+          format,
+          questions,
+        })
+      );
+    } catch (err) {
+      console.warn('Failed to persist project helper form', err);
+    }
+  }, [selectedSubject, projectType, description, requirements, deadline, gradeLevel, wordLimit, format, questions]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+    } catch (err) {
+      console.warn('Failed to persist project helper history', err);
+    }
+  }, [history]);
+
+  const handleSubjectChange = (subjectId: string, setDefaultType = true) => {
     setSelectedSubject(subjectId);
     const subject = getSubjectById(subjectId);
     setSubjectInfo(subject || null);
-    if (subject && subject.commonProjectTypes.length > 0) {
+    if (setDefaultType && subject && subject.commonProjectTypes.length > 0) {
       setProjectType(subject.commonProjectTypes[0]);
     }
   };
@@ -76,6 +294,10 @@ export default function ProjectsPage() {
       setError('Please select a subject and provide a project description');
       return;
     }
+    if (!isOnline) {
+      setError('You appear to be offline. Reconnect to generate project help.');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -85,6 +307,7 @@ export default function ProjectsPage() {
       const response = await fetch('/api/projects/helper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           subject_id: selectedSubject,
           project_type: projectType || 'General',
@@ -104,12 +327,29 @@ export default function ProjectsPage() {
         setProjectHelp(data.data.project_help);
         setModelUsed(data.data.model_used);
         setSubjectInfo(getSubjectById(selectedSubject) || null);
+        const historyItem: ProjectHistoryItem = {
+          generatedAt: new Date().toISOString(),
+          subjectId: selectedSubject,
+          projectType: projectType || 'General',
+          description: description.trim(),
+          requirements: requirements.trim(),
+          deadline: deadline.trim(),
+          gradeLevel: gradeLevel.trim(),
+          wordLimit: wordLimit.trim(),
+          format: format.trim(),
+          questions: questions.filter(q => q.trim().length > 0),
+          modelUsed: data.data.model_used,
+          help: data.data.project_help,
+        };
+        setHistory((prev) => [historyItem, ...prev.filter((item) => item.description !== historyItem.description)].slice(0, MAX_HISTORY));
+        toast.success('Project plan generated successfully');
       } else {
         setError(data.message || 'Failed to generate project help');
       }
     } catch (error) {
       console.error('Project help error:', error);
       setError('Failed to generate project help. Please try again.');
+      toast.error('Could not generate project plan');
     } finally {
       setLoading(false);
     }
@@ -119,17 +359,44 @@ export default function ProjectsPage() {
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-7xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <BookOpen className="w-8 h-8 text-yellow-400" />
+          <OfflineBanner
+            isOnline={isOnline}
+            message="You are offline. Project helper requests will queue until you reconnect."
+            className="mb-4"
+          />
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
+                <BookOpen className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                  Project & Assignment Helper
+                </h1>
+                <p className="text-slate-400">AI-powered comprehensive assistance for all your academic projects</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                Project & Assignment Helper
-              </h1>
-              <p className="text-slate-400">AI-powered comprehensive assistance for all your academic projects</p>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+              {isOnline ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <span>Connected</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4 text-red-400" />
+                  <span className="text-red-300">Offline &mdash; fill out details and retry once online</span>
+                </>
+              )}
             </div>
           </div>
+
+          {error && !projectHelp && (
+            <Alert className="mb-6 bg-red-500/10 border-red-500/30 text-red-200">
+              <AlertCircle className="w-4 h-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           {!projectHelp && (
             <Card className="bg-black border-yellow-500/50 mb-6">
@@ -141,9 +408,24 @@ export default function ProjectsPage() {
                 <CardDescription>Fill in the details to get personalized, detailed assistance</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="flex flex-wrap gap-2">
+                  {PROJECT_TEMPLATES.map((template) => (
+                    <Button
+                      key={template.title}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/10"
+                      onClick={() => applyTemplate(template)}
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" /> {template.title}
+                    </Button>
+                  ))}
+                </div>
+
                 <div>
                   <Label className="text-slate-300 mb-2 block">Subject *</Label>
-                  <Select value={selectedSubject} onValueChange={handleSubjectChange}>
+                  <Select value={selectedSubject} onValueChange={(value) => handleSubjectChange(value)}>
                     <SelectTrigger className="bg-slate-800 border-slate-700">
                       <SelectValue placeholder="Select a subject..." />
                     </SelectTrigger>
@@ -279,7 +561,7 @@ export default function ProjectsPage() {
 
                 <Button
                   onClick={handleGenerateHelp}
-                  disabled={loading || !selectedSubject || !description.trim()}
+                  disabled={loading || !selectedSubject || !description.trim() || !isOnline}
                   className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
                 >
                   {loading ? (
@@ -287,15 +569,56 @@ export default function ProjectsPage() {
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2" />
                       Generating Help...
                     </>
-                  ) : (
+                  ) : isOnline ? (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
                       Generate Project Help
                     </>
+                  ) : (
+                    'Reconnect to generate'
                   )}
                 </Button>
               </CardContent>
             </Card>
+          )}
+
+          {displayHistory.length > 0 && (
+            <div className="mb-6 space-y-3">
+              <div className="flex items-center gap-2 text-slate-300">
+                <History className="w-4 h-4 text-yellow-300" />
+                <h2 className="text-lg font-semibold">Recent project plans</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {displayHistory.map((item, idx) => {
+                  const subject = getSubjectById(item.subjectId);
+                  return (
+                    <Card key={`${item.generatedAt}-${idx}`} className="bg-slate-900/60 border-slate-800">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm text-slate-200 line-clamp-2">{item.description}</CardTitle>
+                          {subject && <span className="text-2xl">{subject.icon}</span>}
+                        </div>
+                        <CardDescription className="text-xs text-slate-500">
+                          {subject?.name ?? item.subjectId} • {item.projectType} • {new Date(item.generatedAt).toLocaleString()}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-xs text-slate-400 line-clamp-3">{item.help.overview}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/10"
+                          onClick={() => handleHistoryLoad(item)}
+                        >
+                          Reopen plan
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           {loading && (
@@ -325,8 +648,22 @@ export default function ProjectsPage() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="border-yellow-500/30 text-yellow-400">
-                    <Download className="w-4 h-4 mr-2" /> Export
+                  <Button
+                    variant="outline"
+                    className="border-yellow-500/30 text-yellow-400"
+                    onClick={handleExport}
+                    disabled={exporting}
+                  >
+                    {exporting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400 mr-2" />
+                        Preparing...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" /> Export Pack
+                      </>
+                    )}
                   </Button>
                   <Button variant="outline" className="border-slate-500/30 text-slate-400" onClick={() => {
                     setProjectHelp(null);
@@ -337,6 +674,8 @@ export default function ProjectsPage() {
                     setWordLimit('');
                     setFormat('');
                     setQuestions(['']);
+                    setModelUsed('');
+                    setActiveTab('overview');
                   }}>
                     New Project
                   </Button>

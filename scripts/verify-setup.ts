@@ -61,6 +61,9 @@ async function checkEnvironmentVariables() {
     'MISTRAL_API_KEY': process.env.MISTRAL_API_KEY,
     'HUME_AI_API_KEY': process.env.HUME_AI_API_KEY,
     'DEEPL_API_KEY': process.env.DEEPL_API_KEY,
+    'SEMANTIC_SCHOLAR_API_KEY': process.env.SEMANTIC_SCHOLAR_API_KEY,
+    'GOOGLE_CLOUD_TTS_API_KEY': process.env.GOOGLE_CLOUD_TTS_API_KEY,
+    'GOOGLE_CLOUD_STT_API_KEY': process.env.GOOGLE_CLOUD_STT_API_KEY,
   };
 
   // Check required variables
@@ -103,10 +106,17 @@ async function checkSupabaseConnection() {
     // Test connection by querying auth.users (always accessible)
     const { data, error } = await supabase.auth.getUser();
 
-    if (error && error.message !== 'Invalid Refresh Token: Refresh Token Not Found') {
-      log(`Connection failed: ${error.message}`, 'error');
-      RESULTS.failed++;
-      return;
+    if (error) {
+      const benignErrors = [
+        'Invalid Refresh Token: Refresh Token Not Found',
+        'Auth session missing!',
+      ];
+
+      if (!benignErrors.includes(error.message)) {
+        log(`Connection failed: ${error.message}`, 'error');
+        RESULTS.failed++;
+        return;
+      }
     }
 
     log('Supabase connection: OK', 'success');

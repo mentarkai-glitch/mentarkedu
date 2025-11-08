@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Search, Sparkles, ExternalLink, BookOpen, Target, TrendingUp, Lightbulb, ArrowRight } from "lucide-react";
@@ -26,39 +26,125 @@ interface SearchResult {
   confidence: number;
 }
 
+type SearchContext = "academic" | "career" | "personal" | "general";
+
+const HISTORY_STORAGE_KEY = "mentark-search-history-v1";
+
+interface RecentQuery {
+  query: string;
+  context: SearchContext;
+  timestamp: string;
+}
+
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
+  const initialContextParam = (searchParams.get("ctx") as SearchContext) || "general";
 
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [context, setContext] = useState<"academic" | "career" | "personal" | "general">("general");
+  const [context, setContext] = useState<SearchContext>(initialContextParam);
+  const [error, setError] = useState<string | null>(null);
+  const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
+  const [isOnline, setIsOnline] = useState(true);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as RecentQuery[];
+        setRecentQueries(parsed);
+      }
+    } catch (err) {
+      console.warn("Failed to parse search history", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateStatus = () => setIsOnline(navigator.onLine);
+    updateStatus();
+    window.addEventListener("online", updateStatus);
+    window.addEventListener("offline", updateStatus);
+    return () => {
+      window.removeEventListener("online", updateStatus);
+      window.removeEventListener("offline", updateStatus);
+    };
+  }, []);
+
+  const handleSearch = async (overrideQuery?: string, overrideContext?: SearchContext) => {
+    const searchText = (overrideQuery ?? query).trim();
+    const searchContext = overrideContext ?? context;
+
+    if (!searchText) return;
+    if (!isOnline) {
+      setError("You're offline. Reconnect to fetch fresh answers.");
+      return;
+    }
+
+    setQuery(searchText);
+    if (overrideContext && overrideContext !== context) {
+      setContext(overrideContext);
+    }
 
     setLoading(true);
     setResults(null);
+    setError(null);
 
     try {
+      router.replace(`?q=${encodeURIComponent(searchText)}&ctx=${searchContext}`, { scroll: false });
+
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, context }),
+        credentials: "include",
+        body: JSON.stringify({ query: searchText, context: searchContext }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Search service returned ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.success) {
         setResults(data.data);
+
+        const newEntry: RecentQuery = {
+          query: searchText,
+          context: searchContext,
+          timestamp: new Date().toISOString(),
+        };
+
+        setRecentQueries((prev) => {
+          const filtered = prev.filter((item) => item.query !== searchText || item.context !== searchContext);
+          const updated = [newEntry, ...filtered].slice(0, 6);
+          try {
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+          } catch (storageError) {
+            console.warn("Failed to persist search history", storageError);
+          }
+          return updated;
+        });
+      } else {
+        throw new Error(data.error || "Search failed");
       }
     } catch (error) {
       console.error("Search error:", error);
+      setError(error instanceof Error ? error.message : "Something went wrong while searching.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (initialQuery.trim()) {
+      handleSearch(initialQuery, initialContextParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -107,11 +193,17 @@ function SearchPageContent() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 mt-3 sm:mt-4">
             <span className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">Context:</span>
             <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-              {["general", "academic", "career", "personal"].map((ctx) => (
+              {( ["general", "academic", "career", "personal"] as SearchContext[] ).map((ctx) => (
                 <button
                   key={ctx}
-                  onClick={() => setContext(ctx as any)}
-                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  onClick={() => {
+                    setContext(ctx);
+                    if (query.trim()) {
+                      handleSearch(query, ctx);
+                    }
+                  }}
+                  aria-pressed={context === ctx}
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500/40 ${
                     context === ctx
                       ? "bg-yellow-500 text-black"
                       : "bg-slate-800 text-gray-400 hover:bg-slate-700"
@@ -123,13 +215,48 @@ function SearchPageContent() {
             </div>
             <Button
               onClick={handleSearch}
-              disabled={loading || !query.trim()}
+              disabled={loading || !query.trim() || !isOnline}
               className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-sm sm:text-base w-full sm:w-auto"
             >
-              {loading ? "Searching..." : "Search"}
+              {loading ? "Searching..." : isOnline ? "Search" : "Offline"}
             </Button>
           </div>
         </motion.div>
+
+        {!isOnline && (
+          <div className="max-w-4xl mx-auto mb-4 text-center text-xs sm:text-sm text-red-300">
+            You&apos;re offline. Recent results are still visible, but new searches will resume once you reconnect.
+          </div>
+        )}
+
+        {recentQueries.length > 0 && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
+              <Sparkles className="h-3 w-3 text-yellow-400" />
+              <span>Recent searches</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recentQueries.map((item) => (
+                <button
+                  key={`${item.query}-${item.context}`}
+                  onClick={() => handleSearch(item.query, item.context)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/60 text-xs sm:text-sm text-slate-300 hover:border-yellow-500 hover:text-white transition-all"
+                >
+                  {item.query}
+                  <span className="ml-2 text-[10px] uppercase tracking-wide text-yellow-400">{item.context}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          </div>
+        )}
 
         {/* Results */}
         {loading && (
@@ -244,10 +371,7 @@ function SearchPageContent() {
                     {results.relatedQueries.map((relatedQuery, idx) => (
                       <button
                         key={idx}
-                        onClick={() => {
-                          setQuery(relatedQuery);
-                          handleSearch();
-                        }}
+                        onClick={() => handleSearch(relatedQuery)}
                         className="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-gray-300 text-sm hover:border-cyan-500 hover:text-white transition-all flex items-center gap-2"
                       >
                         {relatedQuery}
@@ -282,10 +406,7 @@ function SearchPageContent() {
               ].map((example, idx) => (
                 <button
                   key={idx}
-                  onClick={() => {
-                    setQuery(example);
-                    handleSearch();
-                  }}
+                  onClick={() => handleSearch(example)}
                   className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-gray-300 text-sm hover:border-yellow-500 hover:text-white transition-all"
                 >
                   {example}

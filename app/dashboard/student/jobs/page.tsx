@@ -1,14 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, MapPin, Clock, DollarSign, Building, ExternalLink, TrendingUp, Star } from 'lucide-react';
+import {
+  Briefcase,
+  MapPin,
+  Clock,
+  DollarSign,
+  Building,
+  ExternalLink,
+  TrendingUp,
+  Star,
+  Save,
+  History,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
+import { trackEvent } from '@/lib/services/analytics';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface Job {
   job_id: string;
@@ -36,28 +54,77 @@ interface ARK {
   category_id: string;
 }
 
+const PREFERENCES_STORAGE_KEY = 'mentark-job-matcher-preferences-v1';
+const HISTORY_STORAGE_KEY = 'mentark-job-matcher-history-v1';
+const MAX_HISTORY = 5;
+
 export default function JobMatcherPage() {
   const [loading, setLoading] = useState(false);
   const [arks, setArks] = useState<ARK[]>([]);
   const [selectedArk, setSelectedArk] = useState<string>('');
   const [location, setLocation] = useState('India');
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchSummary, setSearchSummary] = useState('');
   const [skillsMatched, setSkillsMatched] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
+  const [history, setHistory] = useState<Array<{ arkId: string; location: string; timestamp: string }>>([]);
+  const [savedJobs, setSavedJobs] = useState<Record<string, Job>>({});
+  const [clientFilter, setClientFilter] = useState('');
 
   useEffect(() => {
     loadUserArks();
+    if (typeof window !== 'undefined') {
+      try {
+        const storedPrefs = localStorage.getItem(PREFERENCES_STORAGE_KEY);
+        if (storedPrefs) {
+          const parsed = JSON.parse(storedPrefs) as { selectedArk?: string; location?: string };
+          if (parsed.selectedArk) setSelectedArk(parsed.selectedArk);
+          if (parsed.location) setLocation(parsed.location);
+        }
+        const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        }
+        const storedSaved = localStorage.getItem('mentark-job-matcher-saved-jobs');
+        if (storedSaved) {
+          setSavedJobs(JSON.parse(storedSaved));
+        }
+      } catch (err) {
+        console.warn('Failed to restore job matcher state', err);
+      }
+      const updateStatus = () => setIsOnline(navigator.onLine);
+      updateStatus();
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      return () => {
+        window.removeEventListener('online', updateStatus);
+        window.removeEventListener('offline', updateStatus);
+      };
+    }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(
+      PREFERENCES_STORAGE_KEY,
+      JSON.stringify({ selectedArk, location })
+    );
+  }, [selectedArk, location]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+  }, [history]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('mentark-job-matcher-saved-jobs', JSON.stringify(savedJobs));
+  }, [savedJobs]);
 
   const loadUserArks = async () => {
     try {
-      // Create Supabase client
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createClient();
       
       // Get user
       const { data: { user } } = await supabase.auth.getUser();
@@ -80,6 +147,10 @@ export default function JobMatcherPage() {
   const handleSearchJobs = async () => {
     if (!selectedArk) {
       setError('Please select an ARK first');
+      return;
+    }
+    if (!isOnline) {
+      setError('You are offline. Reconnect to fetch job matches.');
       return;
     }
 
@@ -112,14 +183,35 @@ export default function JobMatcherPage() {
       
       if (data.success && data.data) {
         setJobs(data.data.recommended_jobs || []);
-        setSearchQuery(data.data.search_query || '');
+        setSearchSummary(data.data.search_query || '');
         setSkillsMatched(data.data.skills_matched || []);
+        setHistory((prev) => [
+          { arkId: selectedArk, location, timestamp: new Date().toISOString() },
+          ...prev.filter((item) => !(item.arkId === selectedArk && item.location === location)),
+        ].slice(0, MAX_HISTORY));
+        toast.success('Latest matches ready');
+        trackEvent("job_matcher_search_success", {
+          ark_id: selectedArk,
+          location,
+          result_count: data.data.recommended_jobs?.length ?? 0,
+        });
       } else {
         setError(data.message || 'No jobs found. Try adjusting your filters.');
+        trackEvent("job_matcher_search_failed", {
+          ark_id: selectedArk,
+          location,
+          reason: data.message || 'no_results',
+        });
       }
     } catch (error) {
       console.error('Job search error:', error);
       setError('Failed to search jobs. Please try again.');
+      toast.error('Job search failed');
+      trackEvent("job_matcher_search_failed", {
+        ark_id: selectedArk,
+        location,
+        reason: 'network_error',
+      });
     } finally {
       setLoading(false);
     }
@@ -150,19 +242,66 @@ export default function JobMatcherPage() {
     return 'Not specified';
   };
 
+  const toggleSaveJob = (job: Job) => {
+    setSavedJobs((prev) => {
+      const updated = { ...prev };
+      if (updated[job.job_id]) {
+        delete updated[job.job_id];
+      } else {
+        updated[job.job_id] = job;
+      }
+      toast.success(updated[job.job_id] ? 'Job saved' : 'Job removed from saved');
+      return updated;
+    });
+  };
+
+  const savedJobsList = useMemo(() => Object.values(savedJobs), [savedJobs]);
+  const filteredJobs = useMemo(() => {
+    if (!clientFilter.trim()) return jobs;
+    const q = clientFilter.toLowerCase();
+    return jobs.filter((job) =>
+      [job.job_title, job.company_name, job.job_description]
+        .filter(Boolean)
+        .some((field) => field!.toLowerCase().includes(q))
+    );
+  }, [jobs, clientFilter]);
+
   return (
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <Briefcase className="w-8 h-8 text-yellow-400" />
+          <OfflineBanner
+            isOnline={isOnline}
+            message="You are offline. Showing your last saved job matches."
+            className="mb-4"
+          />
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
+                <Briefcase className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                  Job Matcher
+                </h1>
+                <p className="text-slate-400">AI-powered job recommendations based on your ARKs</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                Job Matcher
-              </h1>
-              <p className="text-slate-400">AI-powered job recommendations based on your ARKs</p>
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+              {isOnline ? (
+                <>
+                  <Wifi className="h-4 w-4 text-green-400" />
+                  <span>Connected</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-4 w-4 text-red-400" />
+                  <span className="text-red-300">Offline &mdash; showing last saved results</span>
+                </>
+              )}
+              <Badge variant="outline" className="bg-slate-800 border-slate-700 text-xs">
+                Saved: {savedJobsList.length}
+              </Badge>
             </div>
           </div>
 
@@ -173,6 +312,26 @@ export default function JobMatcherPage() {
               <CardDescription>Select an ARK to match jobs aligned with your learning goals</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {history.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                  <History className="h-3 w-3" />
+                  <span>Recent runs:</span>
+                  {history.map((item) => (
+                    <Badge
+                      key={item.timestamp}
+                      variant="outline"
+                      className="cursor-pointer hover:border-yellow-500/60"
+                      onClick={() => {
+                        setSelectedArk(item.arkId);
+                        setLocation(item.location);
+                      }}
+                    >
+                      {new Date(item.timestamp).toLocaleString()}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block text-slate-300">Select ARK</label>
@@ -210,6 +369,13 @@ export default function JobMatcherPage() {
                 </div>
               </div>
 
+              <Input
+                placeholder="Filter jobs by keyword (client-side)"
+                className="bg-slate-800 border-slate-700 text-slate-200"
+                value={clientFilter}
+                onChange={(event) => setClientFilter(event.target.value)}
+              />
+
               {error && (
                 <Alert className="bg-red-500/10 border-red-500/30">
                   <AlertDescription className="text-red-400">{error}</AlertDescription>
@@ -237,13 +403,13 @@ export default function JobMatcherPage() {
           </Card>
 
           {/* Search Context */}
-          {searchQuery && skillsMatched.length > 0 && (
+          {searchSummary && skillsMatched.length > 0 && (
             <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/30 mb-6">
               <CardContent className="pt-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-amber-400 mb-1">Search Query</p>
-                    <p className="text-sm font-medium text-white">{searchQuery}</p>
+                    <p className="text-sm font-medium text-white">{searchSummary}</p>
                   </div>
                   <div>
                     <p className="text-sm text-amber-400 mb-2">Skills Matched</p>
@@ -277,10 +443,10 @@ export default function JobMatcherPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">
-                  Recommended Jobs ({jobs.length})
+                  Recommended Jobs ({filteredJobs.length})
                 </h2>
               </div>
-              {jobs.map((job) => (
+              {filteredJobs.map((job) => (
                 <Card key={job.job_id} className="bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between gap-4">
@@ -366,10 +532,24 @@ export default function JobMatcherPage() {
                         Apply Now
                         <ExternalLink className="w-4 h-4" />
                       </a>
+                      <Button
+                        variant={savedJobs[job.job_id] ? 'default' : 'outline'}
+                        size="sm"
+                        className={`${savedJobs[job.job_id] ? 'bg-yellow-500 text-black hover:bg-yellow-600' : 'border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10'} mt-3`}
+                        onClick={() => toggleSaveJob(job)}
+                      >
+                        <Save className="w-3 h-3 mr-2" />
+                        {savedJobs[job.job_id] ? 'Saved' : 'Save'}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+              {filteredJobs.length === 0 && (
+                <div className="p-6 text-center text-slate-400 bg-slate-900/50 border border-slate-800 rounded-lg">
+                  No jobs match your filter right now.
+                </div>
+              )}
             </div>
           )}
 
@@ -387,6 +567,44 @@ export default function JobMatcherPage() {
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {savedJobsList.length > 0 && (
+            <Card className="bg-slate-900/60 border-yellow-500/20 mt-8">
+              <CardHeader>
+                <CardTitle className="text-yellow-400">Saved Jobs ({savedJobsList.length})</CardTitle>
+                <CardDescription>Quick access to roles you bookmarked</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {savedJobsList.map((job) => (
+                  <div key={`saved-${job.job_id}`} className="flex flex-wrap items-center justify-between gap-2 border border-slate-800 rounded-lg p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{job.job_title}</p>
+                      <p className="text-xs text-slate-400 truncate">{job.company_name}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        asChild
+                        size="sm"
+                        className="bg-yellow-500 text-black hover:bg-yellow-600"
+                      >
+                        <a href={job.job_apply_link} target="_blank" rel="noopener noreferrer">
+                          Apply
+                        </a>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                        onClick={() => toggleSaveJob(job)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}

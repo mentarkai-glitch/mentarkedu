@@ -1,8 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calculator, TrendingUp, TrendingDown, Minus, Target, BarChart3, AlertCircle } from 'lucide-react';
+import {
+  Calculator,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Target,
+  BarChart3,
+  AlertCircle,
+  Download,
+  History,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface College {
   id: string;
@@ -41,6 +55,10 @@ interface Prediction {
   college_courses?: { name: string };
 }
 
+const STORAGE_KEY = 'mentark-cutoff-selected-colleges-v1';
+const HISTORY_STORAGE_KEY = 'mentark-cutoff-history-v1';
+const MAX_HISTORY = 5;
+
 export default function CutoffPredictorPage() {
   const [loading, setLoading] = useState(false);
   const [searchingColleges, setSearchingColleges] = useState(false);
@@ -51,12 +69,57 @@ export default function CutoffPredictorPage() {
   const [selectedCollege, setSelectedCollege] = useState('');
   const [selectedState, setSelectedState] = useState('all');
   const [error, setError] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
+  const [history, setHistory] = useState<Array<{ collegeIds: string[]; year: string; timestamp: string }>>([]);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadColleges();
+    if (typeof window !== 'undefined') {
+      try {
+        const storedSelection = localStorage.getItem(STORAGE_KEY);
+        if (storedSelection) {
+          const parsed = JSON.parse(storedSelection) as { selectedColleges: string[]; targetYear: string };
+          if (Array.isArray(parsed.selectedColleges)) {
+            setSelectedColleges(parsed.selectedColleges);
+          }
+          if (parsed.targetYear) {
+            setTargetYear(parsed.targetYear);
+          }
+        }
+        const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        }
+      } catch (err) {
+        console.warn('Failed to restore cutoff predictor state', err);
+      }
+      const updateStatus = () => setIsOnline(navigator.onLine);
+      updateStatus();
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      return () => {
+        window.removeEventListener('online', updateStatus);
+        window.removeEventListener('offline', updateStatus);
+      };
+    }
   }, [selectedState]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ selectedColleges, targetYear })
+    );
+  }, [selectedColleges, targetYear]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+  }, [history]);
+
   const loadColleges = async () => {
+    if (!isOnline) return;
     setSearchingColleges(true);
     try {
       const params = new URLSearchParams();
@@ -82,6 +145,11 @@ export default function CutoffPredictorPage() {
       return;
     }
 
+    if (!isOnline) {
+      setError('You are offline. Reconnect to generate predictions.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -97,13 +165,24 @@ export default function CutoffPredictorPage() {
       const data = await response.json();
       
       if (data.success) {
-        setPredictions(data.data.predictions || []);
+        const nextPredictions = data.data.predictions || [];
+        setPredictions(nextPredictions);
+        setHistory((prev) => [
+          { collegeIds: [...selectedColleges], year: targetYear, timestamp: new Date().toISOString() },
+          ...prev,
+        ].slice(0, MAX_HISTORY));
+        if (nextPredictions.length === 0) {
+          toast('No fresh predictions returned. Try another college?');
+        } else {
+          toast.success('Cutoff predictions updated');
+        }
       } else {
         setError(data.message || 'Failed to generate predictions');
       }
     } catch (error) {
       console.error('Prediction error:', error);
       setError('Failed to generate predictions. Please try again.');
+      toast.error('Prediction request failed');
     } finally {
       setLoading(false);
     }
@@ -115,6 +194,43 @@ export default function CutoffPredictorPage() {
         ? prev.filter(id => id !== collegeId)
         : [...prev, collegeId]
     );
+  };
+
+  const handleExport = () => {
+    if (predictions.length === 0) {
+      toast.info('No predictions yet', {
+        description: 'Run the predictor to unlock exports.',
+      });
+      return;
+    }
+    setExporting(true);
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        targetYear,
+        selectedColleges,
+        predictions,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `cutoff-predictions-${targetYear}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      toast.success('Export ready', {
+        description: 'Cutoff predictions saved to downloads as JSON.',
+      });
+    } catch (err) {
+      console.error('Export predictions error', err);
+      toast.error('Export failed', {
+        description: 'Please retry after checking your connection.',
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const getTrendIcon = (trend: string) => {
@@ -145,15 +261,50 @@ export default function CutoffPredictorPage() {
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <Calculator className="w-8 h-8 text-yellow-400" />
+          <OfflineBanner
+            isOnline={isOnline}
+            message="You are offline. Cutoff history is available, but new predictions need a connection."
+            className="mb-4"
+          />
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
+                <Calculator className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                  Cutoff Predictor
+                </h1>
+                <p className="text-slate-400">AI-powered admission cutoff predictions</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                Cutoff Predictor
-              </h1>
-              <p className="text-slate-400">AI-powered admission cutoff predictions</p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+                {isOnline ? (
+                  <>
+                    <Wifi className="h-4 w-4 text-green-400" />
+                    <span>Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-4 w-4 text-red-400" />
+                    <span className="text-red-300">Offline &mdash; using cached data</span>
+                  </>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                onClick={handleExport}
+                disabled={exporting || predictions.length === 0}
+              >
+                {exporting ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Export
+              </Button>
             </div>
           </div>
 
@@ -164,6 +315,26 @@ export default function CutoffPredictorPage() {
               <CardDescription>Choose colleges to predict cutoffs for the upcoming academic year</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {history.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                  <History className="h-3 w-3" />
+                  <span>Recent runs:</span>
+                  {history.map((item) => (
+                    <Badge
+                      key={item.timestamp}
+                      variant="outline"
+                      className="cursor-pointer hover:border-yellow-500/60"
+                      onClick={() => {
+                        setSelectedColleges(item.collegeIds);
+                        setTargetYear(item.year);
+                      }}
+                    >
+                      {new Date(item.timestamp).toLocaleString()}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+ 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="state">Filter by State</Label>

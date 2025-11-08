@@ -1,4 +1,5 @@
 import type { ApiResponse, PaginatedResponse } from "@/lib/types";
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 
 /**
@@ -60,6 +61,9 @@ export function paginatedResponse<T>(
  * Handle API errors consistently
  */
 export function handleApiError(error: unknown): NextResponse<ApiResponse> {
+  if (typeof Sentry.captureException === "function") {
+    Sentry.captureException(error);
+  }
   console.error("API Error:", error);
 
   if (error instanceof Error) {

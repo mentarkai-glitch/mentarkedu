@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Search, UserPlus, MessageCircle, Sparkles, Star } from 'lucide-react';
+import { Users, Search, UserPlus, MessageCircle, Sparkles, Star, Filter, Download, Wifi, WifiOff } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface PeerMatch {
   student_id: string;
@@ -31,14 +35,55 @@ export default function PeerMatchesPage() {
   const [matches, setMatches] = useState<PeerMatch[]>([]);
   const [profile, setProfile] = useState<CurrentProfile | null>(null);
   const [error, setError] = useState('');
+  const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'study_buddy' | 'similar_interests' | 'complementary'>('all');
+  const [isOnline, setIsOnline] = useState(true);
+  const [history, setHistory] = useState<Array<{ timestamp: string; matches: number }>>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedMatches = localStorage.getItem('mentark-peer-matches-latest');
+      if (storedMatches) {
+        const parsed = JSON.parse(storedMatches);
+        setMatches(parsed.matches || []);
+        setProfile(parsed.profile || null);
+      }
+      const storedHistory = localStorage.getItem('mentark-peer-matches-history');
+      if (storedHistory) {
+        setHistory(JSON.parse(storedHistory));
+      }
+    } catch (err) {
+      console.warn('Failed to restore peer matches state', err);
+    }
+    const updateStatus = () => setIsOnline(navigator.onLine);
+    updateStatus();
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    return () => {
+      window.removeEventListener('online', updateStatus);
+      window.removeEventListener('offline', updateStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('mentark-peer-matches-history', JSON.stringify(history.slice(0, 5)));
+  }, [history]);
 
   const handleFindMatches = async () => {
+    if (!navigator.onLine) {
+      setIsOnline(false);
+      setError('You are offline. Reconnect to refresh matches.');
+      toast.error('Offline — cannot fetch matches');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const response = await fetch('/api/peer-matching/find', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ preferences: {} }),
       });
 
@@ -47,12 +92,24 @@ export default function PeerMatchesPage() {
       if (data.success && data.data) {
         setMatches(data.data.matches || []);
         setProfile(data.data.current_profile || null);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(
+            'mentark-peer-matches-latest',
+            JSON.stringify({ matches: data.data.matches || [], profile: data.data.current_profile || null })
+          );
+        }
+        setHistory((prev) => [
+          { timestamp: new Date().toISOString(), matches: (data.data.matches || []).length },
+          ...prev,
+        ]);
+        toast.success('Peer matches updated');
       } else {
         setError(data.message || 'Failed to find peer matches');
       }
     } catch (error) {
       console.error('Peer matching error:', error);
       setError('Failed to find peer matches. Please try again.');
+      toast.error('Peer matching failed');
     } finally {
       setLoading(false);
     }
@@ -91,21 +148,95 @@ export default function PeerMatchesPage() {
     return 'text-orange-400';
   };
 
+  const filteredMatches = useMemo(() => {
+    if (matchTypeFilter === 'all') return matches;
+    return matches.filter((match) => match.match_type === matchTypeFilter);
+  }, [matches, matchTypeFilter]);
+
+  const exportMatches = () => {
+    if (matches.length === 0) {
+      toast.info('No matches yet', {
+        description: 'Run a search to export peer recommendations.',
+      });
+      return;
+    }
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        matches,
+        profile,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'peer-matches.json';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      toast.success('Export ready', {
+        description: 'Peer recommendations saved as JSON in your downloads.',
+      });
+    } catch (err) {
+      console.error('Export matches failed', err);
+      toast.error('Export failed', {
+        description: 'Please retry after checking your connection.',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <Users className="w-8 h-8 text-yellow-400" />
+          <OfflineBanner
+            isOnline={isOnline}
+            message="You are offline. Peer recommendations are based on your last successful search."
+            className="mb-4"
+          />
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
+                <Users className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                  Peer Matches
+                </h1>
+                <p className="text-slate-400">Connect with compatible study partners</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                Peer Matches
-              </h1>
-              <p className="text-slate-400">Connect with compatible study partners</p>
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+              {isOnline ? (
+                <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> Online</span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-red-300"><WifiOff className="h-4 w-4 text-red-400" /> Offline</span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                onClick={exportMatches}
+                disabled={matches.length === 0}
+              >
+                <Download className="h-3 w-3 mr-1" /> Export
+              </Button>
             </div>
           </div>
+
+          {history.length > 0 && (
+            <Alert className="mb-4 bg-slate-900/60 border-yellow-500/20">
+              <AlertDescription className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                Recent runs:
+                {history.slice(0, 5).map((entry) => (
+                  <Badge key={entry.timestamp} variant="outline" className="border-yellow-500/40 text-yellow-300">
+                    {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {entry.matches} matches
+                  </Badge>
+                ))}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Profile Display */}
           {profile && (
@@ -200,22 +331,35 @@ export default function PeerMatchesPage() {
           {/* Matches */}
           {!loading && matches.length > 0 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
                 <h2 className="text-2xl font-bold text-white">
-                  Your Matches ({matches.length})
+                  Your Matches ({filteredMatches.length})
                 </h2>
-                <Button
-                  onClick={handleFindMatches}
-                  variant="outline"
-                  className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  Find New Matches
-                </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Select value={matchTypeFilter} onValueChange={(value: any) => setMatchTypeFilter(value)}>
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectValue placeholder="Match Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="study_buddy">Study Buddy</SelectItem>
+                      <SelectItem value="similar_interests">Similar Interests</SelectItem>
+                      <SelectItem value="complementary">Complementary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleFindMatches}
+                    variant="outline"
+                    className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Refresh Matches
+                  </Button>
+                </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                {matches.map((match) => (
+                {filteredMatches.map((match) => (
                   <Card key={match.student_id} className="bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
                     <CardHeader>
                       <div className="flex items-start justify-between">
@@ -315,6 +459,11 @@ export default function PeerMatchesPage() {
                   </Card>
                 ))}
               </div>
+              {filteredMatches.length === 0 && (
+                <div className="text-center text-slate-400 py-8">
+                  No matches for this filter right now. Try refreshing or switching types.
+                </div>
+              )}
             </div>
           )}
         </motion.div>

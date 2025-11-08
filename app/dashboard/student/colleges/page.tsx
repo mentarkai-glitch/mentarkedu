@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Building2, Search, GraduationCap, TrendingUp, Shield, Rocket, Star, Loader2, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface CollegeRecommendation {
   id: string;
@@ -72,6 +76,9 @@ const categoryLabels = {
   dream: 'Dream Colleges',
 };
 
+const HISTORY_STORAGE_KEY = 'mentark-college-history-v1';
+const MAX_HISTORY = 5;
+
 export default function CollegeMatcherPage() {
   const [loading, setLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<CollegeRecommendation[]>([]);
@@ -82,12 +89,76 @@ export default function CollegeMatcherPage() {
     dream: CollegeRecommendation[];
   }>({ safe: [], moderate: [], reach: [], dream: [] });
   const [hasPreferences, setHasPreferences] = useState(false);
-  const supabase = createClient();
+  const [isOnline, setIsOnline] = useState(true);
+  const [stateFilter, setStateFilter] = useState('');
+  const [tierFilter, setTierFilter] = useState('');
+  const [history, setHistory] = useState<Array<{ timestamp: string; total: number }>>([]);
+  const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
+  const tierOptions = useMemo(() => {
+    const tiers = new Set<string>();
+    recommendations.forEach((rec) => {
+      if (rec.colleges.tier) tiers.add(rec.colleges.tier);
+    });
+    return Array.from(tiers);
+  }, [recommendations]);
+
+  const matchesFilters = (rec: CollegeRecommendation) => {
+    const matchesState = stateFilter
+      ? `${rec.colleges.state} ${rec.colleges.city}`.toLowerCase().includes(stateFilter.toLowerCase())
+      : true;
+    const matchesTier = tierFilter ? rec.colleges.tier === tierFilter : true;
+    return matchesState && matchesTier;
+  };
+
+  const filteredCounts = useMemo(() => {
+    const counts = {
+      total: 0,
+      safe: 0,
+      moderate: 0,
+      reach: 0,
+      dream: 0,
+    };
+    Object.entries(byCategory).forEach(([category, recs]) => {
+      const matched = recs.filter(matchesFilters);
+      counts[category as keyof typeof counts] = matched.length;
+      counts.total += matched.length;
+    });
+    return counts;
+  }, [byCategory, stateFilter, tierFilter]);
 
   useEffect(() => {
     loadRecommendations();
     checkPreferences();
+    if (typeof window !== 'undefined') {
+      try {
+        const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        }
+      } catch (err) {
+        console.warn('Failed to restore college matcher history', err);
+      }
+      const updateStatus = () => setIsOnline(navigator.onLine);
+      updateStatus();
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      return () => {
+        window.removeEventListener('online', updateStatus);
+        window.removeEventListener('offline', updateStatus);
+      };
+    }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+    } catch (err) {
+      console.warn('Failed to persist college matcher history', err);
+    }
+  }, [history]);
 
   const checkPreferences = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -103,23 +174,30 @@ export default function CollegeMatcherPage() {
   };
 
   const loadRecommendations = async () => {
-    try {
-      const response = await fetch('/api/colleges/recommendations');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          setRecommendations(data.data.recommendations || []);
-          setByCategory(data.data.by_category || { safe: [], moderate: [], reach: [], dream: [] });
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load recommendations:', error);
-    }
-  };
+     try {
+       const response = await fetch('/api/colleges/recommendations');
+       if (response.ok) {
+         const data = await response.json();
+         if (data.success && data.data) {
+           setRecommendations(data.data.recommendations || []);
+           setByCategory(data.data.by_category || { safe: [], moderate: [], reach: [], dream: [] });
+           const timestamp = data.data.generated_at || new Date().toISOString();
+           setLastRunAt(timestamp);
+           setHistory((prev) => [{ timestamp, total: (data.data.recommendations || []).length }, ...prev.filter((item) => item.timestamp !== timestamp)].slice(0, MAX_HISTORY));
+         }
+       }
+     } catch (error) {
+       console.error('Failed to load recommendations:', error);
+     }
+   };
 
   const handleFindColleges = async () => {
-    if (!hasPreferences) {
-      toast.error('Please configure your admission preferences first');
+     if (!hasPreferences) {
+       toast.error('Please configure your admission preferences first');
+       return;
+     }
+    if (!isOnline) {
+      toast.error('You appear to be offline. Reconnect to fetch updated matches.');
       return;
     }
 
@@ -150,6 +228,39 @@ export default function CollegeMatcherPage() {
       toast.error(error.message || 'Failed to find colleges');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (recommendations.length === 0) {
+      toast('No recommendations to export yet');
+      return;
+    }
+    setExporting(true);
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        filters: {
+          stateFilter,
+          tierFilter,
+        },
+        recommendations,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'mentark-college-recommendations.json';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      toast.success('College recommendations exported');
+    } catch (err) {
+      console.error('Export recommendations error', err);
+      toast.error('Failed to export recommendations');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -240,6 +351,11 @@ export default function CollegeMatcherPage() {
                 College Matcher
               </h1>
               <p className="text-slate-400">Find your perfect college match based on your scores and preferences</p>
+              <OfflineBanner
+                isOnline={isOnline}
+                message="You are offline. College recommendations reflect your last sync."
+                className="mt-3"
+              />
             </div>
           </div>
         </motion.div>
@@ -287,35 +403,128 @@ export default function CollegeMatcherPage() {
 
         {recommendations.length > 0 && (
           <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">Your Recommendations</h2>
-                <p className="text-slate-400">
-                  {recommendations.length} colleges matched your profile
-                </p>
-              </div>
-              <Button
-                onClick={handleFindColleges}
-                disabled={loading}
-                variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Refreshing...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Refresh Results
-                  </>
-                )}
-              </Button>
-            </div>
+            <Card className="bg-slate-900/50 border-slate-700">
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Your Recommendations</h2>
+                    <p className="text-slate-400">
+                      {filteredCounts.total} of {recommendations.length} colleges match the current filters
+                    </p>
+                    {lastRunAt && (
+                      <p className="text-xs text-slate-500 mt-1">Last updated {new Date(lastRunAt).toLocaleString()}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleFindColleges}
+                      disabled={loading || !isOnline}
+                      variant="outline"
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Refreshing...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4 mr-2" />
+                          Refresh Results
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={handleExport}
+                      disabled={exporting || recommendations.length === 0}
+                      variant="outline"
+                      className="border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10"
+                    >
+                      {exporting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Preparing...
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          Export JSON
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
+                    <p className="text-xs text-slate-400">Total matches</p>
+                    <p className="text-2xl font-semibold text-white">{filteredCounts.total}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
+                    <p className="text-xs text-slate-400">Safe bets</p>
+                    <p className="text-2xl font-semibold text-white">{filteredCounts.safe}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
+                    <p className="text-xs text-slate-400">Moderate chances</p>
+                    <p className="text-2xl font-semibold text-white">{filteredCounts.moderate}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
+                    <p className="text-xs text-slate-400">Reach/Dream</p>
+                    <p className="text-2xl font-semibold text-white">{filteredCounts.reach + filteredCounts.dream}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs text-slate-400 mb-1 block">Filter by state/city</Label>
+                    <Input
+                      value={stateFilter}
+                      onChange={(e) => setStateFilter(e.target.value)}
+                      placeholder="e.g., Maharashtra or Mumbai"
+                      className="bg-slate-800 border-slate-700"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-400 mb-1 block">Tier</Label>
+                    <Select value={tierFilter} onValueChange={setTierFilter}>
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
+                        <SelectValue placeholder="All tiers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All tiers</SelectItem>
+                        {tierOptions.map((tier) => (
+                          <SelectItem key={tier} value={tier}>
+                            {tier}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {history.length > 0 && (
+                    <div>
+                      <Label className="text-xs text-slate-400 mb-1 block">Run history</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {history.map((item) => (
+                          <Button
+                            key={item.timestamp}
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-slate-400 hover:text-yellow-300"
+                          >
+                            {new Date(item.timestamp).toLocaleDateString()} ({item.total})
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {Object.entries(byCategory).map(([category, recs]) => {
-              if (recs.length === 0) return null;
+              const filtered = recs.filter(matchesFilters);
+              if (filtered.length === 0) return null;
               const Icon = categoryIcons[category as keyof typeof categoryIcons];
               const colorClass = categoryColors[category as keyof typeof categoryColors];
 
@@ -327,10 +536,10 @@ export default function CollegeMatcherPage() {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-white">{categoryLabels[category as keyof typeof categoryLabels]}</h3>
-                      <p className="text-sm text-slate-400">{recs.length} colleges</p>
+                      <p className="text-sm text-slate-400">{filtered.length} colleges</p>
                     </div>
                   </div>
-                  <div>{recs.map(renderRecommendation)}</div>
+                  <div>{filtered.map(renderRecommendation)}</div>
                 </div>
               );
             })}

@@ -108,7 +108,7 @@ export function SidebarNav() {
     {
       title: "Tracking",
       items: [
-        { title: "Emotion Check", href: "/emotion-check", icon: Heart },
+        { title: "Emotion Check", href: "/dashboard/student/emotion", icon: Heart },
         { title: "Progress", href: "/dashboard/student/progress", icon: TrendingUp },
         { title: "Achievements", href: "/dashboard/student/achievements", icon: Trophy },
         { title: "Peer Matches", href: "/dashboard/student/peers", icon: Users },

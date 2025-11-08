@@ -1,0 +1,8 @@
+{
+  "model_type": "career",
+  "label_type": "career_success",
+  "timestamp": "2025-11-08T04:28:42.434636",
+  "samples": 0,
+  "status": "skipped",
+  "reason": "Insufficient data: need at least 50 samples, found 0."
+}

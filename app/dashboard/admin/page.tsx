@@ -56,8 +56,50 @@ interface Analytics {
   };
 }
 
+interface RiskInsights {
+  level_counts: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  risk_trend: Array<{ date: string; average_dropout_risk: number }>;
+  top_high_risk: Array<{
+    student_id: string;
+    name: string;
+    risk_level: string;
+    dropout_risk_score: number;
+    burnout_risk_score: number;
+    disengagement_risk_score: number;
+    prediction_date: string;
+    primary_risk_factors: string[];
+    early_warning_flags: string[];
+  }>;
+  alerts: {
+    recent: Array<{
+      id: string;
+      student_id: string;
+      name: string;
+      severity: string;
+      status: string;
+      risk_score: number;
+      alert_type: string;
+      message: string;
+      created_at: string;
+    }>;
+    by_severity: {
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+    };
+    open_count: number;
+  };
+}
+
 export default function AdminDashboard() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [riskInsights, setRiskInsights] = useState<RiskInsights | null>(null);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [billing, setBilling] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -66,6 +108,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchAnalytics();
+    fetchRiskInsights();
     fetchTeachers();
     fetchBilling();
   }, []);
@@ -81,6 +124,18 @@ export default function AdminDashboard() {
       console.error('Failed to fetch analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRiskInsights = async () => {
+    try {
+      const response = await fetch('/api/admin/risk-insights');
+      const data = await response.json();
+      if (data.success) {
+        setRiskInsights(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch risk insights:', error);
     }
   };
 
@@ -158,10 +213,29 @@ export default function AdminDashboard() {
     : [];
 
   const riskChartData = [
-    { name: 'High Risk', value: analytics?.risk_distribution.high || 0, color: '#EF4444' },
-    { name: 'Medium Risk', value: analytics?.risk_distribution.medium || 0, color: '#F59E0B' },
-    { name: 'Low Risk', value: analytics?.risk_distribution.low || 0, color: '#10B981' }
+    { name: 'High Risk', value: riskInsights?.level_counts.high || analytics?.risk_distribution.high || 0, color: '#EF4444' },
+    { name: 'Medium Risk', value: riskInsights?.level_counts.medium || analytics?.risk_distribution.medium || 0, color: '#F59E0B' },
+    { name: 'Low Risk', value: riskInsights?.level_counts.low || analytics?.risk_distribution.low || 0, color: '#10B981' }
   ];
+
+  const riskTrendData = (riskInsights?.risk_trend || []).map((trend) => ({
+    date: new Date(trend.date).toLocaleDateString(),
+    average_dropout_risk: Math.round(trend.average_dropout_risk),
+  }));
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'critical':
+        return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'high':
+        return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+      case 'medium':
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      default:
+        return 'bg-green-500/20 text-green-400 border-green-500/30';
+    }
+  };
+  
 
   return (
     <div className="min-h-screen bg-black">
@@ -233,7 +307,7 @@ export default function AdminDashboard() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <KPICard
                 title="Total Students"
                 value={analytics?.overview.total_students || 0}
@@ -339,12 +413,16 @@ export default function AdminDashboard() {
                     <p className="text-sm text-gray-400 mt-1">ARK Completion</p>
                   </div>
                   <div className="bg-slate-700/30 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-white">{analytics?.risk_distribution.high || 0}</p>
+                    <p className="text-2xl font-bold text-white">{riskInsights?.level_counts.high || analytics?.risk_distribution.high || 0}</p>
                     <p className="text-sm text-gray-400 mt-1">High Risk Students</p>
                   </div>
                   <div className="bg-slate-700/30 rounded-lg p-4 text-center">
                     <p className="text-2xl font-bold text-white">{analytics?.overview.total_teachers || 0}</p>
                     <p className="text-sm text-gray-400 mt-1">Active Teachers</p>
+                  </div>
+                  <div className="bg-slate-700/30 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{riskInsights?.alerts.open_count ?? analytics?.overview.growth_rate.toFixed(1) || 0}</p>
+                    <p className="text-sm text-gray-400 mt-1">Open Risk Alerts</p>
                   </div>
                   <div className="bg-slate-700/30 rounded-lg p-4 text-center">
                     <p className="text-2xl font-bold text-white">{analytics?.overview.growth_rate.toFixed(1) || 0}%</p>
@@ -353,6 +431,114 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+            {riskInsights && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-white">Dropout Risk Trend (Last 14 Days)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {riskTrendData.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400">Insufficient data</div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={280}>
+                        <LineChart data={riskTrendData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                          <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+                          <YAxis stroke="#9CA3AF" />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', color: '#fff' }}
+                          />
+                          <Line type="monotone" dataKey="average_dropout_risk" stroke="#f59e0b" strokeWidth={2} dot />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-white">Top High-Risk Students</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {riskInsights.top_high_risk.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400">No high-risk students yet</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {riskInsights.top_high_risk.map((student) => (
+                          <div key={student.student_id} className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-white font-semibold">{student.name}</p>
+                                <p className="text-xs text-slate-400">Updated {new Date(student.prediction_date).toLocaleString()}</p>
+                              </div>
+                              <Badge className={getSeverityBadge(student.risk_level)}>{student.risk_level.toUpperCase()}</Badge>
+                            </div>
+                            <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-slate-300">
+                              <div>
+                                <p className="text-slate-400">Dropout</p>
+                                <p className="text-white font-semibold">{Math.round(student.dropout_risk_score)}</p>
+                              </div>
+                              <div>
+                                <p className="text-slate-400">Burnout</p>
+                                <p className="text-white font-semibold">{Math.round(student.burnout_risk_score)}</p>
+                              </div>
+                              <div>
+                                <p className="text-slate-400">Disengagement</p>
+                                <p className="text-white font-semibold">{Math.round(student.disengagement_risk_score)}</p>
+                              </div>
+                            </div>
+                            {student.primary_risk_factors?.length > 0 && (
+                              <div className="mt-2 text-xs text-slate-400">
+                                Key factors: {student.primary_risk_factors.slice(0, 2).join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {riskInsights && (
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">Recent Risk Alerts</CardTitle>
+                    <Badge className={getSeverityBadge('high')}>
+                      {riskInsights.alerts.open_count} open
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {riskInsights.alerts.recent.length === 0 ? (
+                    <div className="text-center py-6 text-slate-400">No open alerts 🎉</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {riskInsights.alerts.recent.map((alert) => (
+                        <div key={alert.id} className="flex items-start justify-between bg-slate-700/30 border border-slate-600/30 rounded-lg p-3">
+                          <div>
+                            <p className="text-white font-semibold">{alert.name}</p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {alert.alert_type.replace('_', ' ')} · {new Date(alert.created_at).toLocaleString()}
+                            </p>
+                            {alert.message && (
+                              <p className="text-xs text-slate-300 mt-2 line-clamp-2">{alert.message}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <Badge className={getSeverityBadge(alert.severity)}>{alert.severity.toUpperCase()}</Badge>
+                            <p className="text-xs text-slate-400 mt-2">Score: {Math.round(alert.risk_score)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Teachers Tab */}

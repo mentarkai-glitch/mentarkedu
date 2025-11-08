@@ -69,6 +69,19 @@ interface Message {
   };
 }
 
+const LOCAL_STORAGE_KEY = "mentark-chat-history-v1";
+
+interface StoredMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  persona?: MentorPersona;
+  imageUrl?: string;
+  imageAnalysis?: Message["imageAnalysis"];
+}
+
+type PersonaHistory = Record<string, StoredMessage[]>;
+
 
 // Enhanced persona data with icons and colors
 const mentorPersonas = [
@@ -135,6 +148,8 @@ export default function ChatPage() {
   const [user, setUser] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [historyReady, setHistoryReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Get current user
   useEffect(() => {
@@ -148,34 +163,96 @@ export default function ChatPage() {
 
   // Initialize with persona greeting
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([{
-        role: "assistant",
-        content: selectedPersona.greeting,
-        timestamp: new Date(),
-        persona: selectedPersona.id as MentorPersona
-      }]);
-    }
-  }, [selectedPersona, messages.length]);
+    if (typeof window === "undefined") return;
 
+    let parsed: PersonaHistory = {};
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        parsed = JSON.parse(stored) as PersonaHistory;
+      }
+    } catch (parseError) {
+      console.warn("Failed to parse chat history", parseError);
+    }
+
+    const personaHistory = parsed[selectedPersona.id] ?? [];
+    if (personaHistory.length > 0) {
+      setMessages(
+        personaHistory.map((msg) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }))
+      );
+    } else {
+      setMessages([
+        {
+          role: "assistant",
+          content: selectedPersona.greeting,
+          timestamp: new Date(),
+          persona: selectedPersona.id as MentorPersona,
+        },
+      ]);
+    }
+
+    setHistoryReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPersona]);
+
+  useEffect(() => {
+    if (!historyReady || typeof window === "undefined") return;
+    let parsed: PersonaHistory = {};
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        parsed = JSON.parse(stored) as PersonaHistory;
+      }
+    } catch {
+      parsed = {};
+    }
+
+    parsed[selectedPersona.id] = messages.map(({ timestamp, ...rest }) => ({
+      ...rest,
+      timestamp: timestamp.toISOString(),
+    }));
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(parsed));
+    } catch (storageError) {
+      console.warn("Failed to persist chat history", storageError);
+    }
+  }, [messages, selectedPersona.id, historyReady]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateStatus = () => setIsConnected(typeof navigator === "undefined" ? true : navigator.onLine);
+    updateStatus();
+
+    window.addEventListener("online", updateStatus);
+    window.addEventListener("offline", updateStatus);
+    return () => {
+      window.removeEventListener("online", updateStatus);
+      window.removeEventListener("offline", updateStatus);
+    };
+  }, []);
+ 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
+ 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Simulate connection status
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsConnected(Math.random() > 0.1); // 90% chance of being connected
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
+    if (!isConnected) {
+      setError("You appear to be offline. Reconnect to upload images.");
+      setUploadingImage(false);
+      return;
+    }
+
+    setError(null);
     
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -190,11 +267,16 @@ export default function ChatPage() {
       const response = await fetch("/api/vision/analyze-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           imageBase64: base64Data,
           features: ["text", "labels", "objects"],
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Vision service returned ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -212,6 +294,7 @@ export default function ChatPage() {
         const chatResponse = await fetch("/api/ai/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             message: `I've uploaded an image. Here's what was detected: ${data.data.extracted_text || 'No text detected'}. Labels: ${data.data.labels?.join(', ') || 'No labels'}. Please analyze this image and provide insights.`,
             persona: selectedPersona.id,
@@ -219,6 +302,10 @@ export default function ChatPage() {
             user_id: user?.id,
           }),
         });
+
+        if (!chatResponse.ok) {
+          throw new Error(`Chat service returned ${chatResponse.status}`);
+        }
 
         const chatData = await chatResponse.json();
 
@@ -236,6 +323,7 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error("Image upload error:", error);
+      setError("Couldn't analyze that image just yet. Please try again or upload a clearer shot.");
       const errorMessage: Message = {
         role: "assistant",
         content: "Sorry, I couldn't analyze the image. Please try uploading a clearer image or try again later.",
@@ -247,30 +335,42 @@ export default function ChatPage() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading || uploadingImage) return;
+  const sendMessage = async (override?: string) => {
+    const text = (override ?? input).trim();
+    if (!text || loading || uploadingImage) return;
+
+    if (!isConnected) {
+      setError("You're offline. We'll send this once you're back online.");
+      return;
+    }
 
     const userMessage: Message = {
       role: "user",
-      content: input,
+      content: text,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          message: input,
+          message: text,
           persona: selectedPersona.id,
           session_id: user?.id || "demo-session",
           user_id: user?.id,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Chat service returned ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -287,6 +387,7 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error("Chat error:", error);
+      setError("Sorry, I'm having trouble connecting right now. Please try again in a moment.");
       const errorMessage: Message = {
         role: "assistant",
         content: "Sorry, I'm having trouble connecting right now. Please try again in a moment.",
@@ -314,8 +415,14 @@ export default function ChatPage() {
     { text: "How to manage time better?", emoji: "⏰" }
   ];
 
+  const handleQuickQuestion = (text: string) => {
+    if (loading || uploadingImage) return;
+    setInput(text);
+    sendMessage(text);
+  };
+
   return (
-    <div className="flex h-screen flex-col bg-black">
+    <div className="flex min-h-screen flex-col bg-black">
       {/* Enhanced Header */}
       <header className="border-b border-yellow-500/20 glass backdrop-blur-xl overflow-hidden">
         <div className="w-full max-w-full mx-auto flex h-16 items-center justify-between px-2 sm:px-4 overflow-x-auto">
@@ -385,6 +492,14 @@ export default function ChatPage() {
         </div>
       </header>
 
+      {error && (
+        <div className="border-b border-red-500/30 bg-red-500/10">
+          <div className="container mx-auto px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-red-200">
+            {error}
+          </div>
+        </div>
+      )}
+
       {/* Persona Selector */}
       <AnimatePresence>
         {showPersonaSelector && (
@@ -404,12 +519,6 @@ export default function ChatPage() {
                     onClick={() => {
                       setSelectedPersona(persona);
                       setShowPersonaSelector(false);
-                      setMessages([{
-                        role: "assistant",
-                        content: persona.greeting,
-                        timestamp: new Date(),
-                        persona: persona.id as MentorPersona
-                      }]);
                     }}
                     className="cursor-pointer"
                   >
@@ -543,6 +652,21 @@ export default function ChatPage() {
             </motion.div>
           )}
 
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <Card className="max-w-[80%] glass border-red-500/20 backdrop-blur-sm">
+                <CardContent className="p-4 text-center text-red-400">
+                  <AlertCircle className="w-6 h-6 mb-2" />
+                  {error}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -568,7 +692,7 @@ export default function ChatPage() {
                   <Badge
                     variant="outline"
                     className="cursor-pointer border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50 transition-all text-xs"
-                    onClick={() => setInput(q.text)}
+                    onClick={() => handleQuickQuestion(q.text)}
                   >
                     {q.emoji} <span className="hidden sm:inline">{q.text}</span>
                   </Badge>

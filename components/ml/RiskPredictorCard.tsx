@@ -267,12 +267,15 @@ export function RiskPredictorCard({ studentId, className }: RiskPredictorCardPro
 
         {/* Model Info */}
         <div className="pt-4 border-t border-gray-700 text-xs text-gray-500">
-          <div className="flex justify-between">
+          <div className="grid grid-cols-2 gap-3 text-xs text-gray-400">
             <span>Model: {prediction.model_version}</span>
             <span>Confidence: {Math.round((prediction.confidence_score || 0) * 100)}%</span>
-          </div>
-          <div className="mt-1">
-            Last updated: {new Date(prediction.prediction_date).toLocaleString()}
+            {prediction.model_source && (
+              <span className="col-span-2">Source: {prediction.model_source}</span>
+            )}
+            <span className="col-span-2">
+              Last updated: {new Date(prediction.prediction_date).toLocaleString()}
+            </span>
           </div>
         </div>
       </CardContent>

@@ -1,13 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Trophy, Award, Zap, Target, BarChart3, Calendar, Users } from 'lucide-react';
+import {
+  TrendingUp,
+  Trophy,
+  Award,
+  Zap,
+  Target,
+  BarChart3,
+  Calendar,
+  Users,
+  Download,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
+import { OfflineBanner } from '@/components/ui/offline-banner';
 
 interface XPData {
   totalXp: number;
@@ -64,13 +81,31 @@ export default function ProgressPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userPosition, setUserPosition] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isOnline, setIsOnline] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadAllData();
+    if (typeof window !== 'undefined') {
+      const updateStatus = () => setIsOnline(navigator.onLine);
+      updateStatus();
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      return () => {
+        window.removeEventListener('online', updateStatus);
+        window.removeEventListener('offline', updateStatus);
+      };
+    }
   }, []);
 
   const loadAllData = async () => {
+    if (!navigator.onLine) {
+      setIsOnline(false);
+      toast('Offline — showing last loaded progress');
+      return;
+    }
     setLoading(true);
+    setError(null);
     try {
       const [xpRes, badgesRes, leaderRes] = await Promise.all([
         fetch('/api/gamification/xp'),
@@ -92,6 +127,8 @@ export default function ProgressPage() {
       }
     } catch (error) {
       console.error('Error loading progress data:', error);
+      setError('Unable to load progress data. Please try again.');
+      toast.error('Failed to load progress data');
     } finally {
       setLoading(false);
     }
@@ -122,6 +159,53 @@ export default function ProgressPage() {
     return `#${rank}`;
   };
 
+  const frequentSources = useMemo(() => {
+    if (!xpData) return [] as Array<{ source: string; total: number }>;
+    const map = new Map<string, number>();
+    xpData.transactions.forEach((txn) => {
+      map.set(txn.source, (map.get(txn.source) || 0) + txn.amount);
+    });
+    return Array.from(map.entries())
+      .map(([source, total]) => ({ source, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 3);
+  }, [xpData]);
+
+  const exportProgress = () => {
+    if (!xpData && !badgeData && leaderboard.length === 0) {
+      toast.info('No progress data yet', {
+        description: 'Complete activities to build an exportable snapshot.',
+      });
+      return;
+    }
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        xpData,
+        badgeData,
+        leaderboard,
+        userPosition,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'progress-overview.json';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      toast.success('Export ready', {
+        description: 'Progress overview saved as JSON in your downloads.',
+      });
+    } catch (err) {
+      console.error('Progress export failed', err);
+      toast.error('Export failed', {
+        description: 'Please retry after checking your connection.',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black p-4 md:p-8">
@@ -140,19 +224,55 @@ export default function ProgressPage() {
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-              <BarChart3 className="w-8 h-8 text-yellow-400" />
+          <OfflineBanner
+            isOnline={isOnline}
+            message="You are offline. Progress data is shown from your last sync."
+            className="mb-4"
+          />
+          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
+                <BarChart3 className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                  Progress Tracking
+                </h1>
+                <p className="text-slate-400">Your learning journey analytics</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                Progress Tracking
-              </h1>
-              <p className="text-slate-400">Your learning journey analytics</p>
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+              {isOnline ? (
+                <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> Online</span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-red-300"><WifiOff className="h-4 w-4 text-red-400" /> Offline</span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                onClick={exportProgress}
+              >
+                <Download className="h-3 w-3 mr-1" /> Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                onClick={loadAllData}
+                disabled={loading}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} /> Refresh
+              </Button>
             </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            {error && (
+              <Alert className="mb-4 bg-red-500/10 border-red-500/30">
+                <AlertDescription className="text-red-300">{error}</AlertDescription>
+              </Alert>
+            )}
             <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-yellow-500/30">
               <TabsTrigger value="overview">📊 Overview</TabsTrigger>
               <TabsTrigger value="achievements">🏆 Achievements</TabsTrigger>
@@ -259,6 +379,23 @@ export default function ProgressPage() {
                         </div>
                       ))}
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {frequentSources.length > 0 && (
+                <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <CardHeader>
+                    <CardTitle className="text-yellow-400">Top XP Sources</CardTitle>
+                    <CardDescription>Where you earn the most XP</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {frequentSources.map((source) => (
+                      <div key={source.source} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700">
+                        <span className="text-sm text-slate-300 capitalize">{source.source.replace(/_/g, ' ')}</span>
+                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/40">+{source.total} XP</Badge>
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               )}

@@ -1,0 +1,8 @@
+{
+  "model_type": "dropout",
+  "label_type": "dropout",
+  "timestamp": "2025-11-08T04:28:42.129422",
+  "samples": 0,
+  "status": "skipped",
+  "reason": "Insufficient data: need at least 50 samples, found 0."
+}
