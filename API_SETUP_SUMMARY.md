@@ -18,6 +18,10 @@
 9. ⚠️  PostHog API Key: Added to `.env.local` (needs restart)
 10. ⚠️  PostHog Project ID: Added to `.env.local` (needs restart)
 11. ⚠️  Sentry DSN: Added to `.env.local` (needs restart)
+12. 🆕 Razorpay Checkout: Requires `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`
+
+**Communications**
+- 🆕 EmailJS Contact Form: Requires `NEXT_PUBLIC_EMAILJS_SERVICE_ID`, `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`, `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`
 
 ---
 
@@ -74,11 +78,10 @@ npm run dev
 ## Next Steps
 
 ### Immediate:
-1. ✅ **Add RESEND_API_KEY** to `.env.local`: `re_8Gak2W5J_BiEqDps5Jo6WyuR3iAfvqx3d`
-2. ✅ **Restart dev server** to load all new env vars (PostHog, Sentry, Resend)
-3. ✅ Test PostHog analytics tracking
-4. ✅ Test Sentry error tracking in production
-5. ✅ Test Resend email functionality
+1. ✅ **Resend, PostHog, and Sentry keys are present** in `.env.local`
+2. ✅ Restart dev server if analytics or email services appear stale
+3. ✅ Smoke-test PostHog dashboards & Sentry ingestion
+4. ✅ Trigger a sample Resend email from the app
 
 ### Optional (Priority 4):
 6. ⚠️  Configure Google Cloud Vision API

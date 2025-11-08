@@ -94,41 +94,33 @@
 - **Status**: ✅ WORKING (but not actively used)
 - **Potential Use**: Motivation content, education news
 
+#### 16. **Semantic Scholar** ✅ ACTIVE
+- **Status**: ✅ WORKING
+- **Features Enabled**:
+  - Academic paper discovery
+  - Citation insights for study planner
+  - Research note generation
+
 ---
 
 ## 🔴 **MISSING APIs (Optional Services)**
 
 ### Not Critical - Can Add Later
 
-#### 1. **Resend (Email)** ❌ NOT CONFIGURED
-- **Environment Variable**: `RESEND_API_KEY` (missing)
-- **Impact**: Email notifications won't work
-- **Workaround**: Push notifications work via Firebase
-- **Recommendation**: Add if you want email alerts
+#### 1. **Google Cloud TTS/STT** ✅ CONFIGURED
+- **Environment Variables**: `GOOGLE_CLOUD_TTS_API_KEY`, `GOOGLE_CLOUD_STT_API_KEY`
+- **Impact**: Mentor voice mode ready once UI ships
+- **Next Step**: Wire audio capture + playback in Phase 8
 
-#### 2. **PostHog (Analytics)** ❌ NOT CONFIGURED
-- **Environment Variables**: `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` (missing)
-- **Impact**: User behavior tracking disabled
-- **Workaround**: Platform works fine without analytics
-- **Recommendation**: Add for production usage tracking
+#### 2. **Google Cloud Vision** ✅ CONFIGURED
+- **Environment Variable**: `GOOGLE_CLOUD_VISION_API_KEY`
+- **Impact**: Vision-based features ready (e.g., diagram analysis)
+- **Next Step**: Integrate with Visual Explainer / agent pipelines
 
-#### 3. **Google Cloud TTS/STT** ❌ NOT CONFIGURED
-- **Environment Variables**: `GOOGLE_CLOUD_TTS_API_KEY`, `GOOGLE_CLOUD_STT_API_KEY` (missing)
-- **Impact**: Voice mentor mode won't work (Week 9 - not built yet)
-- **Workaround**: Week 9 feature not implemented yet
-- **Recommendation**: Add when building Week 9
-
-#### 4. **Google Cloud Vision** ❌ NOT CONFIGURED
-- **Environment Variable**: `GOOGLE_CLOUD_VISION_API_KEY` (missing)
-- **Impact**: Image analysis won't work (Week 9 - not built yet)
-- **Workaround**: Week 9 feature not implemented yet
-- **Recommendation**: Add when building Week 9
-
-#### 5. **Twilio (WhatsApp)** ❌ NOT CONFIGURED
-- **Environment Variables**: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_NUMBER` (missing)
-- **Impact**: WhatsApp notifications won't work
-- **Workaround**: Firebase push + email work
-- **Recommendation**: Add for parent WhatsApp reports (future)
+#### 3. **WhatsApp Messaging** ❌ NOT CONFIGURED
+- **Environment Variables**: `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TOKEN`
+- **Impact**: WhatsApp outreach still pending
+- **Workaround**: Use push/email notifications until Meta integration is finished
 
 #### 6. **Firebase Admin (Server-side)** ⚠️ PARTIALLY CONFIGURED
 - **Environment Variables**: Missing `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
@@ -274,6 +266,27 @@
      FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
      ```
    - Enables server-side push notifications
+
+4. **Razorpay Payments** (10 min setup)
+   - Create account at razorpay.com and generate keys
+   - Add to `.env.local`:
+     ```
+     RAZORPAY_KEY_ID=rzp_test_...
+     RAZORPAY_KEY_SECRET=...
+     NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_...
+     ```
+   - Enables the new `/payments` checkout flow
+
+5. **EmailJS Contact Form** (5 min setup)
+   - Create a service & template at emailjs.com
+   - Map template variables to `name`, `email`, `organisation`, `message`
+   - Add to `.env.local`:
+     ```
+     NEXT_PUBLIC_EMAILJS_SERVICE_ID=service_xxx
+     NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=template_xxx
+     NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_public_key
+     ```
+   - Powers the landing page “Send us a note” form
 
 ---
 

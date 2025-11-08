@@ -1,15 +1,5 @@
 # 🔑 Environment Variables Needed
 
-## Resend API Key
-
-Please add this to your `.env.local` file:
-
-```env
-RESEND_API_KEY=re_8Gak2W5J_BiEqDps5Jo6WyuR3iAfvqx3d
-```
-
----
-
 ## Current Status
 
 **✅ Already Configured:**
@@ -21,32 +11,25 @@ RESEND_API_KEY=re_8Gak2W5J_BiEqDps5Jo6WyuR3iAfvqx3d
 - Perplexity
 - Firebase
 - HuggingFace
+- PostHog
+- Sentry
+- Resend
+- Semantic Scholar
 
-**⚠️ Added (restart needed):**
-- PostHog API Key
-- PostHog Project ID
-- Sentry DSN
-
-**⏳ Needs to be added:**
-- RESEND_API_KEY=re_8Gak2W5J_BiEqDps5Jo6WyuR3iAfvqx3d
+**⚠️ Added (restart may be needed):**
+- Update the dev server if analytics/emails appear stale
+- Configure Razorpay keys for the new payments flow:
+  - `RAZORPAY_KEY_ID`
+  - `RAZORPAY_KEY_SECRET`
+  - `NEXT_PUBLIC_RAZORPAY_KEY_ID`
+- Configure EmailJS for the contact form:
+  - `NEXT_PUBLIC_EMAILJS_SERVICE_ID`
+  - `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`
+  - `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`
 
 **❌ Not yet obtained:**
-- Google Cloud Vision API Key (optional)
+- (None – optional keys can be added as future features require.)
 
 ---
 
-## Quick Add Instructions
-
-1. Open `.env.local` in your editor
-2. Add the Resend key:
-   ```
-   RESEND_API_KEY=re_8Gak2W5J_BiEqDps5Jo6WyuR3iAfvqx3d
-   ```
-3. Save the file
-4. Restart dev server: `npm run dev`
-
----
-
-**After adding, run:** `npm run setup:verify` to confirm.
-
-
+All core env variables are in place. Use `npm run setup:verify` after any updates to confirm the configuration.

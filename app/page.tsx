@@ -268,19 +268,33 @@ export default function LandingPage() {
             <span className="font-display text-lg sm:text-xl font-bold text-gradient-cyan">Mentark</span>
           </Link>
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/features"><Button variant="ghost">Features</Button></Link>
-            <Link href="#manifesto"><Button variant="ghost">Manifesto</Button></Link>
-            <Link href="#quantum"><Button variant="ghost">Mentark Quantum</Button></Link>
-            <Link href="#neuro"><Button variant="ghost">Mentark Neuro</Button></Link>
-            <Link href="#pricing"><Button variant="ghost">Pricing</Button></Link>
-            <Link href="/payments"><Button variant="ghost">Payments</Button></Link>
-            <Link href="#contact"><Button variant="ghost">Contact</Button></Link>
-            <Link href="/auth/login"><Button variant="ghost">Login</Button></Link>
-            <Link href="/auth/register">
-              <Button className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90">
-                Request demo
-              </Button>
-            </Link>
+            <Button asChild variant="ghost">
+              <Link href="/features">Features</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="#manifesto">Manifesto</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="#quantum">Mentark Quantum</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="#neuro">Mentark Neuro</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="#pricing">Pricing</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/payments">Payments</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="#contact">Contact</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/auth/login">Login</Link>
+            </Button>
+            <Button asChild className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90">
+              <Link href="/auth/register">Request demo</Link>
+            </Button>
           </div>
           <MobileNav />
         </div>
@@ -342,20 +356,25 @@ export default function LandingPage() {
         </motion.div>
         <AnimatedText delay={0.8}>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
-            <Link href="/demo">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" className="bg-gradient-cyan-blue text-black font-semibold shadow-lg shadow-cyan-500/25">
-                  Request an enterprise walkthrough
-                </Button>
-              </motion.div>
-            </Link>
-            <Link href="#pricing">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" variant="outline" className="border-yellow-500/40 text-yellow-300 hover:border-yellow-500/60">
-                  View plans
-                </Button>
-              </motion.div>
-            </Link>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                asChild
+                size="lg"
+                className="bg-gradient-cyan-blue text-black font-semibold shadow-lg shadow-cyan-500/25"
+              >
+                <Link href="/demo">Request an enterprise walkthrough</Link>
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-yellow-500/40 text-yellow-300 hover:border-yellow-500/60"
+              >
+                <Link href="#pricing">View plans</Link>
+              </Button>
+            </motion.div>
           </div>
         </AnimatedText>
       </motion.section>
