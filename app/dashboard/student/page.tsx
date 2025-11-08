@@ -40,7 +40,9 @@ import {
   Sparkles,
   Coffee,
   Moon,
-  Sun
+  Sun,
+  GraduationCap,
+  IndianRupee,
 } from 'lucide-react';
 
 interface StudentStats {
@@ -231,6 +233,13 @@ export default function StudentDashboard() {
 
   const TimeIcon = getTimeIcon();
 
+  const handleLaunchDashboard = () => {
+    const anchor = document.getElementById("student-dashboard-main");
+    if (anchor) {
+      anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -269,7 +278,61 @@ export default function StudentDashboard() {
         </div>
       </header>
 
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 w-full max-w-full">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 w-full max-w-full space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass border border-yellow-500/30 rounded-xl bg-gradient-to-br from-yellow-500/10 via-transparent to-transparent p-5 sm:p-6"
+        >
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex-1 space-y-3">
+              <div className="inline-flex items-center gap-2 bg-yellow-500/15 border border-yellow-500/30 px-3 py-1 rounded-full text-xs text-yellow-200">
+                <Sparkles className="h-3 w-3" />
+                Fresh for Indian learners
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                Train Mentark AI before you dive in
+              </h2>
+              <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
+                Share your graduation plan, course year, and competitive exam prep (JEE, NEET, AIIMS, CUET or others).
+                Mentark will shape ARKs, reminders, scholarships and costs around the Indian education landscape and your
+                personal budget in <span className="font-semibold text-yellow-200">₹</span>.
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                <Badge className="bg-slate-900/60 border border-yellow-500/30 text-yellow-200">
+                  <GraduationCap className="h-3 w-3 mr-1" />
+                  Degree aware
+                </Badge>
+                <Badge className="bg-slate-900/60 border border-yellow-500/30 text-yellow-200">
+                  <Target className="h-3 w-3 mr-1" />
+                  Exam timelines (JEE/NEET/AIIMS)
+                </Badge>
+                <Badge className="bg-slate-900/60 border border-yellow-500/30 text-yellow-200">
+                  <IndianRupee className="h-3 w-3 mr-1" />
+                  Guidance in ₹ Rupees
+                </Badge>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3">
+              <Button
+                asChild
+                className="bg-yellow-500 text-black font-semibold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400"
+              >
+                <Link href="/dashboard/student/train-ai">Train Mentark AI</Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="border-slate-600 text-slate-200 hover:bg-slate-900"
+                onClick={handleLaunchDashboard}
+              >
+                Launch dashboard
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+
+        <div id="student-dashboard-main" />
+
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

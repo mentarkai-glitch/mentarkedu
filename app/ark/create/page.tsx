@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, ArrowLeft, ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 
@@ -20,13 +20,12 @@ import { AskMentarkChat } from "@/components/ark/AskMentarkChat";
 
 // Import data
 import { studentCategories, getCategoryById } from "@/lib/data/student-categories";
-import { getTimeframesForCategory, getTimeframeById, type TimeframeOption } from "@/lib/data/student-timeframes";
+import { getTimeframesForCategory, getTimeframeById } from "@/lib/data/student-timeframes";
 import type { StudentARKData, StudentProfile, InstituteARKTemplate } from "@/lib/types";
 
 const TOTAL_STEPS = 7;
 
 export default function StudentARKCreation() {
-  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -38,7 +37,7 @@ export default function StudentARKCreation() {
   const [availableTemplates, setAvailableTemplates] = useState<InstituteARKTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<InstituteARKTemplate | null>(null);
   const [deepDiveAnswers, setDeepDiveAnswers] = useState<Record<string, any>>({});
-  
+ 
   const [arkData, setArkData] = useState<StudentARKData>({
     categoryId: "",
     goalStatement: "",
@@ -60,10 +59,31 @@ export default function StudentARKCreation() {
     onboardingProfile: undefined
   });
 
+  const [difficultyStatus, setDifficultyStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [difficultyRecommendation, setDifficultyRecommendation] = useState<{
+    level: string;
+    score: number;
+    confidence: number;
+    recommendations: string[];
+  } | null>(null);
+  const [difficultyError, setDifficultyError] = useState<string | null>(null);
+  const [creationSucceeded, setCreationSucceeded] = useState(false);
+  const [createdArkId, setCreatedArkId] = useState<string | null>(null);
+  const [creationModel, setCreationModel] = useState<string | null>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+
   // Fetch onboarding profile on mount
   useEffect(() => {
     fetchOnboardingProfile();
   }, []);
+
+  useEffect(() => {
+    if (currentStep === 7 && user?.id) {
+      if (difficultyStatus === "idle" || difficultyStatus === "error") {
+        fetchDifficultyRecommendation(user.id);
+      }
+    }
+  }, [currentStep, user?.id]);
 
   // Fetch templates when category is selected
   useEffect(() => {
@@ -77,23 +97,29 @@ export default function StudentARKCreation() {
       const response = await fetch('/api/students/profile');
       const data = await response.json();
       
-      if (data.success && data.data.onboarding_profile) {
-        const profile = data.data.onboarding_profile;
-        setOnboardingProfile(profile);
-        
-        // Pre-fill arkData with profile values
-        setArkData(prev => ({
-          ...prev,
-          currentLevel: profile.career_clarity === "Very clear" ? "advanced" :
-                       profile.career_clarity === "Somewhat clear" ? "intermediate" : "beginner",
-          weeklyHours: parseInt(profile.study_hours) || 10,
-          learningStyle: profile.learning_style || "",
-          motivation: profile.motivation_level || 7,
-          stress: profile.stress_level || 5,
-          confidence: profile.confidence_level || 6,
-          hoursPerWeek: parseInt(profile.study_hours) || 10,
-          onboardingProfile: profile
-        }));
+      if (data.success) {
+        if (data.data.user_id) {
+          setUser({ id: data.data.user_id, email: data.data.email });
+        }
+
+        if (data.data.onboarding_profile) {
+          const profile = data.data.onboarding_profile;
+          setOnboardingProfile(profile);
+          
+          // Pre-fill arkData with profile values
+          setArkData(prev => ({
+            ...prev,
+            currentLevel: profile.career_clarity === "Very clear" ? "advanced" :
+                         profile.career_clarity === "Somewhat clear" ? "intermediate" : "beginner",
+            weeklyHours: parseInt(profile.study_hours) || 10,
+            learningStyle: profile.learning_style || "",
+            motivation: profile.motivation_level || 7,
+            stress: profile.stress_level || 5,
+            confidence: profile.confidence_level || 6,
+            hoursPerWeek: parseInt(profile.study_hours) || 10,
+            onboardingProfile: profile
+          }));
+        }
       }
     } catch (error) {
       console.error('Failed to fetch onboarding profile:', error);
@@ -117,6 +143,47 @@ export default function StudentARKCreation() {
 
   const updateArkData = (updates: Partial<StudentARKData>) => {
     setArkData(prev => ({ ...prev, ...updates }));
+  };
+
+  const fetchDifficultyRecommendation = async (studentId: string) => {
+    setDifficultyStatus("loading");
+    setDifficultyError(null);
+
+    try {
+      const response = await fetch("/api/ml/predict-difficulty", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ student_id: studentId }),
+      });
+
+      const json = await response.json();
+
+      if (!response.ok || !json.success) {
+        throw new Error(json.error || "Unable to fetch difficulty recommendation");
+      }
+
+      const prediction = json.data?.prediction;
+      if (!prediction) {
+        throw new Error("No prediction returned from serving layer");
+      }
+
+      setDifficultyRecommendation({
+        level: prediction.recommended_level,
+        score: prediction.difficulty_score,
+        confidence: prediction.confidence,
+        recommendations: prediction.recommendations || [],
+      });
+      setDifficultyStatus("ready");
+    } catch (error: any) {
+      setDifficultyStatus("error");
+      setDifficultyError(error?.message || "Unable to fetch difficulty recommendation");
+    }
+  };
+
+  const handleRetryDifficulty = () => {
+    if (user?.id) {
+      fetchDifficultyRecommendation(user.id);
+    }
   };
 
   const canProceedToNextStep = (): boolean => {
@@ -204,11 +271,14 @@ export default function StudentARKCreation() {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
+          const arkId: string | undefined = data.data?.ark?.id;
+          if (arkId) {
+            setCreatedArkId(arkId);
+          }
+          setCreationModel(data.data?.model ?? null);
           setGenerationProgress(100);
           setGenerationMessage("ARK generated successfully!");
-          setTimeout(() => {
-            router.push(`/dashboard/student/arks`);
-          }, 1500);
+          setCreationSucceeded(true);
         } else {
           setGenerationProgress(0);
           setGenerationMessage(data.message || "Error generating ARK. Please try again.");
@@ -239,6 +309,141 @@ export default function StudentARKCreation() {
         <div className="text-center">
           <Loader2 className="h-12 w-12 text-yellow-400 animate-spin mx-auto mb-4" />
           <p className="text-white text-lg">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (creationSucceeded) {
+    const categoryDetails = getCategoryById(arkData.categoryId);
+    const timeframeDetails = arkData.timeframeId ? getTimeframeById(arkData.timeframeId) : undefined;
+
+    return (
+      <div className="min-h-screen bg-black overflow-x-hidden w-full">
+        <div className="container mx-auto max-w-5xl px-3 sm:px-6 py-8 md:py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 glass border border-yellow-500/30 rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-yellow-500/10 via-yellow-500/5 to-transparent"
+          >
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start lg:items-center">
+              <div className="flex-1 space-y-3">
+                <div className="inline-flex items-center gap-2 bg-yellow-500/15 border border-yellow-500/40 px-3 py-1 rounded-full text-xs sm:text-sm text-yellow-200">
+                  <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+                  Mentark ARK ready
+                </div>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+                  Your personalised roadmap is live!
+                </h1>
+                <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                  Explore your new ARK, or train Mentark AI with your academic journey. Share your graduation path,
+                  course year, and exam prep (JEE, NEET, AIIMS or any other) so every recommendation stays rooted in
+                  the Indian education system and tailored to your goals in ₹.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-auto">
+                {createdArkId && (
+                  <Button asChild className="bg-yellow-500 text-black font-semibold shadow-lg shadow-yellow-500/20 hover:bg-yellow-400">
+                    <Link href={`/ark/${createdArkId}`}>Open ARK Workspace</Link>
+                  </Button>
+                )}
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="bg-slate-900 text-yellow-100 border border-yellow-500/40 hover:bg-slate-800"
+                >
+                  <Link href="/dashboard/student/train-ai">Train Mentark AI</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-slate-600 text-slate-200 hover:bg-slate-900"
+                >
+                  <Link href="/dashboard/student/arks">View All ARKs</Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-slate-400 hover:text-yellow-300 hover:bg-slate-900"
+                  onClick={() => {
+                    setCreationSucceeded(false);
+                    setCreatedArkId(null);
+                    setCreationModel(null);
+                    setGenerationProgress(0);
+                    setGenerationMessage("");
+                  }}
+                >
+                  Create another ARK
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-2"
+            >
+              <ARKSummary
+                data={arkData}
+                categoryName={categoryDetails?.title || "Selected Focus Area"}
+                timeframeName={timeframeDetails ? `${timeframeDetails.name}` : arkData.timeframeDuration || "Custom timeframe"}
+                difficulty={{
+                  status: difficultyStatus,
+                  recommendation: difficultyRecommendation,
+                  error: difficultyError,
+                  onRetry: difficultyStatus === "error" ? handleRetryDifficulty : undefined,
+                }}
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-4"
+            >
+              <Card className="border-yellow-500/20 bg-slate-900/60">
+                <CardHeader>
+                  <CardTitle className="text-white text-lg">What&apos;s next?</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm text-slate-300">
+                  <div className="space-y-2">
+                    <p className="font-semibold text-yellow-300">1. Explore your ARK milestones</p>
+                    <p>Review tasks, deadlines, and weekly focus zones crafted for you.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-yellow-300">2. Train Mentark AI</p>
+                    <p>
+                      Tell us about your graduation plan, course year, and any competitive exams so the AI mentor aligns with your journey in India.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-yellow-300">3. Launch your day</p>
+                    <p>Use Daily Assistant, Doubt Solver, and Smart Search to keep momentum.</p>
+                  </div>
+                  {creationModel && (
+                    <div className="text-xs text-slate-500 border-t border-slate-700 pt-3">
+                      Generated using <span className="text-slate-300 font-semibold">{creationModel}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-green-500/20 bg-green-500/5">
+                <CardHeader>
+                  <CardTitle className="text-green-200 text-base">Need personalised help?</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-green-100">
+                  <p className="leading-relaxed">
+                    Mentark coaches can interpret your ARK, suggest resource bundles, and guide you on scholarships or college shortlists with Indian context and pricing in ₹.
+                  </p>
+                  <Button asChild variant="secondary" className="bg-green-500 text-black hover:bg-green-400">
+                    <Link href="/chat">Chat with a Mentor</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
         </div>
       </div>
     );
@@ -458,6 +663,12 @@ export default function StudentARKCreation() {
               data={arkData}
               categoryName={categoryName}
               timeframeName={timeframeName}
+              difficulty={{
+                status: difficultyStatus,
+                recommendation: difficultyRecommendation,
+                error: difficultyError,
+                onRetry: handleRetryDifficulty,
+              }}
             />
 
             <div className="text-center space-y-6">
