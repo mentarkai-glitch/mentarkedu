@@ -67,6 +67,12 @@ def train_burnout_model(
         )
     )
 
+    if y.nunique() < 2:
+        print("Training skipped: burnout labels contain only one class.")
+        if use_mlflow:
+            mlflow.end_run()
+        return
+
     scaler = StandardScaler()
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=random_state, stratify=y
@@ -74,6 +80,9 @@ def train_burnout_model(
 
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
+
+    positive_rate = float(y.mean())
+    base_score = min(max(positive_rate if 0 < positive_rate < 1 else 0.5, 1e-6), 1 - 1e-6)
 
     model = XGBClassifier(
         n_estimators=n_estimators,
@@ -84,6 +93,9 @@ def train_burnout_model(
         random_state=random_state,
         eval_metric="logloss",
         scale_pos_weight=1.0,
+        objective="binary:logistic",
+        base_score=base_score,
+        use_label_encoder=False,
     )
 
     model.fit(X_train_scaled, y_train)

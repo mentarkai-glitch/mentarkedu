@@ -180,10 +180,15 @@ def parse_label_value(label: Any) -> Any:
             "category",
         ):
             if key in label:
-                return label[key]
-        # fallback: if only one key, return its value
+                return parse_label_value(label[key])
         if len(label) == 1:
-            return next(iter(label.values()))
+            return parse_label_value(next(iter(label.values())))
+        return json.dumps(label, sort_keys=True)
+    if isinstance(label, list):
+        if not label:
+            return None
+        # Prefer first element as representative; recurse for nested structures
+        return parse_label_value(label[0])
     return label
 
 

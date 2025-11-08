@@ -1,746 +1,390 @@
 'use client';
 
 import Link from "next/link";
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedText, CountUp } from "@/components/ui/AnimatedText";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { 
-  Brain, 
-  Target, 
-  Heart, 
-  TrendingUp, 
-  Users, 
-  Award, 
-  BarChart3, 
-  Zap,
-  MessageCircle,
-  Calendar,
-  Shield,
+import {
+  Brain,
+  Compass,
+  HeartPulse,
+  IndianRupee,
+  Lightbulb,
+  LineChart,
+  MapPin,
+  Rocket,
+  ShieldCheck,
+  Target,
+  Users,
   Sparkles,
+  GraduationCap,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
 } from "lucide-react";
+
+const impactStats = [
+  { label: "Learners supported", value: 50000, suffix: "+" },
+  { label: "Institutions onboarded", value: 325, suffix: "+" },
+  { label: "Dropout risk reduction", value: 37, suffix: "%" },
+  { label: "Daily insights processed", value: 4, suffix: "M" },
+];
+
+const manifestoSections = [
+  {
+    title: "Vision",
+    text: "Mentorship is infrastructure. Every learner, parent, and professional deserves clarity, courage, and calm. AI should revive humanity, not replace it.",
+  },
+  {
+    title: "Mission",
+    text: "Mentark builds adaptive ARKs—living roadmaps refined daily by intelligence that listens and learns. We guide academic, professional, emotional, and financial journeys with mentors that think with reason, feel with empathy, and act with purpose.",
+  },
+  {
+    title: "Belief",
+    text: "People do not fail for lack of capability; they fail for lack of direction, discipline, and emotional balance. Mentark exists to restore that guidance.",
+  },
+  {
+    title: "Philosophy",
+    text: "Clarity before chaos. Emotion before execution. Progress before perfection. Purpose before performance. Every feature, model, and policy honours this order.",
+  },
+  {
+    title: "Promise",
+    text: "We will not exploit confusion—we remove it. We will not amplify anxiety—we listen to it. We will not design addiction—we design awareness. We build for people, not profiles; for meaning, not metrics.",
+  },
+  {
+    title: "Vision in action",
+    text: "Mentark becomes the AI operating system for human growth. From choosing a career to healing burnout, from building wealth to rediscovering purpose—your mentor is present, adaptive, and human at heart.",
+  },
+];
+
+const featureHighlights = [
+  {
+    icon: Brain,
+    title: "Adaptive Roadmaps (ARKs)",
+    description:
+      "Personalised plans aligned to Indian academic calendars, competitive exams, and psychology signals. ARKs evolve daily as students grow.",
+    bullets: [
+      "Board, semester, and entrance-exam aware timeframes",
+      "Daily micro-milestones with human + AI accountability",
+      "Institute templates with instant customisation",
+    ],
+    cta: { label: "Build an ARK", href: "/ark/create" },
+  },
+  {
+    icon: Lightbulb,
+    title: "Mentark AI Mentors",
+    description:
+      "Five mentor personas (guide, analyst, motivator, calm, spiritual) powered by GPT-4o, Claude 3.5, and Gemini. They read emotion, coach habits, and recommend next actions.",
+    bullets: [
+      "Context-aware chat with institute safeguards",
+      "Real-time emotional tone detection",
+      "Audit trails for teachers and parents",
+    ],
+    cta: { label: "Chat with Mentark", href: "/chat" },
+  },
+  {
+    icon: ShieldCheck,
+    title: "Risk & Wellbeing Intelligence",
+    description:
+      "Dropout, burnout, and disengagement indices generated from 30+ behavioural signals. Mentark flags risk 2–4 weeks early and prescribes interventions.",
+    bullets: [
+      "Feature store syncing daily check-ins, ARK progress, and chat sentiment",
+      "Auto-alerts for teachers and counsellors",
+      "ML + rule-based fallbacks to ensure zero blind spots",
+    ],
+    cta: { label: "See live dashboards", href: "/dashboard/admin" },
+  },
+  {
+    icon: HeartPulse,
+    title: "Emotion & Energy Timeline",
+    description:
+      "Daily wellness check-ins, AI-generated coping strategies, and anomaly detection for sudden dips in morale.",
+    bullets: [
+      "Sentiment history correlated with academic events",
+      "Offline-ready daily assistant with momentum coaching",
+      "Parents receive balanced reports without panic",
+    ],
+    cta: { label: "Log a check-in", href: "/daily-checkin" },
+  },
+  {
+    icon: GraduationCap,
+    title: "Train Mentark AI",
+    description:
+      "Learners teach Mentark about their graduation path, budget in ₹, and competitive exams (JEE, NEET, AIIMS, CUET). The AI adapts schedules, recommendations, and scholarships around that reality.",
+    bullets: [
+      "Course & semester aware planning",
+      "Rupee-based budget intelligence",
+      "Family dashboards with human-friendly language",
+    ],
+    cta: { label: "Personalise my AI", href: "/dashboard/student/train-ai" },
+  },
+  {
+    icon: LineChart,
+    title: "Institution OS",
+    description:
+      "Executive dashboards for heads, deans, and investors: adoption, engagement, outcomes, and projected risk in a single pane of glass.",
+    bullets: [
+      "Cohort-level ARK completion and time-in-app",
+      "Income, scholarship, and placement tracking",
+      "API hooks into MIS/ERP for automated reporting",
+    ],
+    cta: { label: "Book an institute demo", href: "/auth/register" },
+  },
+];
+
+const stakeholderTiles = [
+  {
+    title: "Why institutes and investors lean in",
+    icon: Users,
+    points: [
+      "Reduce attrition 30–40% with proactive ML alerts",
+      "Unlock new premium revenue via AI mentorship tiers",
+      "Proof-ready data room: feature store, model registry, audit logs",
+      "No shadow IT—compliant with UGC/AICTE and SOC2-ready architecture",
+    ],
+    cta: { label: "Download investor brief", href: "/docs/MENTARK_INVESTOR.pdf" },
+  },
+  {
+    title: "Why parents trust Mentark",
+    icon: MapPin,
+    points: [
+      "Transparent rupee budgets for courses, coaching, and wellness",
+      "Entrance-exam aware planning for JEE, NEET, AIIMS, CUET, UPSC",
+      "Emotion alerts without fearmongering—data with context",
+      "Mentor loops that include teachers, counsellors, and families",
+    ],
+    cta: { label: "Explore family features", href: "/dashboard/student" },
+  },
+];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black text-white">
       {/* Navigation */}
-      <nav className="border-b border-border bg-background/50 backdrop-blur-xl sticky top-0 z-30 w-full overflow-x-hidden">
-        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4 w-full max-w-full">
+      <nav className="sticky top-0 z-30 border-b border-border bg-background/60 backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Mentark Quantum" className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg" />
-            <span className="font-display text-lg sm:text-xl font-bold text-gradient-cyan">
-              Mentark Quantum
-            </span>
+            <img src="/logo.png" alt="Mentark" className="h-9 w-9 rounded-lg" />
+            <span className="font-display text-lg sm:text-xl font-bold text-gradient-cyan">Mentark</span>
           </Link>
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/search">
-              <Button variant="ghost" className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                <span className="hidden lg:inline">Smart Search</span>
-              </Button>
-            </Link>
-            <Link href="/chat">
-              <Button variant="ghost" className="hidden lg:inline-flex">Try AI Chat</Button>
-            </Link>
-            <Link href="#features">
-              <Button variant="ghost" className="hidden lg:inline-flex">Features</Button>
-            </Link>
-            <Link href="/auth/login">
-              <Button variant="ghost">Login</Button>
-            </Link>
+          <div className="hidden md:flex items-center gap-3">
+            <Link href="#manifesto"><Button variant="ghost">Manifesto</Button></Link>
+            <Link href="#features"><Button variant="ghost">Platform</Button></Link>
+            <Link href="#stakeholders"><Button variant="ghost">For stakeholders</Button></Link>
+            <Link href="/auth/login"><Button variant="ghost">Login</Button></Link>
             <Link href="/auth/register">
-              <Button className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 text-sm sm:text-base">
-                Get Started
+              <Button className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90">
+                Request demo
               </Button>
             </Link>
           </div>
-          {/* Mobile Navigation */}
           <MobileNav />
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 text-center w-full max-w-full overflow-x-hidden">
+      {/* Hero */}
+      <section className="container mx-auto px-4 py-12 sm:py-16 md:py-20 text-center">
         <AnimatedText delay={0.2}>
-          <Badge className="mb-4 border-yellow-500/30 bg-yellow-500/10 text-yellow-400 neon-glow">
-            AI-Powered B2B Mentorship Platform
-          </Badge>
+          <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300">AI Operating System for Human Growth</Badge>
         </AnimatedText>
         <AnimatedText delay={0.4}>
-          <h1 className="font-display text-5xl font-bold leading-tight md:text-7xl">
-            Beyond Marks.
+          <h1 className="mt-4 font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-tight">
+            Mentorship is not a luxury.
             <br />
-            <span className="text-gradient-cyan">Toward Meaning.</span>
+            <span className="text-gradient-cyan">It&apos;s infrastructure.</span>
           </h1>
         </AnimatedText>
         <AnimatedText delay={0.6}>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-400 md:text-xl">
-            Transform your institute with AI-powered mentorship that goes beyond academics —
-            nurturing emotional intelligence, personalized growth, and lifelong clarity.
+          <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg md:text-xl text-slate-300">
+            Mentark blends adaptive AI roadmaps, behavioural ML, and human empathy so institutes, parents, and investors can scale the type of mentorship that changes lives.
           </p>
         </AnimatedText>
         <AnimatedText delay={0.8}>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link href="/chat">
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link href="/auth/register">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  size="lg"
-                  className="bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 neon-glow"
-                >
-                  🤖 Try AI Chat Now
+                <Button size="lg" className="bg-gradient-cyan-blue text-black font-semibold shadow-lg shadow-cyan-500/25">
+                  Book an institute session
                 </Button>
               </motion.div>
             </Link>
             <Link href="/dashboard/student">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" variant="outline" className="border-yellow-500/30 text-yellow-400 hover:border-yellow-500/50">
-                  📊 Student Dashboard
+                <Button size="lg" variant="outline" className="border-yellow-500/40 text-yellow-300 hover:border-yellow-500/60">
+                  See learner experience
+                </Button>
+              </motion.div>
+            </Link>
+            <Link href="/docs/MENTARK_INVESTOR.pdf" target="_blank" rel="noopener noreferrer">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" variant="ghost" className="text-slate-200 hover:text-white">
+                  📄 Investor memo
                 </Button>
               </motion.div>
             </Link>
           </div>
         </AnimatedText>
 
-        {/* Stats */}
-        <div className="mt-16 grid grid-cols-2 gap-8 md:grid-cols-4">
-          {[
-            { label: "Institutes", value: 500, suffix: "+" },
-            { label: "Students", value: 50, suffix: "K+" },
-            { label: "Success Rate", value: 95, suffix: "%" },
-            { label: "AI Models", value: 5, suffix: "+" },
-          ].map((stat, index) => (
-            <motion.div 
+        <div className="mt-12 grid grid-cols-2 gap-6 md:grid-cols-4">
+          {impactStats.map((stat, index) => (
+            <motion.div
               key={stat.label}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1 + index * 0.1, type: "spring", stiffness: 200 }}
-              whileHover={{ scale: 1.1 }}
+              className="text-left sm:text-center"
             >
-              <div className="font-display text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+              <div className="font-display text-2xl sm:text-3xl md:text-4xl bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
                 <CountUp value={stat.value} suffix={stat.suffix} />
               </div>
-              <div className="mt-1 text-xs sm:text-sm text-slate-400">{stat.label}</div>
+              <div className="mt-1 text-xs sm:text-sm text-slate-400 uppercase tracking-wider">{stat.label}</div>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 w-full max-w-full overflow-x-hidden">
-        <div className="mb-12 sm:mb-16 text-center">
-          <AnimatedText delay={1.4}>
-            <Badge className="mb-4 border-yellow-500/30 bg-yellow-500/10 text-yellow-400 neon-glow text-xs sm:text-sm">
-              Premium Features
-            </Badge>
-          </AnimatedText>
-          <AnimatedText delay={1.6}>
-            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white px-4">
-              Everything Your Institute Needs
-            </h2>
-          </AnimatedText>
-          <AnimatedText delay={1.8}>
-            <p className="mt-4 text-base sm:text-lg text-slate-400 max-w-3xl mx-auto px-4">
-              Powered by GPT-4o, Claude 3.5, Gemini 1.5 Pro, and Perplexity — 
-              The most advanced AI mentorship platform for institutes
-            </p>
-          </AnimatedText>
-        </div>
-
-        <div className="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {/* Feature 1: AI Mentor Chat */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div 
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                  <MessageCircle className="h-7 w-7 text-black" />
-                </motion.div>
-                <CardTitle className="text-2xl text-white">AI Mentor Chat</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Multi-persona AI mentors powered by GPT-4o and Claude
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  5 AI personas that understand emotions, provide personalized guidance, and adapt to each student&apos;s learning style and emotional state.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  {[
-                    "Friendly, Calm, Analytical, Motivational, Spiritual modes",
-                    "Context-aware responses using student profile",
-                    "Real-time conversation with fallback models"
-                  ].map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-slate-300">
-                      <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/chat">
-                  <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                    Try AI Chat
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Feature 2: Adaptive Roadmaps */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div 
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                  <Target className="h-7 w-7 text-black" />
-                </motion.div>
-                <CardTitle className="text-2xl text-white">Adaptive Roadmaps (ARKs)</CardTitle>
-                <CardDescription className="text-slate-400">
-                  AI-generated personalized learning paths
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  Create customized learning journeys aligned with academic calendars, student psychology, and institute templates.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  {[
-                    "Academic calendar-based timeframes (exams, semesters)",
-                    "6 student categories with grade-specific content",
-                    "Psychology-aware pacing (motivation, stress, confidence)"
-                  ].map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-slate-300">
-                      <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/ark/create">
-                  <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                    Build My ARK
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Feature 3: ML Dropout Prediction */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div 
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                <Shield className="h-7 w-7 text-black" />
-              </motion.div>
-              <CardTitle className="text-2xl text-white">ML Dropout Predictor</CardTitle>
-              <CardDescription className="text-slate-400">
-                Early warning system with AI-powered risk analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Machine learning analyzes 30+ behavioral signals to predict dropout, burnout, and disengagement risk 2-4 weeks early.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "3 risk scores: Dropout, Burnout, Disengagement",
-                  "Auto-alerts for teachers with intervention suggestions",
-                  "Pattern recognition using Claude AI + ML models"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/dashboard/student">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  View Risk Analysis
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Feature 4: Sentiment Timeline */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div 
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                <Heart className="h-7 w-7 text-black" />
-              </motion.div>
-              <CardTitle className="text-2xl text-white">Sentiment Timeline</CardTitle>
-              <CardDescription className="text-slate-400">
-                Emotion tracking with event correlation powered by Gemini
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Track daily emotions across 6 dimensions, discover what events trigger stress or joy, and detect anomalies instantly.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "6 emotions analyzed: Joy, Sadness, Fear, Anger, Surprise, Trust",
-                  "Event-emotion correlation discovery",
-                  "Anomaly detection for sudden mood changes"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/daily-checkin">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  Daily Check-in
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Feature 5: Career DNA Mapping */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div 
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                <Brain className="h-7 w-7 text-black" />
-              </motion.div>
-              <CardTitle className="text-2xl text-white">Career DNA Mapping</CardTitle>
-              <CardDescription className="text-slate-400">
-                AI-powered career discovery and peer matching
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Analyze student interests and generate affinity scores for 10 career categories. Find study buddies with similar goals.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "10 career categories with affinity scoring",
-                  "Smart peer matching (study buddies, complementary)",
-                  "Personalized career path recommendations"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/career-dna/analyze">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  Discover Career DNA
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Feature 6: Gamification */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div 
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                <Award className="h-7 w-7 text-black" />
-              </motion.div>
-              <CardTitle className="text-2xl text-white">Gamification Engine</CardTitle>
-              <CardDescription className="text-slate-400">
-                XP, levels, badges, and leaderboards for motivation
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Earn XP from daily activities, unlock achievement badges, compete on leaderboards, and maintain learning streaks.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "Dynamic XP system with leveling (√(XP/100) formula)",
-                  "8 achievement badges (streaks, completions, engagement)",
-                  "Institute-wide leaderboards by batch"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/dashboard/student">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  View Dashboard
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Feature 7: Teacher Dashboard */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                whileHover={{ scale: 1.2, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 400 }}
-              >
-                <Users className="h-7 w-7 text-black" />
-              </motion.div>
-              <CardTitle className="text-2xl text-white">Teacher Insights</CardTitle>
-              <CardDescription className="text-slate-400">
-                Monitor students with AI-powered analytics
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Real-time student monitoring, batch analytics, intervention tools, and at-risk student alerts with recommended actions.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "View all assigned students with risk scores",
-                  "Batch analytics with psychology charts",
-                  "Create interventions with tracking"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-          </li>
-                ))}
-              </ul>
-              <Link href="/dashboard/teacher">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  Teacher Dashboard
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Feature 8: Admin Management */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                  <BarChart3 className="h-7 w-7 text-black" />
-                </motion.div>
-              <CardTitle className="text-2xl text-white">Institute Analytics</CardTitle>
-              <CardDescription className="text-slate-400">
-                Complete admin dashboard with billing management
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Manage teachers, create ARK templates, track institute-wide KPIs, and handle billing for Neuro/Quantum plans.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "KPI tracking: Students, ARKs, engagement, growth",
-                  "Teacher management and batch assignment",
-                  "Billing: ₹8,999 (Neuro) | ₹11,999 (Quantum)"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-          </li>
-                ))}
-              </ul>
-              <Link href="/dashboard/admin">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  Admin Dashboard
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Feature 9: Peer Matching */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                <Users className="h-7 w-7 text-black" />
-              </motion.div>
-              <CardTitle className="text-2xl text-white">Peer Matching</CardTitle>
-              <CardDescription className="text-slate-400">
-                AI-powered study buddy recommendations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Smart algorithm matches students based on interests (40%), goals (30%), and career profiles (30%) for optimal study partnerships.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "3 match types: Study Buddy, Complementary, Similar Interests",
-                  "Compatibility scores with detailed reasons",
-                  "Connect and message matched peers"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/dashboard/student?tab=peer-matching">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  Find Study Buddies
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Feature 10: Daily Check-ins */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Card className="group relative overflow-hidden glass border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-500 hover:shadow-xl hover:shadow-yellow-500/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-              <CardHeader>
-                <motion.div
-                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                >
-                  <Calendar className="h-7 w-7 text-black" />
-              </motion.div>
-              <CardTitle className="text-2xl text-white">Daily Check-ins</CardTitle>
-              <CardDescription className="text-slate-400">
-                3 micro-questions for weekly ARK adaptation
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Quick daily reflection on energy, progress, and emotions. AI uses responses to adjust ARK pacing weekly.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {[
-                  "Energy level tracking (0-10 scale)",
-                  "Progress self-rating and reflections",
-                  "Emotion scoring with AI analysis"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/daily-checkin">
-                <Button className="w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 group-hover:scale-105 transition-transform neon-glow">
-                  Start Check-in
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 w-full max-w-full overflow-x-hidden">
-        <div className="mb-8 sm:mb-12 text-center">
-          <h2 className="font-display text-3xl font-bold md:text-4xl">Simple, Transparent Pricing</h2>
-          <p className="mt-4 text-slate-400">Choose the plan that fits your institute</p>
-        </div>
-
-        <div className="mx-auto grid max-w-5xl gap-4 sm:gap-6 md:grid-cols-2">
-          {/* Neuro Plan */}
-          <Card className="border-border bg-card p-6 sm:p-8">
-            <h3 className="font-display text-xl sm:text-2xl font-bold">Neuro</h3>
-            <div className="mt-4">
-              <span className="font-display text-3xl sm:text-4xl font-bold">₹8,999</span>
-              <span className="text-slate-400 text-sm sm:text-base">/student/year</span>
-            </div>
-            <ul className="mt-6 space-y-3 text-xs sm:text-sm">
-              {[
-                "Unlimited ARKs",
-                "Focus analytics",
-                "Daily motivation",
-                "Core AI mentor",
-                "Email support",
-              ].map((feature) => (
-                <li key={feature} className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> {feature}
-          </li>
-              ))}
-            </ul>
-            <Button className="mt-8 w-full" variant="outline">
-              Get Started
-            </Button>
-          </Card>
-
-          {/* Quantum Plan */}
-          <Card className="relative border-primary/50 bg-gradient-to-br from-card to-primary/5 p-6 sm:p-8">
-            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 border-primary/20 bg-primary/10 text-primary text-xs sm:text-sm">
-              Popular
-            </Badge>
-            <h3 className="font-display text-xl sm:text-2xl font-bold">Quantum</h3>
-            <div className="mt-4">
-              <span className="font-display text-3xl sm:text-4xl font-bold">₹11,999</span>
-              <span className="text-slate-400 text-sm sm:text-base">/student/year</span>
-            </div>
-            <ul className="mt-6 space-y-3 text-xs sm:text-sm">
-              {[
-                "Everything in Neuro",
-                "Emotion graph & timeline",
-                "Burnout prediction",
-                "Custom AI personas",
-                "Hybrid human–AI mentorship",
-                "Career DNA mapping",
-                "Priority support",
-              ].map((feature) => (
-                <li key={feature} className="flex items-center gap-2">
-                  <span className="text-primary">✓</span> {feature}
-          </li>
-              ))}
-            </ul>
-            <Button className="mt-8 w-full bg-gradient-cyan-blue font-semibold text-black hover:opacity-90">
-              Get Started
-            </Button>
-          </Card>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 md:py-20 text-center w-full max-w-full overflow-x-hidden">
-        <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 p-6 sm:p-8 md:p-12">
-          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold px-2">
-            Ready to Transform Your Institute?
-          </h2>
-          <p className="mt-4 text-sm sm:text-base text-slate-400 px-4">
-            Join leading educational institutions using Mentark Quantum
+      {/* Manifesto */}
+      <section id="manifesto" className="container mx-auto px-4 py-16 border-t border-slate-800">
+        <div className="text-center mb-10">
+          <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300 mb-4">Mentark Manifesto</Badge>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl">Guiding minds. Growing humans.</h2>
+          <p className="mt-4 text-base sm:text-lg text-slate-300 max-w-3xl mx-auto">
+            This is the covenant that anchors every model release, every feature ship, every partnership.
           </p>
-          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 px-4">
-            <Link href="/auth/register" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-gradient-cyan-blue font-semibold text-black hover:opacity-90 text-sm sm:text-base"
-              >
-                Start Free Trial
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {manifestoSections.map((item) => (
+            <Card key={item.title} className="border-slate-700/60 bg-slate-900/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white text-xl">
+                  <Sparkles className="h-5 w-5 text-yellow-300" />
+                  {item.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm sm:text-base leading-relaxed text-slate-300">{item.text}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="container mx-auto px-4 py-16 border-t border-slate-800">
+        <div className="text-center mb-12">
+          <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300 mb-4">Platform pillars</Badge>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl">From AI mentors to ML observability—everything connects.</h2>
+          <p className="mt-4 text-base sm:text-lg text-slate-300 max-w-3xl mx-auto">
+            Mentark unifies adaptive planning, daily assistance, emotional wellbeing, and executive intelligence into one operating system.
+          </p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {featureHighlights.map((feature) => (
+            <Card key={feature.title} className="group border-slate-700/70 bg-slate-900/40 hover:border-yellow-500/40 transition-colors">
+              <CardHeader>
+                <feature.icon className="h-10 w-10 text-yellow-300 mb-4" />
+                <CardTitle className="text-white text-2xl">{feature.title}</CardTitle>
+                <CardDescription className="text-slate-300 text-sm leading-relaxed">
+                  {feature.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ul className="space-y-2 text-sm text-slate-300">
+                  {feature.bullets.map((point) => (
+                    <li key={point} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-yellow-400 mt-0.5" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link href={feature.cta.href}>
+                  <Button className="mt-4 bg-gradient-cyan-blue text-black font-semibold w-full sm:w-auto group-hover:translate-x-1 transition-transform">
+                    {feature.cta.label}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Stakeholders */}
+      <section id="stakeholders" className="container mx-auto px-4 py-16 border-t border-slate-800">
+        <div className="text-center mb-12">
+          <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300 mb-4">For every stakeholder</Badge>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl">Value that compounds for institutes, investors, parents, and learners.</h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {stakeholderTiles.map((tile) => (
+            <Card key={tile.title} className="border-slate-700/70 bg-slate-900/40">
+              <CardHeader>
+                <tile.icon className="h-8 w-8 text-yellow-300 mb-3" />
+                <CardTitle className="text-white text-2xl">{tile.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ul className="space-y-2 text-sm text-slate-300">
+                  {tile.points.map((point) => (
+                    <li key={point} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-300 mt-0.5" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+                {tile.cta && (
+                  <Link href={tile.cta.href}>
+                    <Button variant="outline" className="mt-4 border-yellow-500/40 text-yellow-300 hover:border-yellow-500/60">
+                      {tile.cta.label}
+                    </Button>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Promise CTA */}
+      <section className="container mx-auto px-4 py-16 border-t border-slate-800">
+        <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-transparent to-transparent">
+          <CardHeader className="space-y-4 text-center">
+            <Badge className="border-yellow-500/40 bg-yellow-500/20 text-yellow-100">Our Motto</Badge>
+            <CardTitle className="font-display text-3xl sm:text-4xl text-white">
+              “We don’t tell you who to be. We help you become who you already are.”
+            </CardTitle>
+            <CardDescription className="text-slate-200 text-base sm:text-lg max-w-3xl mx-auto">
+              Join the ecosystem that is re-defining mentorship for India and beyond—evidence-first, empathy-led, revenue-positive.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/auth/register">
+              <Button size="lg" className="bg-gradient-cyan-blue text-black font-semibold">
+                Partner with Mentark
               </Button>
             </Link>
-            <Link href="mailto:contact@mentark.ai" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
-                Contact Sales
+            <Link href="mailto:hello@mentark.ai">
+              <Button size="lg" variant="ghost" className="text-slate-200 hover:text-white">
+                Speak with the founders
               </Button>
             </Link>
-          </div>
+          </CardContent>
         </Card>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-8 w-full overflow-x-hidden">
-        <div className="container mx-auto px-3 sm:px-4 text-center text-sm text-slate-400 w-full max-w-full">
-          <p>© 2025 Mentark Quantum. All rights reserved.</p>
-          <p className="mt-2">Beyond marks. Toward meaning. 💙</p>
+      <footer className="border-t border-slate-800 bg-black/80 py-8 text-sm text-slate-500">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Rocket className="h-4 w-4" />
+            <span>© {new Date().getFullYear()} Mentark. Built in India for the world.</span>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/docs/MENTARK_MANIFESTO.pdf" target="_blank" className="hover:text-yellow-300">Manifesto (PDF)</Link>
+            <Link href="/privacy" className="hover:text-yellow-300">Privacy</Link>
+            <Link href="/terms" className="hover:text-yellow-300">Terms</Link>
+            <Link href="https://www.linkedin.com/company/mentark" target="_blank" className="hover:text-yellow-300">LinkedIn</Link>
+          </div>
         </div>
       </footer>
     </div>

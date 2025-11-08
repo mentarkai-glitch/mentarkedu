@@ -63,6 +63,12 @@ def train_dropout_model(
     feature_cols = loader.get_feature_names("dropout")
     X = df[feature_cols].fillna(0)
     y = df["label"].apply(lambda x: 1 if x.get("outcome_type") == "dropout" else 0)
+
+    if y.nunique() < 2:
+        print("Training skipped: dropout labels contain only one class.")
+        if use_mlflow:
+            mlflow.end_run()
+        return
     
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(
@@ -76,12 +82,18 @@ def train_dropout_model(
     
     # Train model
     print("Training model...")
+    positive_rate = float(y.mean())
+    base_score = min(max(positive_rate if 0 < positive_rate < 1 else 0.5, 1e-6), 1 - 1e-6)
+
     model = XGBClassifier(
         n_estimators=n_estimators,
         max_depth=max_depth,
         learning_rate=learning_rate,
         random_state=random_state,
-        eval_metric='logloss'
+        eval_metric="logloss",
+        objective="binary:logistic",
+        base_score=base_score,
+        use_label_encoder=False,
     )
     
     model.fit(X_train_scaled, y_train)

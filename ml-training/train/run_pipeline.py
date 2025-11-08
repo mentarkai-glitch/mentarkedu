@@ -33,6 +33,11 @@ try:
 except ImportError:
     create_client = None  # Supabase optional; handled later
 
+try:
+    from postgrest.exceptions import APIError  # type: ignore
+except ImportError:  # pragma: no cover - best effort optional dependency
+    APIError = Exception
+
 
 MODELS = [
     {
@@ -93,9 +98,32 @@ def register_model_version(metadata: Dict[str, Any]) -> Optional[str]:
     payload = metadata.copy()
     payload.setdefault("deployed", False)
 
-    response = client.table("ml_model_versions").upsert(payload).execute()
-    if response.error:
-        return f"Supabase error: {response.error.message}"
+    try:
+        response = client.table("ml_model_versions").upsert(payload).execute()
+    except APIError as exc:
+        detail = getattr(exc, "details", None) or getattr(exc, "message", str(exc))
+        code = getattr(exc, "code", None)
+        if code == "23505":
+            return "Supabase registry: duplicate version (already registered)"
+        return f"Supabase error: {detail}"
+    except Exception as exc:  # noqa: BLE001
+        return f"Supabase error: {exc}"
+
+    error = getattr(response, "error", None)
+    status_code = getattr(response, "status_code", None)
+
+    if error:
+        # Some versions expose `error` as string or object
+        if isinstance(error, Exception):
+            return f"Supabase error: {error}"
+        if isinstance(error, dict) and "message" in error:
+            return f"Supabase error: {error['message']}"
+        return f"Supabase error: {error}"
+
+    if status_code and status_code >= 400:
+        data = getattr(response, "data", None)
+        return f"Supabase error: status {status_code} - {data}"
+
     return None
 
 
