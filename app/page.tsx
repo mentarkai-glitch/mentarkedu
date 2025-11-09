@@ -261,7 +261,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <nav className="sticky top-0 z-30 border-b border-border bg-background/60 backdrop-blur-xl">
+      <nav className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4">
           <Link href="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="Mentark" className="h-9 w-9 rounded-lg" />
@@ -296,12 +296,22 @@ export default function LandingPage() {
               <Link href="/auth/register">Request demo</Link>
             </Button>
           </div>
-          <MobileNav />
+          <div className="flex items-center gap-2 md:hidden">
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="border-slate-700 text-white hover:bg-slate-800"
+            >
+              <Link href="/auth/login">Login</Link>
+            </Button>
+            <MobileNav />
+          </div>
         </div>
       </nav>
 
       <motion.section
-        className="container mx-auto px-4 pt-24 pb-12 sm:pt-28 sm:pb-16 md:pt-32 md:pb-20 text-center"
+        className="container mx-auto px-4 pt-28 pb-12 sm:pt-32 sm:pb-16 md:pt-36 md:pb-20 text-center"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
