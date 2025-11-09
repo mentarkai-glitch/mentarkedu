@@ -66,7 +66,7 @@ export default function FeaturesPage() {
           <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300">
             One platform. Three promises.
           </Badge>
-          <h1 className="font-display text-4xl md:text-5xl">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl">
             Features tailored for every stakeholder.
           </h1>
           <p className="text-slate-300 max-w-3xl mx-auto">
@@ -76,12 +76,12 @@ export default function FeaturesPage() {
         </motion.header>
 
         <Tabs defaultValue="students" className="space-y-8">
-          <TabsList className="flex flex-col sm:flex-row gap-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-2 overflow-hidden">
+          <TabsList className="flex sm:flex-row gap-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-2 overflow-x-auto sm:overflow-visible">
             {SEGMENTS.map((segment) => (
               <TabsTrigger
                 key={segment.id}
                 value={segment.id}
-                className="w-full sm:w-auto rounded-xl text-sm sm:text-base data-[state=active]:bg-yellow-400 data-[state=active]:text-black data-[state=active]:shadow-lg data-[state=active]:shadow-yellow-400/40"
+                className="flex-1 sm:flex-none whitespace-nowrap rounded-xl text-sm sm:text-base px-4 py-2 data-[state=active]:bg-yellow-400 data-[state=active]:text-black data-[state=active]:shadow-lg data-[state=active]:shadow-yellow-400/40"
               >
                 {segment.title}
               </TabsTrigger>
