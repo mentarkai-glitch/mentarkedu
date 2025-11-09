@@ -1,16 +1,26 @@
 import { NextRequest } from "next/server";
-import { aiOrchestrator } from "@/lib/ai/orchestrator";
-import { generateARKPrompt } from "@/lib/ai/prompts/ark-generator";
-import { generateStudentARKPrompt, generateTemplateCustomizationPrompt } from "@/lib/ai/prompts/student-ark-generator";
-import { generateARKWithOrchestration, generateARKWithNavigation } from "@/lib/ai/ark-orchestrator";
-import { successResponse, errorResponse, handleApiError, validateRequiredFields } from "@/lib/utils/api-helpers";
+import { env } from "process";
 import { createClient } from "@/lib/supabase/server";
-import { getCategoryById } from "@/lib/data/student-categories";
-import { safeParseJSON } from "@/lib/utils/json-repair";
-import type { AIContext, ARKCategory, ARKDuration, StudentProfile } from "@/lib/types";
-import { extractKeywordContext, gatherComprehensiveResources } from "@/lib/ai/orchestration/api-router";
-import { generateTimelineFromMilestones } from "@/lib/utils/timeline-generator";
-import { getRecommendedMilestoneCount } from "@/lib/data/student-timeframes";
+import { errorResponse, handleApiError, successResponse } from "@/lib/utils/api-helpers";
+import { generateARKPrompt, parseGeneratedARK, sanitizeARKData } from "@/lib/services/ark-generator";
+import { generateARKWithOrchestration } from "@/lib/services/ark-orchestration";
+import type { ARKCategory, ARKDuration, StudentProfile } from "@/lib/types";
+import { trackEvent } from "@/lib/services/analytics";
+import { ArkGenerationError, parseError } from "@/lib/services/errors";
+import { logger } from "@/lib/services/logger";
+
+const FALLBACK_MODEL = env.OPENAI_FALLBACK_MODEL || "gpt-4o-mini";
+
+const providersConfigured = [
+  env.OPENAI_API_KEY,
+  env.ANTHROPIC_API_KEY,
+  env.GEMINI_API_KEY,
+  env.PERPLEXITY_API_KEY,
+].some(Boolean);
+
+if (!providersConfigured) {
+  throw new Error("No AI provider API keys set. Configure OpenAI, Anthropic, Gemini or Perplexity to enable ARK generation.");
+}
 
 /**
  * Calculate complexity score for ARK generation
