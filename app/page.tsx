@@ -301,7 +301,7 @@ export default function LandingPage() {
       </nav>
 
       <motion.section
-        className="container mx-auto px-4 py-12 sm:py-16 md:py-20 text-center"
+        className="container mx-auto px-4 pt-24 pb-12 sm:pt-28 sm:pb-16 md:pt-32 md:pb-20 text-center"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
