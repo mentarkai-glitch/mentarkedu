@@ -134,7 +134,7 @@ const neuroFeatures = [
     icon: IndianRupee,
     title: "Train Mentark AI",
     description:
-      "Students share graduation targets, budgets in ₹, and competitive exams so every plan, scholarship, and reminder stays hyper-relevant.",
+      "Students share graduation targets, Indian household budgets, and competitive exams so every plan, scholarship, and reminder stays hyper-relevant to local realities.",
     bullets: [
       "Course + semester aware nudges and revision loops",
       "Rupee-first cost guidance across coaching and content",

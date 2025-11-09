@@ -338,7 +338,7 @@ export default function StudentARKCreation() {
                 <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
                   Explore your new ARK, or train Mentark AI with your academic journey. Share your graduation path,
                   course year, and exam prep (JEE, NEET, AIIMS or any other) so every recommendation stays rooted in
-                  the Indian education system and tailored to your goals in ₹.
+                  the Indian education system and tailored to your goals in Indian rupees.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-auto">
@@ -435,7 +435,7 @@ export default function StudentARKCreation() {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-green-100">
                   <p className="leading-relaxed">
-                    Mentark coaches can interpret your ARK, suggest resource bundles, and guide you on scholarships or college shortlists with Indian context and pricing in ₹.
+                    Mentark coaches can interpret your ARK, suggest resource bundles, and guide you on scholarships or college shortlists with Indian context and pricing benchmarks in rupees.
                   </p>
                   <Button asChild variant="secondary" className="bg-green-500 text-black hover:bg-green-400">
                     <Link href="/chat">Chat with a Mentor</Link>

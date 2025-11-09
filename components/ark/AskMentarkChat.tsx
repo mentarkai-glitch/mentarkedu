@@ -33,6 +33,27 @@ export function AskMentarkChat({
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const suggestionLibrary: Record<number, string[]> = {
+    1: [
+      "Help me summarise my target outcome for this ARK.",
+      "Suggest Indian exam milestones I should mention.",
+    ],
+    2: [
+      "List common blockers for students in Maharashtra with this goal.",
+      "What metrics should I track weekly for this ARK?",
+    ],
+    3: [
+      "Draft strong deep-dive answers for competitive exam prep.",
+      "How do I describe my constraints like budget and study hours?",
+    ],
+    4: [
+      "What cultural or language context should I highlight?",
+      "Recommend mentorship styles suited to my institute type.",
+    ],
+  };
+
+  const activeSuggestions = suggestionLibrary[currentStep ?? 1] ?? suggestionLibrary[1];
+
   // Update context when props change
   useEffect(() => {
     setContext({
@@ -112,6 +133,34 @@ export function AskMentarkChat({
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
+                {activeSuggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-slate-800/70 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 space-y-2"
+                  >
+                    <p className="font-semibold text-yellow-300 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Prompt ideas for this step
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {activeSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setInputValue(suggestion);
+                            inputRef.current?.focus();
+                          }}
+                          className="text-left rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-xs hover:border-yellow-400 hover:text-yellow-200 transition"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
                 {messages.map((message) => (
                   <motion.div
                     key={message.id}

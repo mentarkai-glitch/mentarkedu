@@ -17,7 +17,7 @@ const SEGMENTS = [
     title: "Students",
     subtitle: "Clarity, motivation, and personalised growth.",
     description:
-      "Mentark Neuro gives every learner a living ARK, five compassionate mentor personas, and a daily assistant that balances academics, wellbeing, and budgets in ₹.",
+      "Mentark Neuro gives every learner a living ARK, five compassionate mentor personas, and a daily assistant that balances academics, wellbeing, and budgets in Indian rupees.",
     highlights: [
       "Adaptive ARKs aligned to school boards, semesters, and entrance exams.",
       "Daily Assistant with energy tracking, smart reminders, and offline resilience.",
@@ -46,7 +46,7 @@ const SEGMENTS = [
       "Families see the right level of detail—celebrations, concerns, and upcoming milestones—so they can support without adding pressure.",
     highlights: [
       "Weekly digest emails translating AI signals into plain-language updates.",
-      "Budget-aware recommendations for coaching, subscriptions, and scholarships in ₹.",
+      "Budget-aware recommendations for coaching, subscriptions, and scholarships priced for India.",
       "Emotion & energy timelines with suggested conversation starters and coping playbooks.",
       "Instant escalation paths to counsellors or mentors when high-risk signals appear.",
     ],
@@ -76,12 +76,12 @@ export default function FeaturesPage() {
         </motion.header>
 
         <Tabs defaultValue="students" className="space-y-8">
-          <TabsList className="grid gap-3 md:grid-cols-3 bg-slate-900/50 border border-slate-800">
+          <TabsList className="flex flex-col sm:flex-row gap-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-2 overflow-hidden">
             {SEGMENTS.map((segment) => (
               <TabsTrigger
                 key={segment.id}
                 value={segment.id}
-                className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black data-[state=active]:shadow-lg data-[state=active]:shadow-yellow-400/40"
+                className="w-full sm:w-auto rounded-xl text-sm sm:text-base data-[state=active]:bg-yellow-400 data-[state=active]:text-black data-[state=active]:shadow-lg data-[state=active]:shadow-yellow-400/40"
               >
                 {segment.title}
               </TabsTrigger>

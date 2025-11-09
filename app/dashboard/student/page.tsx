@@ -296,7 +296,7 @@ export default function StudentDashboard() {
               <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
                 Share your graduation plan, course year, and competitive exam prep (JEE, NEET, AIIMS, CUET or others).
                 Mentark will shape ARKs, reminders, scholarships and costs around the Indian education landscape and your
-                personal budget in <span className="font-semibold text-yellow-200">₹</span>.
+                personal budget in Indian rupees.
               </p>
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
                 <Badge className="bg-slate-900/60 border border-yellow-500/30 text-yellow-200">
@@ -309,7 +309,7 @@ export default function StudentDashboard() {
                 </Badge>
                 <Badge className="bg-slate-900/60 border border-yellow-500/30 text-yellow-200">
                   <IndianRupee className="h-3 w-3 mr-1" />
-                  Guidance in ₹ Rupees
+                  Guidance priced for India
                 </Badge>
               </div>
             </div>

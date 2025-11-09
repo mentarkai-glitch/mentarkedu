@@ -261,7 +261,7 @@ export default function TrainMentarkAIPage() {
               <CardDescription className="text-slate-200 text-sm sm:text-base leading-relaxed">
                 Share your graduation plan, course year, and competitive exam prep so Mentark behaves like an Indian
                 mentor. Recommendations, reminders, and budgets will reference Indian universities, entrance exams, and
-                pricing in <span className="font-semibold text-yellow-200">₹ Rupees</span>.
+                pricing in Indian rupees.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -383,7 +383,7 @@ export default function TrainMentarkAIPage() {
                     className="bg-black/40 border border-slate-700 text-slate-100 placeholder:text-slate-500"
                   />
                   <p className="text-xs text-slate-400">
-                    Helps Mentark recommend courses, coaching, or subscriptions within your budget (₹).
+                    Helps Mentark recommend courses, coaching, or subscriptions within your Indian budget.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -404,7 +404,7 @@ export default function TrainMentarkAIPage() {
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-slate-300">
                   <li>Mentark adapts milestones to Indian academic calendars and entrance exam timelines.</li>
-                  <li>Resources, mentors, and scholarships suggested will respect your budget in ₹.</li>
+                  <li>Resources, mentors, and scholarships suggested will respect Indian family budgets.</li>
                   <li>AI reminders become more relevant when we know your course load and exam dates.</li>
                 </ul>
               </div>

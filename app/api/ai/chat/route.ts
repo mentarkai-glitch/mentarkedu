@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
     let studentProfile: StudentProfile | undefined;
     let userTier: "free" | "premium" | "enterprise" = "free";
     
+    let studentLocation: string | undefined;
+
     if (user_id) {
       try {
         const { data: student, error } = await supabase
@@ -43,6 +45,10 @@ export async function POST(request: NextRequest) {
 
         if (!error && student?.onboarding_profile) {
           studentProfile = student.onboarding_profile as StudentProfile;
+          const profileLocation = (studentProfile as any)?.location || (studentProfile as any)?.city;
+          if (typeof profileLocation === "string" && profileLocation.trim().length > 0) {
+            studentLocation = profileLocation.trim();
+          }
         }
         
         const { data: userData } = await supabase
@@ -84,6 +90,7 @@ export async function POST(request: NextRequest) {
         system_prompt: systemPrompt,
         user_tier: userTier,
         complexity: 5,
+        location: studentLocation,
       },
     };
 
@@ -96,9 +103,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const locationPreface = studentLocation
+      ? `Student location/context: ${studentLocation}. Respond with guidance grounded in this region of India.\n\n`
+      : "";
+
     const enhancedPrompt = memoryContext 
-      ? `${message}\n\nRelevant context from previous conversations:\n${memoryContext}`
-      : message;
+      ? `${locationPreface}${message}\n\nRelevant context from previous conversations:\n${memoryContext}`
+      : `${locationPreface}${message}`;
 
     const aiResponse = await aiOrchestrator(context, enhancedPrompt);
 
