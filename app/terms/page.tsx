@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const termsSections: Array<{ title: string; clauses: string[] }> = [
+const CORE_TERMS: Array<{ title: string; clauses: string[] }> = [
   {
     title: "1. Acceptance of terms",
     clauses: [
@@ -25,7 +26,7 @@ const termsSections: Array<{ title: string; clauses: string[] }> = [
   {
     title: "3. Services we provide",
     clauses: [
-      "ARK generation, Daily Assistant, Study Analyzer, Risk dashboards, and AI mentors operate as guidance tools.",
+      "ARK generation, Daily Assistant, Study Analyzer, risk dashboards, and AI mentors operate as guidance tools.",
       "Model outputs are recommendations, not guarantees; final academic decisions remain yours.",
       "We continuously iterate ML models—performance metrics and version notes are available on request.",
     ],
@@ -51,7 +52,7 @@ const termsSections: Array<{ title: string; clauses: string[] }> = [
     clauses: [
       "You retain ownership of your content; you grant Mentark a licence to process it for guidance, analytics, and product improvement.",
       "We maintain detailed audit logs for regulators; see the privacy policy for retention timelines.",
-      "Deletion requests are honoured unless a law or Institute agreement requires temporary retention.",
+      "Deletion requests are honoured unless a law or institute agreement requires temporary retention.",
     ],
   },
   {
@@ -79,10 +80,75 @@ const termsSections: Array<{ title: string; clauses: string[] }> = [
   },
 ];
 
+const EXPANDED_CLAUSES: Array<{ title: string; body: string[] }> = [
+  {
+    title: "Using Mentark",
+    body: [
+      "Mentark provides academic roadmaps (ARKs), AI mentors, analytics dashboards, and integrations for students, parents, and institutes.",
+      "By creating an account or accessing dashboards, you confirm you are authorised to act for yourself or your organisation.",
+      "Institutes are responsible for ensuring their usage complies with local regulations and institutional policies.",
+    ],
+  },
+  {
+    title: "Accounts & access",
+    body: [
+      "Keep login credentials secure and notify us immediately of any unauthorised access.",
+      "Student accounts may be provisioned by institutes or self-registered with an email/phone OTP.",
+      "Mentark may suspend or terminate accounts that violate acceptable use, security, or payment terms.",
+    ],
+  },
+  {
+    title: "Payments",
+    body: [
+      "Paid plans (Neuro, Quantum) are billed monthly or annually in Indian rupees via Razorpay.",
+      "Institute partnerships operate on custom Statements of Work approved through the partnerships desk.",
+      "Refunds follow RBI and Razorpay guidelines; contact partnerships@mentark.com for assistance.",
+    ],
+  },
+  {
+    title: "Intellectual property",
+    body: [
+      "Mentark retains ownership of the platform, AI models, UI, and documentation.",
+      "Institutes retain ownership of their raw data. Mentark receives a limited licence to process it for service delivery.",
+      "You may not reverse engineer, resell, or copy Mentark without written consent.",
+    ],
+  },
+  {
+    title: "AI outputs",
+    body: [
+      "AI-generated recommendations are intended to guide—not replace—human judgement from mentors and counsellors.",
+      "We log AI prompts and outputs to improve quality, mitigate bias, and meet audit obligations.",
+      "High-stakes alerts (dropout, burnout) are always paired with human review workflows.",
+    ],
+  },
+  {
+    title: "Limitation of liability",
+    body: [
+      'Mentark is provided "as is" without warranties. We are not liable for indirect or consequential losses.',
+      "Total liability for any claim is capped at the fees paid for the preceding three months.",
+      "Some jurisdictions do not allow certain limitations, so these may not apply to you.",
+    ],
+  },
+  {
+    title: "Governing law",
+    body: [
+      "These terms are governed by the laws of India. Disputes will be resolved in Mumbai, Maharashtra.",
+      "We follow India&apos;s DPDP Act and sector-specific education guidance for compliance.",
+      "Institutes outside India may request region-specific addendums.",
+    ],
+  },
+];
+
 export default function TermsPage() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
+
+  const lastUpdated = new Date().toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
@@ -93,26 +159,26 @@ export default function TermsPage() {
           transition={{ duration: 0.6 }}
           className="space-y-4"
         >
-          <Link href="/" className="inline-block">
-            <Button variant="outline" className="border-slate-700 text-slate-200 hover:text-yellow-200">
-              ← Back to home
-            </Button>
-          </Link>
+          <Button
+            asChild
+            variant="outline"
+            className="border-slate-700 text-slate-200 hover:text-yellow-200 w-max"
+          >
+            <Link href="/">← Back to home</Link>
+          </Button>
           <p className="text-xs uppercase tracking-[0.4em] text-yellow-300">Terms of Service</p>
           <h1 className="font-display text-3xl sm:text-4xl md:text-5xl">
             Building the national mentorship OS with clarity and trust.
           </h1>
           <p className="text-slate-300 sm:text-lg">
-            These terms outline the relationship between Mentark, Indian institutes, mentors, families, and learners.
-            They apply across Mentark Neuro, Mentark Quantum, the AI mentor suite, and allied services.
+            These terms outline the relationship between Mentark, Indian institutes, mentors, families, and learners. They
+            apply across Mentark Neuro, Mentark Quantum, the AI mentor suite, and allied services.
           </p>
-          <p className="text-sm text-slate-500">
-            Last updated: {new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
-          </p>
+          <p className="text-sm text-slate-500">Last updated: {lastUpdated}</p>
         </motion.header>
 
         <div className="space-y-10">
-          {termsSections.map((section) => (
+          {CORE_TERMS.map((section) => (
             <motion.section
               key={section.title}
               initial={{ opacity: 0, y: 24 }}
@@ -134,6 +200,21 @@ export default function TermsPage() {
           ))}
         </div>
 
+        <div className="space-y-6">
+          {EXPANDED_CLAUSES.map((clause) => (
+            <Card key={clause.title} className="bg-slate-900/40 border-slate-800">
+              <CardHeader>
+                <CardTitle className="text-white text-2xl">{clause.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-slate-300 text-sm sm:text-base">
+                {clause.body.map((item) => (
+                  <p key={item}>{item}</p>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
         <motion.section
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -143,8 +224,8 @@ export default function TermsPage() {
         >
           <h2 className="text-2xl font-semibold text-white">Questions about these terms?</h2>
           <p className="text-slate-200">
-            Reach out at partnerships@mentark.com for institute agreements or connect@mentark.com for personal
-            accounts. We aim to respond within three working days.
+            Reach out at partnerships@mentark.com for institute agreements or connect@mentark.com for personal accounts.
+            We aim to respond within three working days.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button asChild className="bg-gradient-cyan-blue text-black font-semibold hover:opacity-90">
@@ -155,105 +236,6 @@ export default function TermsPage() {
             </Button>
           </div>
         </motion.section>
-      </div>
-    </div>
-  );
-}
-"use client";
-
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const CLAUSES = [
-  {
-    title: "Using Mentark",
-    body: [
-      "Mentark provides academic roadmaps (ARKs), AI mentors, analytics dashboards, and integrations for students, parents, and institutes.",
-      "By creating an account or accessing dashboards, you confirm you are authorised to act for yourself or your organisation.",
-      "Institutes are responsible for ensuring their usage complies with local regulations and institutional policies."
-    ],
-  },
-  {
-    title: "Accounts & access",
-    body: [
-      "Keep login credentials secure and notify us immediately of any unauthorised access.",
-      "Student accounts may be provisioned by institutes or self-registered with an email/phone OTP.",
-      "Mentark may suspend or terminate accounts that violate acceptable use, security, or payment terms."
-    ],
-  },
-  {
-    title: "Payments",
-    body: [
-      "Paid plans (Neuro, Quantum) are billed monthly or annually in Indian rupees via Razorpay.",
-      "Institute partnerships operate on custom Statements of Work approved through the partnerships desk.",
-      "Refunds follow RBI and Razorpay guidelines; contact partnerships@mentark.com for assistance."
-    ],
-  },
-  {
-    title: "Intellectual property",
-    body: [
-      "Mentark retains ownership of the platform, AI models, UI, and documentation.",
-      "Institutes retain ownership of their raw data. Mentark receives a limited licence to process it for service delivery.",
-      "You may not reverse engineer, resell, or copy Mentark without written consent."
-    ],
-  },
-  {
-    title: "AI outputs",
-    body: [
-      "AI-generated recommendations are intended to guide—not replace—human judgement from mentors and counsellors.",
-      "We log AI prompts and outputs to improve quality, mitigate bias, and meet audit obligations.",
-      "High-stakes alerts (dropout, burnout) are always paired with human review workflows."
-    ],
-  },
-  {
-    title: "Limitation of liability",
-    body: [
-      "Mentark is provided " + "\"as is\"" + " without warranties. We are not liable for indirect or consequential losses.",
-      "Total liability for any claim is capped at the fees paid for the preceding three months.",
-      "Some jurisdictions do not allow certain limitations, so these may not apply to you."
-    ],
-  },
-  {
-    title: "Governing law",
-    body: [
-      "These terms are governed by the laws of India. Disputes will be resolved in Mumbai, Maharashtra.",
-      "We follow India&apos;s DPDP Act and sector-specific education guidance for compliance.",
-      "Institutes outside India may request region-specific addendums."
-    ],
-  },
-];
-
-export default function TermsPage() {
-  return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="container mx-auto max-w-4xl px-4 py-16 space-y-10">
-        <motion.header
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="space-y-4"
-        >
-          <p className="text-sm uppercase tracking-[0.25em] text-yellow-300">Terms of Service</p>
-          <h1 className="font-display text-4xl sm:text-5xl">Welcome to Mentark.</h1>
-          <p className="text-slate-300 text-base sm:text-lg">
-            These terms explain how you can access Mentark&apos;s products, what to expect from us, and how to stay compliant.
-            By using Mentark, you agree to this agreement as well as our <Link href="/privacy" className="text-yellow-300">Privacy Notice</Link>.
-          </p>
-        </motion.header>
-
-        {CLAUSES.map((clause) => (
-          <Card key={clause.title} className="bg-slate-900/40 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white text-2xl">{clause.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-slate-300 text-sm sm:text-base">
-              {clause.body.map((item) => (
-                <p key={item}>{item}</p>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
 
         <Card className="bg-slate-900/40 border-slate-800">
           <CardHeader>
@@ -261,8 +243,11 @@ export default function TermsPage() {
           </CardHeader>
           <CardContent className="text-slate-300 space-y-3 text-sm sm:text-base">
             <p>
-              For questions about these terms, email <Link href="mailto:legal@mentark.com" className="text-yellow-300">legal@mentark.com</Link> or
-              write to Mentark Labs Private Limited, Mumbai, Maharashtra, India.
+              For questions about these terms, email{" "}
+              <Link href="mailto:legal@mentark.com" className="text-yellow-300">
+                legal@mentark.com
+              </Link>{" "}
+              or write to Mentark Labs Private Limited, Mumbai, Maharashtra, India.
             </p>
             <p>Effective date: {new Date().toLocaleDateString("en-IN")}</p>
           </CardContent>

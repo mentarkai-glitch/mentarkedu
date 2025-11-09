@@ -1,13 +1,24 @@
 import { NextRequest } from "next/server";
 import { env } from "process";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse, handleApiError, successResponse } from "@/lib/utils/api-helpers";
-import { generateARKPrompt, parseGeneratedARK, sanitizeARKData } from "@/lib/services/ark-generator";
-import { generateARKWithOrchestration } from "@/lib/services/ark-orchestration";
-import type { ARKCategory, ARKDuration, StudentProfile } from "@/lib/types";
-import { trackEvent } from "@/lib/services/analytics";
-import { ArkGenerationError, parseError } from "@/lib/services/errors";
-import { logger } from "@/lib/services/logger";
+import {
+  errorResponse,
+  handleApiError,
+  successResponse,
+  validateRequiredFields,
+} from "@/lib/utils/api-helpers";
+import {
+  generateStudentARKPrompt,
+  generateTemplateCustomizationPrompt,
+} from "@/lib/ai/prompts/student-ark-generator";
+import { generateARKWithNavigation } from "@/lib/ai/ark-orchestrator";
+import { aiOrchestrator } from "@/lib/ai/orchestrator";
+import type { AIContext, ARKCategory, ARKDuration, StudentProfile } from "@/lib/types";
+import { safeParseJSON } from "@/lib/utils/json-repair";
+import { getCategoryById } from "@/lib/data/student-categories";
+import { getRecommendedMilestoneCount } from "@/lib/data/student-timeframes";
+import { generateTimelineFromMilestones } from "@/lib/utils/timeline-generator";
+import { extractKeywordContext, gatherComprehensiveResources } from "@/lib/ai/orchestration/api-router";
 
 const FALLBACK_MODEL = env.OPENAI_FALLBACK_MODEL || "gpt-4o-mini";
 
