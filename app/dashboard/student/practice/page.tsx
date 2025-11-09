@@ -92,7 +92,6 @@ export default function PracticeQuestionsPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
   const [pastResults, setPastResults] = useState<PracticeQuestion[]>([]);
-  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [recentSummary, setRecentSummary] = useState<{ correct: number; total: number; accuracy: number } | null>(null);
 
   useEffect(() => {
@@ -131,6 +130,16 @@ export default function PracticeQuestionsPage() {
     }
   }, [mistakes]);
 
+  const scoreSummary = useMemo(() => {
+    if (!showResults || questions.length === 0) return null;
+    const correct = questions.reduce((acc, q, idx) => {
+      const answer = selectedAnswers[idx];
+      return answer === q.correctAnswer ? acc + 1 : acc;
+    }, 0);
+    const accuracy = Math.round((correct / questions.length) * 100);
+    return { correct, total: questions.length, accuracy };
+  }, [questions, selectedAnswers, showResults]);
+
   useEffect(() => {
     if (typeof window === 'undefined' || questions.length === 0 || !showResults || !scoreSummary) return;
     try {
@@ -158,16 +167,6 @@ export default function PracticeQuestionsPage() {
       window.removeEventListener('offline', updateStatus);
     };
   }, []);
-
-  const scoreSummary = useMemo(() => {
-    if (!showResults || questions.length === 0) return null;
-    const correct = questions.reduce((acc, q, idx) => {
-      const answer = selectedAnswers[idx];
-      return answer === q.correctAnswer ? acc + 1 : acc;
-    }, 0);
-    const accuracy = Math.round((correct / questions.length) * 100);
-    return { correct, total: questions.length, accuracy };
-  }, [questions, selectedAnswers, showResults]);
 
   const displaySummary = scoreSummary ?? recentSummary;
 
@@ -477,28 +476,142 @@ export default function PracticeQuestionsPage() {
             </TabsContent>
 
             <TabsContent value="practice" className="mt-6">
-              {questions.length > 0 && (
+              {questions.length > 0 ? (
                 <div className="space-y-6">
-                  {questions.map((q, idx) => (
-                    <Card key={idx} className="bg-slate-900/50 border-yellow-500/30">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-yellow-400">Question {idx + 1}</CardTitle>
-                          <Badge className={getDifficultyColor(q.difficulty)}>
-                            {q.difficulty}
-                          </Badge>
+                  {questions.map((q, idx) => {
+                    const userSelection = selectedAnswers[idx];
+                    const gotItRight = showResults && userSelection === q.correctAnswer;
+
+                    return (
+                      <Card key={idx} className="bg-slate-900/50 border-yellow-500/30">
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-yellow-400">Question {idx + 1}</CardTitle>
+                            <Badge className={getDifficultyColor(q.difficulty)}>{q.difficulty}</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <p className="text-white text-lg">{q.question}</p>
+
+                          <div className="space-y-2">
+                            {q.options.map((option, optIdx) => {
+                              const isSelected = userSelection === optIdx;
+                              const isCorrectOption = q.correctAnswer === optIdx;
+
+                              const baseClasses = isSelected
+                                ? 'border-yellow-400 bg-yellow-500/10 text-white'
+                                : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-yellow-400/60';
+
+                              const resultClasses = showResults
+                                ? isCorrectOption
+                                  ? 'border-green-400/70 bg-green-500/10 text-green-100'
+                                  : isSelected
+                                  ? 'border-red-400/70 bg-red-500/10 text-red-100'
+                                  : 'opacity-70'
+                                : '';
+
+                              return (
+                                <button
+                                  key={optIdx}
+                                  type="button"
+                                  onClick={() => {
+                                    if (!showResults) {
+                                      setSelectedAnswers({ ...selectedAnswers, [idx]: optIdx });
+                                    }
+                                  }}
+                                  className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${baseClasses} ${resultClasses}`}
+                                >
+                                  {option}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {showResults && (
+                            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-sm text-slate-300 space-y-2">
+                              <p className={gotItRight ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
+                                {gotItRight
+                                  ? 'You nailed this one!'
+                                  : `Correct answer: ${q.options[q.correctAnswer]}`}
+                              </p>
+                              <p>{q.explanation}</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                    {!showResults && (
+                      <Button
+                        onClick={handleSubmitAnswers}
+                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                      >
+                        Submit answers
+                      </Button>
+                    )}
+                    {showResults && (
+                      <>
+                        <Button
+                          onClick={() => {
+                            setShowResults(false);
+                            setSelectedAnswers({});
+                          }}
+                          className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                        >
+                          Retake this set
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setQuestions([]);
+                            setSelectedAnswers({});
+                            setShowResults(false);
+                            setRecentSummary(null);
+                            setTab('mistakes');
+                          }}
+                          className="border-slate-700 text-slate-200 hover:border-yellow-400/60"
+                        >
+                          Clear practice
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  {showResults && scoreSummary && (
+                    <Card className="bg-slate-900/40 border-green-500/30">
+                      <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <p className="text-lg font-semibold text-white">
+                            Score: {scoreSummary.correct}/{scoreSummary.total} - Accuracy {scoreSummary.accuracy}%
+                          </p>
+                          {generatedAt && (
+                            <p className="text-xs text-slate-400">
+                              Generated {new Date(generatedAt).toLocaleString()}
+                            </p>
+                          )}
                         </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <p className="text-white text-lg">{q.question}</p>
-                        
-                        <div className="space-y-2">
-                          {q.options.map((option, optIdx) => (
-                            <button
-                              key={optIdx}
-                              onClick={() => {
-                                if (!showResults) {
-                                  setSelectedAnswers({ ...selectedAnswers, [idx]: optIdx });
-                                }
-                              }}
-                              className={`
+                        <Button
+                          variant="outline"
+                          onClick={handleGenerateQuestions}
+                          className="border-yellow-400/50 text-yellow-200 hover:border-yellow-400"
+                        >
+                          Generate new set
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-10 text-center text-slate-500">
+                  Log a few mistakes first and tap "Generate Practice Questions" to get a tailored set.
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

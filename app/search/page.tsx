@@ -214,7 +214,7 @@ function SearchPageContent() {
               ))}
             </div>
             <Button
-              onClick={handleSearch}
+              onClick={() => handleSearch()}
               disabled={loading || !query.trim() || !isOnline}
               className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-sm sm:text-base w-full sm:w-auto"
             >

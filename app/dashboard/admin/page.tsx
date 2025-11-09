@@ -421,7 +421,11 @@ export default function AdminDashboard() {
                     <p className="text-sm text-gray-400 mt-1">Active Teachers</p>
                   </div>
                   <div className="bg-slate-700/30 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-white">{riskInsights?.alerts.open_count ?? analytics?.overview.growth_rate.toFixed(1) || 0}</p>
+                    <p className="text-2xl font-bold text-white">
+                      {riskInsights?.alerts.open_count ?? (analytics?.overview.growth_rate != null
+                        ? analytics.overview.growth_rate.toFixed(1)
+                        : 0)}
+                    </p>
                     <p className="text-sm text-gray-400 mt-1">Open Risk Alerts</p>
                   </div>
                   <div className="bg-slate-700/30 rounded-lg p-4 text-center">

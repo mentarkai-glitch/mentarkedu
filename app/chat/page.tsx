@@ -732,7 +732,7 @@ export default function ChatPage() {
             />
             
             <Button
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               disabled={!input.trim() || loading || uploadingImage}
               className="bg-gradient-cyan-blue text-black hover:opacity-90 disabled:opacity-50 h-10 sm:h-12 px-3 sm:px-6 neon-glow"
             >

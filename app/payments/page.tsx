@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { Suspense, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
 import {
@@ -67,6 +67,14 @@ async function ensureRazorpayScript(): Promise<void> {
 }
 
 export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black text-white flex items-center justify-center">Loading payments…</div>}>
+      <PaymentsPageContent />
+    </Suspense>
+  );
+}
+
+function PaymentsPageContent() {
   const searchParams = useSearchParams();
   const eligiblePlans = useMemo(() => PRICING_PLANS.filter((plan) => !plan.contactOnly), []);
   const initialPlanParam = searchParams.get("plan") as PricingPlanId | null;
@@ -225,7 +233,9 @@ export default function PaymentsPage() {
   const price = calculatePlanPrice(planId, billingCycle);
   const cadence = getCadenceLabel(plan, billingCycle);
   const monthlyReference =
-    billingCycle === "yearly" ? `Equivalent to ${INR_FORMATTER.format(plan.monthlyPrice)} / month` : null;
+    billingCycle === "yearly" && typeof plan.monthlyPrice === "number"
+      ? `Equivalent to ${INR_FORMATTER.format(plan.monthlyPrice)} / month`
+      : null;
 
   return (
     <div className="min-h-screen bg-black text-white">
