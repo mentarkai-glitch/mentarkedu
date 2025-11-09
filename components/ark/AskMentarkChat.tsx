@@ -12,12 +12,14 @@ interface AskMentarkChatProps {
   categoryId?: string;
   currentStep?: number;
   userAnswers?: Record<string, any>;
+  studentLocation?: string | null;
 }
 
 export function AskMentarkChat({ 
   categoryId, 
   currentStep, 
-  userAnswers 
+  userAnswers,
+  studentLocation,
 }: AskMentarkChatProps) {
   const {
     isOpen,
@@ -39,7 +41,7 @@ export function AskMentarkChat({
       "Suggest Indian exam milestones I should mention.",
     ],
     2: [
-      "List common blockers for students in Maharashtra with this goal.",
+      "List common blockers for students in StateName with this goal.",
       "What metrics should I track weekly for this ARK?",
     ],
     3: [
@@ -52,16 +54,22 @@ export function AskMentarkChat({
     ],
   };
 
-  const activeSuggestions = suggestionLibrary[currentStep ?? 1] ?? suggestionLibrary[1];
+  const activeSuggestions = (suggestionLibrary[currentStep ?? 1] ?? suggestionLibrary[1]).map((suggestion) => {
+    if (suggestion.includes('StateName')) {
+      return suggestion.replace('StateName', studentLocation ?? 'my state');
+    }
+    return suggestion;
+  });
 
   // Update context when props change
   useEffect(() => {
     setContext({
       categoryId,
       currentStep,
-      userAnswers
+      userAnswers,
+      studentLocation: studentLocation || undefined,
     });
-  }, [categoryId, currentStep, userAnswers, setContext]);
+  }, [categoryId, currentStep, studentLocation, userAnswers, setContext]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

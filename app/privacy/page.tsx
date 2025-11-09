@@ -1,6 +1,140 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+
+export default function PrivacyPolicyPage() {
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  const sections: Array<{ title: string; points: string[] }> = [
+    {
+      title: "1. How we collect information",
+      points: [
+        "Profile data you share during onboarding (academic goals, support needs, location).",
+        "Session activity from ARKs, Daily Assistant, Study Analyzer, and other dashboards.",
+        "Optional uploads like notes, assignments, or voice messages used for analytics.",
+        "Telemetry for product reliability (anonymised events, error logs, performance metrics).",
+      ],
+    },
+    {
+      title: "2. Why we use your information",
+      points: [
+        "To generate and improve personalised ARKs, nudges, and mentor insights.",
+        "To surface wellbeing signals so counsellors and parents intervene calmly.",
+        "To run ML models that forecast risk, burnout, and career fit for Indian students.",
+        "To fulfil purchases, send transactional communications, and comply with Indian regulations.",
+      ],
+    },
+    {
+      title: "3. How we store and secure it",
+      points: [
+        "Data lives in Supabase (India region) with row-level security and access logs.",
+        "Secrets and model artefacts stay in encrypted storage with rotation policies.",
+        "Access is role-based; only vetted Mentark operators can view learner records.",
+        "We retain history so you can audit interventions; you can request deletion anytime.",
+      ],
+    },
+    {
+      title: "4. Sharing and integrations",
+      points: [
+        "We only share data with institute administrators, counsellors, or mentors linked to your account.",
+        "Third-party integrations (Razorpay, EmailJS, RunPod, Google Cloud, Semantic Scholar) receive minimum required fields.",
+        "We never sell learner data, advertising slots, or anonymised data lakes.",
+        "International transfers follow GDPR and Indian PDP Bill provisions when applicable.",
+      ],
+    },
+    {
+      title: "5. Your choices",
+      points: [
+        "You can update or export your data from the student profile dashboard.",
+        "Request account deletion by writing to connect@mentark.com; we respond within seven working days.",
+        "Opt out of non-essential emails or WhatsApp nudges while retaining platform access.",
+        "Raise privacy questions anytime at privacy@mentark.com.",
+      ],
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      <div className="container mx-auto max-w-4xl px-4 py-16 space-y-12">
+        <motion.header
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="space-y-4"
+        >
+          <Link href="/" className="inline-block">
+            <Button variant="outline" className="border-slate-700 text-slate-200 hover:text-yellow-200">
+              ← Back to home
+            </Button>
+          </Link>
+          <p className="text-xs uppercase tracking-[0.4em] text-yellow-300">Privacy Policy</p>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl">
+            Protecting every learner&apos;s data, dignity, and direction.
+          </h1>
+          <p className="text-slate-300 sm:text-lg">
+            Mentark operates as an Indian-first mentorship OS. This policy covers how we collect, use, and safeguard
+            personal information across Mentark Neuro, Mentark Quantum, and related AI agents.
+          </p>
+          <p className="text-sm text-slate-500">
+            Last updated: {new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
+          </p>
+        </motion.header>
+
+        <div className="space-y-10">
+          {sections.map((section) => (
+            <motion.section
+              key={section.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.5 }}
+              className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8 space-y-4"
+            >
+              <h2 className="text-2xl font-semibold text-white">{section.title}</h2>
+              <ul className="space-y-3 text-sm sm:text-base text-slate-300">
+                {section.points.map((point) => (
+                  <li key={point} className="flex gap-3">
+                    <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-yellow-400" />
+                    <span className="leading-relaxed">{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.section>
+          ))}
+        </div>
+
+        <motion.section
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.5 }}
+          className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-6 sm:p-8 space-y-4"
+        >
+          <h2 className="text-2xl font-semibold text-white">Need a data processing agreement?</h2>
+          <p className="text-slate-200">
+            Institutes, network partners, and investors can request a DPA or detailed security dossier by writing to
+            partnerships@mentark.com. We respond with artefacts (RLS policies, penetration test summaries, observability
+            diagrams) within five working days.
+          </p>
+          <Button
+            asChild
+            className="bg-gradient-cyan-blue text-black font-semibold hover:opacity-90"
+          >
+            <Link href="mailto:privacy@mentark.com">Contact the privacy desk</Link>
+          </Button>
+        </motion.section>
+      </div>
+    </div>
+  );
+}
+"use client";
+
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";

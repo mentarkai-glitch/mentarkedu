@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -33,6 +33,7 @@ import {
   Sparkles,
   Calendar,
   LogOut,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -55,6 +56,19 @@ export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      setCollapsed(mobile ? true : false);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -126,11 +140,23 @@ export function SidebarNav() {
   return (
     <>
       {/* Mobile Overlay */}
-      {!collapsed && (
+      {!collapsed && isMobile && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setCollapsed(true)}
         />
+      )}
+
+      {collapsed && isMobile && (
+        <Button
+          size="icon"
+          variant="outline"
+          className="fixed bottom-4 left-4 z-30 h-12 w-12 rounded-full border-yellow-500/40 text-yellow-200 bg-slate-900/80 backdrop-blur"
+          onClick={() => setCollapsed(false)}
+          aria-label="Open dashboard navigation"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
       )}
 
       {/* Sidebar */}

@@ -25,6 +25,7 @@ export interface ChatContext {
   categoryId?: string;
   currentQuestions?: string[];
   userAnswers?: Record<string, any>;
+  studentLocation?: string;
 }
 
 interface ChatStore {

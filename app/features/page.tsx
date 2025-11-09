@@ -17,7 +17,7 @@ const SEGMENTS = [
     title: "Students",
     subtitle: "Clarity, motivation, and personalised growth.",
     description:
-      "Mentark Neuro gives every learner a living ARK, five compassionate mentor personas, and a daily assistant that balances academics, wellbeing, and budgets in Indian rupees.",
+      "Mentark Neuro gives every learner a living ARK, five compassionate mentor personas, and a daily assistant that balances academics, wellbeing, and budgets for Indian households.",
     highlights: [
       "Adaptive ARKs aligned to school boards, semesters, and entrance exams.",
       "Daily Assistant with energy tracking, smart reminders, and offline resilience.",
@@ -46,7 +46,7 @@ const SEGMENTS = [
       "Families see the right level of detail—celebrations, concerns, and upcoming milestones—so they can support without adding pressure.",
     highlights: [
       "Weekly digest emails translating AI signals into plain-language updates.",
-      "Budget-aware recommendations for coaching, subscriptions, and scholarships priced for India.",
+      "Budget-aware recommendations for coaching, subscriptions, and scholarships that respect Indian households.",
       "Emotion & energy timelines with suggested conversation starters and coping playbooks.",
       "Instant escalation paths to counsellors or mentors when high-risk signals appear.",
     ],

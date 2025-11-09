@@ -79,6 +79,14 @@ function buildContextString(
     contextStr += `Current Step: ${context.currentStep}\n`;
   }
 
+  if (context.studentLocation) {
+    contextStr += `Student Location: ${context.studentLocation}\n`;
+    contextStr += `Always ground recommendations in Indian context, with examples relevant to ${context.studentLocation}.\n`;
+  } else {
+    contextStr += "Student Location: India\n";
+    contextStr += "Ground recommendations in Indian education realities (state boards, entrance exams, budgets).\n";
+  }
+
   if (context.userAnswers && Object.keys(context.userAnswers).length > 0) {
     contextStr += `\nUser has already provided:\n`;
     Object.entries(context.userAnswers).forEach(([key, value]) => {

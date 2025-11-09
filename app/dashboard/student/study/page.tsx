@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 interface KnowledgeGap {
   topic: string;
@@ -40,6 +41,87 @@ interface StudyPlan {
   expectedOutcome: string;
 }
 
+const FALLBACK_GAPS: KnowledgeGap[] = [
+  {
+    topic: 'Electrostatics fundamentals',
+    importance: 'critical',
+    estimatedTime: '3 hours',
+    priority: 1,
+    dependencies: ['Coulomb’s law refresher'],
+  },
+  {
+    topic: 'Differential equations practice',
+    importance: 'high',
+    estimatedTime: '2 hours',
+    priority: 2,
+    dependencies: ['Derivative basics'],
+  },
+  {
+    topic: 'Organic chemistry named reactions',
+    importance: 'medium',
+    estimatedTime: '90 minutes',
+    priority: 3,
+  },
+];
+
+const FALLBACK_SUMMARY =
+  'We could not reach the AI planner just now, so here is a starter gap list based on popular Indian entrance prep weak spots.';
+
+const FALLBACK_PLAN: StudyPlan = {
+  duration: 7,
+  topics: [
+    {
+      day: 1,
+      topics: ['Electrostatics fundamentals'],
+      timeRequired: '3 hours',
+      resources: [
+        {
+          type: 'video',
+          title: 'NTA JEE: Electrostatics crash session',
+          url: 'https://www.youtube.com/results?search_query=jee+electrostatics+crash+course',
+        },
+        {
+          type: 'notes',
+          title: 'NCERT XI Physics Chapter 2 quick revision',
+        },
+      ],
+      focus: 'Revisit charge, electric field, and superposition examples relevant to the JEE pattern.',
+    },
+    {
+      day: 2,
+      topics: ['Differential equations practice'],
+      timeRequired: '2 hours',
+      resources: [
+        {
+          type: 'practice',
+          title: 'Aakash PYQ problem set',
+          url: 'https://www.google.com/search?q=aakash+differential+equations+jee+pyq',
+        },
+      ],
+      focus: 'Solve first-order problems and verify steps with worked solutions.',
+    },
+    {
+      day: 3,
+      topics: ['Organic chemistry named reactions'],
+      timeRequired: '1.5 hours',
+      resources: [
+        {
+          type: 'flashcards',
+          title: 'Named reaction mnemonic deck',
+          url: 'https://www.google.com/search?q=organic+named+reactions+flashcards',
+        },
+      ],
+      focus: 'Memorise mechanisms and map them to likely exam questions.',
+    },
+  ],
+  recommendations: [
+    'Spread revision into 45-minute focus blocks with 10-minute breaks.',
+    'Log each study session in Mentark so Daily Assistant can rebalance your week.',
+    'If a topic still feels unclear, drop it into Ask Mentark for quick micro-plans.',
+  ],
+  expectedOutcome: 'Better confidence across three high-leverage topics before mock tests.',
+};
+
 export default function StudyWorkspacePage() {
   const [tab, setTab] = useState('analyze');
   const [loading, setLoading] = useState(false);
@@ -65,6 +147,16 @@ export default function StudyWorkspacePage() {
     if (materials.length === 0) return;
 
     setLoading(true);
+    let appliedFallback = false;
+
+    const applyFallbackAnalysis = (reason?: string) => {
+      setGaps(FALLBACK_GAPS);
+      setSummary(`${FALLBACK_SUMMARY}${reason ? ` (${reason})` : ''}`);
+      setTab('gaps');
+      toast.info('Using offline gap template so you can keep planning.');
+      appliedFallback = true;
+    };
+
     try {
       const response = await fetch('/api/study-analyzer/gaps', {
         method: 'POST',
@@ -72,13 +164,17 @@ export default function StudyWorkspacePage() {
         body: JSON.stringify({ materials }),
       });
 
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.success && Array.isArray(data.data?.gaps) && data.data.gaps.length > 0) {
         setGaps(data.data.gaps);
         setSummary(data.data.summary);
+        setTab('gaps');
+      } else {
+        applyFallbackAnalysis(data?.error || `status_${response.status}`);
       }
     } catch (error) {
       console.error('Analysis error:', error);
+      applyFallbackAnalysis('network_error');
     } finally {
       setLoading(false);
     }
@@ -88,6 +184,17 @@ export default function StudyWorkspacePage() {
     if (gaps.length === 0) return;
 
     setLoading(true);
+    let appliedFallback = false;
+
+    const applyFallbackPlan = (reason?: string) => {
+      setPlan(FALLBACK_PLAN);
+      setTab('plan');
+      toast.info('Serving a 7-day sample plan while the planner reconnects.', {
+        description: reason ? `Reason: ${reason}` : undefined,
+      });
+      appliedFallback = true;
+    };
+
     try {
       const response = await fetch('/api/study-analyzer/plan', {
         method: 'POST',
@@ -95,13 +202,16 @@ export default function StudyWorkspacePage() {
         body: JSON.stringify({ gaps, constraints }),
       });
 
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.success) {
         setPlan(data.data);
         setTab('plan');
+      } else {
+        applyFallbackPlan(data?.error || `status_${response.status}`);
       }
     } catch (error) {
       console.error('Plan generation error:', error);
+      applyFallbackPlan('network_error');
     } finally {
       setLoading(false);
     }

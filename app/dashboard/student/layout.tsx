@@ -24,7 +24,7 @@ export default function StudentLayout({
         </div>
         
         {/* Page Content */}
-        <div className="lg:pt-0 pt-16">
+        <div className="lg:pt-0 pt-20 pb-10 px-2 sm:px-4">
           {children}
         </div>
       </div>

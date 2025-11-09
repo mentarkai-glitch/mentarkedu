@@ -134,10 +134,10 @@ const neuroFeatures = [
     icon: IndianRupee,
     title: "Train Mentark AI",
     description:
-      "Students share graduation targets, Indian household budgets, and competitive exams so every plan, scholarship, and reminder stays hyper-relevant to local realities.",
+      "Students share graduation targets, household budget bands, and competitive exams so every plan, scholarship, and reminder stays grounded in Indian realities.",
     bullets: [
       "Course + semester aware nudges and revision loops",
-      "Rupee-first cost guidance across coaching and content",
+      "Local cost guidance across coaching, content, and travel",
       "Career milestones with parental visibility & consent",
     ],
     cta: { label: "Personalise my AI", href: "/dashboard/student/train-ai" },
@@ -159,7 +159,7 @@ const audienceBenefits = [
     subtitle: "Visibility without micromanagement",
     points: [
       "Weekly digest reports highlight wins, risks, and next steps in simple language",
-      "Budget-aware suggestions ensure every rupee is optimised for growth",
+      "Budget-aware suggestions ensure every recommendation fits Indian families",
       "Emotion timelines surface early signs of burnout or disengagement",
     ],
   },
@@ -189,7 +189,7 @@ const stakeholderHighlights = [
     title: "Families & Learners",
     icon: MapPin,
     points: [
-      "Transparent rupee budgets across coaching, content, and wellness",
+      "Transparent Indian budgeting across coaching, content, and wellness",
       "Entrance-exam aware planning for JEE, NEET, AIIMS, CUET, UPSC",
       "Emotion alerts with human-in-the-loop interventions",
       "Mentor loops that involve teachers, counsellors, and parents",
@@ -580,7 +580,7 @@ export default function LandingPage() {
           <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300 mb-4">Pricing</Badge>
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl">Designed to grow with your ecosystem.</h2>
           <p className="mt-4 text-base sm:text-lg text-slate-300 max-w-3xl mx-auto">
-            Pricing is transparently in rupees and scales with usage. Talk to us for multi-campus or network rates.
+            Pricing stays transparent for Indian campuses and scales with usage. Talk to us for multi-campus or network rates.
           </p>
         </div>
         <div className="flex flex-col items-center gap-3 mb-10">
