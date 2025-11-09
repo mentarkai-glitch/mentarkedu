@@ -261,7 +261,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <nav className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
+      <nav className="fixed top-0 inset-x-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4">
           <Link href="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="Mentark" className="h-9 w-9 rounded-lg" />
@@ -309,9 +309,10 @@ export default function LandingPage() {
           </div>
         </div>
       </nav>
+      <div className="h-16 md:h-20" />
 
       <motion.section
-        className="container mx-auto px-4 pt-28 pb-12 sm:pt-32 sm:pb-16 md:pt-36 md:pb-20 text-center"
+        className="container mx-auto px-4 pt-20 pb-12 sm:pt-28 sm:pb-16 md:pt-32 md:pb-20 text-center"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
@@ -391,7 +392,7 @@ export default function LandingPage() {
 
       <motion.section
         id="why-mentark"
-        className="container mx-auto px-4 py-16 border-t border-slate-800"
+        className="container mx-auto px-4 py-16 border-t border-slate-800 scroll-mt-24"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
@@ -430,7 +431,7 @@ export default function LandingPage() {
 
       <motion.section
         id="manifesto"
-        className="container mx-auto px-4 py-16 border-t border-slate-800"
+        className="container mx-auto px-4 py-16 border-t border-slate-800 scroll-mt-24"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.25 }}
@@ -470,7 +471,7 @@ export default function LandingPage() {
 
       <motion.section
         id="quantum"
-        className="container mx-auto px-4 py-16 border-t border-slate-800"
+        className="container mx-auto px-4 py-16 border-t border-slate-800 scroll-mt-24"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.25 }}
@@ -525,7 +526,7 @@ export default function LandingPage() {
 
       <motion.section
         id="neuro"
-        className="container mx-auto px-4 py-16 border-t border-slate-800"
+        className="container mx-auto px-4 py-16 border-t border-slate-800 scroll-mt-24"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.25 }}
@@ -580,7 +581,7 @@ export default function LandingPage() {
 
       <motion.section
         id="pricing"
-        className="container mx-auto px-4 py-16 border-t border-slate-800"
+        className="container mx-auto px-4 py-16 border-t border-slate-800 scroll-mt-24"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
@@ -679,7 +680,7 @@ export default function LandingPage() {
       </motion.section>
 
       <motion.section
-        className="container mx-auto px-4 py-16 border-t border-slate-800"
+        className="container mx-auto px-4 py-16 border-t border-slate-800 scroll-mt-24"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
