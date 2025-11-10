@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
@@ -29,17 +29,18 @@ export const metadata: Metadata = {
     "adaptive roadmaps",
   ],
   authors: [{ name: "Mentark" }],
-  themeColor: "#00E6FF",
   manifest: "/manifest.json",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
   icons: {
     icon: "/favicon.ico",
     apple: "/icons/icon-192.png",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#00E6FF",
 };
 
 export default function RootLayout({
