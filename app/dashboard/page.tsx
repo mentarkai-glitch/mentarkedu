@@ -17,12 +17,11 @@ import {
   Settings,
   LogOut,
   Shield,
-  Mail,
-  Phone,
   Sparkles,
   Rocket,
   GraduationCap,
-  ArrowRight
+  ArrowRight,
+  Search
 } from 'lucide-react';
 import { OTPVerification } from '@/components/auth/OTPVerification';
 import { AnimatedText } from '@/components/ui/AnimatedText';
@@ -199,6 +198,76 @@ export default function DashboardPage() {
               </motion.div>
             )}
           </div>
+
+          {/* Primary actions */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+            className="max-w-4xl mx-auto mb-12"
+          >
+            <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-6">
+              Where do you want to start today?
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                {
+                  title: 'Smart Search',
+                  description: 'Find papers, scholarships, and curated resources instantly.',
+                  href: '/search',
+                  icon: Search,
+                  gradient: 'from-cyan-500/20 via-blue-500/10 to-transparent',
+                  border: 'border-cyan-400/40',
+                },
+                {
+                  title: 'Student Dashboard',
+                  description: 'See your ARKs, momentum stats, and latest mentor nudges.',
+                  href: '/dashboard/student',
+                  icon: GraduationCap,
+                  gradient: 'from-yellow-500/20 via-orange-500/10 to-transparent',
+                  border: 'border-yellow-400/40',
+                },
+                {
+                  title: 'Train Mentark AI',
+                  description: 'Share your goals so recommendations stay Indian-context aware.',
+                  href: '/dashboard/student/train-ai',
+                  icon: Brain,
+                  gradient: 'from-emerald-500/20 via-lime-500/10 to-transparent',
+                  border: 'border-emerald-400/40',
+                },
+              ].map((action, index) => (
+                <motion.div
+                  key={action.title}
+                  whileHover={{ scale: 1.02, y: -6 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                >
+                  <Card className={`glass border ${action.border} bg-gradient-to-br ${action.gradient} backdrop-blur-sm h-full`}>
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-black/40">
+                          <action.icon className="h-5 w-5 text-white" />
+                        </div>
+                        <CardTitle className="text-white text-lg">{action.title}</CardTitle>
+                      </div>
+                      <CardDescription className="text-slate-300 text-sm">
+                        {action.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        className="w-full bg-gradient-cyan-blue text-black hover:opacity-90 font-semibold"
+                        onClick={() => router.push(action.href)}
+                      >
+                        Launch
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
 
           {/* Dashboard Options */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">

@@ -26,6 +26,7 @@ type AcademicStage =
   | "class_12"
   | "undergraduate"
   | "postgraduate"
+  | "graduate"
   | "working_professional"
   | "gap_year"
   | "other";
@@ -35,6 +36,7 @@ const stageOptions: { value: AcademicStage; label: string }[] = [
   { value: "class_12", label: "Class 12 (Senior Secondary)" },
   { value: "undergraduate", label: "Undergraduate / Graduation" },
   { value: "postgraduate", label: "Postgraduate / Masters" },
+  { value: "graduate", label: "Graduate (Completed degree)" },
   { value: "working_professional", label: "Working Professional" },
   { value: "gap_year", label: "Gap Year / Drop Year" },
   { value: "other", label: "Other" },
@@ -63,10 +65,26 @@ const competitiveExamOptions = [
   "Others",
 ];
 
+const graduationTracks = [
+  "B.Tech / BE (Engineering)",
+  "MBBS / BDS (Medical)",
+  "B.Com / BBA / BMS",
+  "B.Sc (Science)",
+  "BA (Arts & Humanities)",
+  "BCA / BSc IT",
+  "Design / Architecture (B.Des / B.Arch)",
+  "Law (Integrated / LLB)",
+  "Hotel Management / Tourism",
+  "Pharmacy / Allied Health",
+  "Vocational / Diploma",
+  "Other / Not sure yet",
+];
+
 interface TrainAIProfile {
   academicStage: AcademicStage | "";
   graduationCourse: string;
   graduationYear: string;
+  graduationTarget: string;
   competitiveExams: string[];
   otherExam: string;
   monthlyBudget: string;
@@ -100,6 +118,7 @@ export default function TrainMentarkAIPage() {
     academicStage: "",
     graduationCourse: "",
     graduationYear: "",
+    graduationTarget: "",
     competitiveExams: [],
     otherExam: "",
     monthlyBudget: "",
@@ -125,6 +144,7 @@ export default function TrainMentarkAIPage() {
             academicStage: onboarding.academicStage || onboarding.academic_stage || prev.academicStage,
             graduationCourse: onboarding.graduationCourse || onboarding.graduation_course || "",
             graduationYear: onboarding.graduationYear || onboarding.graduation_year || "",
+            graduationTarget: onboarding.graduationTarget || onboarding.graduation_target || "",
             competitiveExams:
               onboarding.competitiveExams ||
               onboarding.competitive_exams ||
@@ -157,7 +177,19 @@ export default function TrainMentarkAIPage() {
   );
 
   const isGraduationStage = useMemo(
-    () => form.academicStage === "undergraduate" || form.academicStage === "postgraduate",
+    () =>
+      form.academicStage === "undergraduate" ||
+      form.academicStage === "postgraduate" ||
+      form.academicStage === "graduate",
+    [form.academicStage]
+  );
+
+  const shouldShowGraduationTarget = useMemo(
+    () =>
+      form.academicStage === "class_11" ||
+      form.academicStage === "class_12" ||
+      form.academicStage === "gap_year" ||
+      form.academicStage === "graduate",
     [form.academicStage]
   );
 
@@ -187,6 +219,7 @@ export default function TrainMentarkAIPage() {
         academicStage: form.academicStage,
         graduationCourse: form.graduationCourse,
         graduationYear: form.graduationYear,
+        graduationTarget: form.graduationTarget,
         competitiveExams: form.competitiveExams,
         otherExam: form.otherExam,
         monthlyBudgetInr: form.monthlyBudget ? Number(form.monthlyBudget) : null,
@@ -304,6 +337,30 @@ export default function TrainMentarkAIPage() {
                   Mentark uses this to suggest relevant milestones, scholarships, and internships in India.
                 </p>
               </section>
+
+              {shouldShowGraduationTarget && (
+                <section className="space-y-2">
+                  <Label className="text-slate-200">Preferred graduation track (optional)</Label>
+                  <Select
+                    value={form.graduationTarget}
+                    onValueChange={(value) => setForm((prev) => ({ ...prev, graduationTarget: value }))}
+                  >
+                    <SelectTrigger className="bg-black/40 border border-slate-700 text-slate-100">
+                      <SelectValue placeholder="Choose the graduation path you’re aiming for" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border border-slate-700 text-slate-100">
+                      {graduationTracks.map((track) => (
+                        <SelectItem key={track} value={track}>
+                          {track}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-400">
+                    Helps Mentark recommend the right institutes, professors, and scholarship alerts for your goal.
+                  </p>
+                </section>
+              )}
 
               {isGraduationStage && (
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
