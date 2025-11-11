@@ -24,9 +24,12 @@ const FALLBACK_MODEL = env.OPENAI_FALLBACK_MODEL || "gpt-4o-mini";
 
 const providersConfigured = [
   env.OPENAI_API_KEY,
+  env.CLAUDE_API_KEY,
   env.ANTHROPIC_API_KEY,
   env.GEMINI_API_KEY,
   env.PERPLEXITY_API_KEY,
+  env.COHERE_API_KEY,
+  env.MISTRAL_API_KEY,
 ].some(Boolean);
 
 /**
