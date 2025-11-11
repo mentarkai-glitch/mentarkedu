@@ -29,10 +29,6 @@ const providersConfigured = [
   env.PERPLEXITY_API_KEY,
 ].some(Boolean);
 
-if (!providersConfigured) {
-  throw new Error("No AI provider API keys set. Configure OpenAI, Anthropic, Gemini or Perplexity to enable ARK generation.");
-}
-
 /**
  * Calculate complexity score for ARK generation
  * Higher complexity = better model selection
@@ -63,6 +59,14 @@ function getComplexityScore(category: string, goal: string, psychologyProfile: a
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    if (!providersConfigured) {
+      console.error("ARK generation attempted without any AI provider keys configured.");
+      return errorResponse(
+        "ARK generation is temporarily unavailable because no AI providers are configured. Please update your environment variables for OpenAI, Anthropic, Gemini, or Perplexity.",
+        503
+      );
+    }
 
     // Validate required fields
     const validation = validateRequiredFields(body, ["category", "goal"]);
