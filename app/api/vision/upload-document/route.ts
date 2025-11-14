@@ -96,8 +96,9 @@ export async function POST(request: NextRequest) {
       filename: file.name,
       size: file.size,
       mimeType: file.type,
-      extracted_text: result.text,
-      form_fields: (result as any).fields,
+      extracted_text: result.extracted_text || '',
+      form_fields: result.form_fields || {},
+      entities: result.entities || [],
       storage_url: uploadData?.path || null,
       processed_at: new Date().toISOString(),
     });
