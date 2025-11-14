@@ -8,18 +8,31 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink } from 'lucide-react';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 
 const HISTORY_KEY = 'mentark-doubt-history-v1';
 
 type DoubtCategory = 'math' | 'science' | 'programming' | 'exam' | 'general';
 
+interface YouTubeVideo {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail_url: string;
+  channel_title: string;
+  duration: string;
+  view_count: number;
+  url: string;
+  embed_url: string;
+}
+
 interface SolvedDoubt {
   question: string;
   answer: string;
   category: DoubtCategory;
   timestamp: string;
+  videos?: YouTubeVideo[];
 }
 
 const EXAMPLE_DOUBTS: Array<{ prompt: string; category: DoubtCategory }> = [
@@ -35,6 +48,7 @@ export default function DoubtSolverPage() {
   const [category, setCategory] = useState<DoubtCategory>('general');
   const [loading, setLoading] = useState(false);
   const [answer, setAnswer] = useState('');
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<SolvedDoubt[]>([]);
   const [isOnline, setIsOnline] = useState(true);
@@ -84,6 +98,7 @@ export default function DoubtSolverPage() {
 
     setLoading(true);
     setAnswer('');
+    setVideos([]);
     setError(null);
 
     try {
@@ -99,14 +114,20 @@ export default function DoubtSolverPage() {
       }
 
       const data = await response.json();
-      const resolvedAnswer = data.answer || data.error || 'No answer generated';
+      const solution = data.data || data;
+      const resolvedAnswer = solution.answer || solution.explanation || solution.error || 'No answer generated';
+      const resolvedVideos = solution.videos || [];
+      
       setAnswer(resolvedAnswer);
+      setVideos(resolvedVideos);
+      
       setHistory((prev) => [
         {
           question: question.trim(),
           answer: resolvedAnswer,
           category,
           timestamp: new Date().toISOString(),
+          videos: resolvedVideos,
         },
         ...prev,
       ].slice(0, 10));
@@ -115,6 +136,7 @@ export default function DoubtSolverPage() {
       console.error(error);
       setError('Error solving your doubt. Please try again.');
       setAnswer('Error solving your doubt. Please try again.');
+      setVideos([]);
     } finally {
       setLoading(false);
     }
@@ -227,26 +249,83 @@ export default function DoubtSolverPage() {
             </form>
 
             {answer && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-green-500/30"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                  <span className="font-semibold text-green-400">Verified Answer</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    onClick={handleCopyAnswer}
-                    className="ml-auto text-xs text-slate-300 hover:text-white"
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-green-500/30"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <span className="font-semibold text-green-400">Verified Answer</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      onClick={handleCopyAnswer}
+                      className="ml-auto text-xs text-slate-300 hover:text-white"
+                    >
+                      <Clipboard className="w-4 h-4 mr-1" /> Copy
+                    </Button>
+                  </div>
+                  <p className="text-slate-200 whitespace-pre-wrap">{answer}</p>
+                </motion.div>
+
+                {videos.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-yellow-500/30"
                   >
-                    <Clipboard className="w-4 h-4 mr-1" /> Copy
-                  </Button>
-                </div>
-                <p className="text-slate-200 whitespace-pre-wrap">{answer}</p>
-              </motion.div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Play className="w-5 h-5 text-yellow-400" />
+                      <span className="font-semibold text-yellow-400">Video Explanations</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {videos.map((video) => (
+                        <motion.a
+                          key={video.id}
+                          href={video.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative rounded-lg overflow-hidden border border-slate-700 hover:border-yellow-500/50 transition-all bg-slate-800/50"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className="relative aspect-video bg-slate-900">
+                            <img
+                              src={video.thumbnail_url}
+                              alt={video.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <div className="w-12 h-12 rounded-full bg-red-600/90 flex items-center justify-center group-hover:bg-red-600 transition-colors">
+                                <Play className="w-6 h-6 text-white ml-1" />
+                              </div>
+                            </div>
+                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/80 rounded text-xs text-white">
+                              {video.duration}
+                            </div>
+                          </div>
+                          <div className="p-3">
+                            <h4 className="text-sm font-semibold text-white line-clamp-2 mb-1 group-hover:text-yellow-400 transition-colors">
+                              {video.title}
+                            </h4>
+                            <div className="flex items-center justify-between text-xs text-slate-400">
+                              <span className="line-clamp-1">{video.channel_title}</span>
+                              <div className="flex items-center gap-2">
+                                <span>{video.view_count.toLocaleString()} views</span>
+                                <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            </div>
+                          </div>
+                        </motion.a>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

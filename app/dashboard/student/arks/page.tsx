@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
   BookOpen,
   Plus,
@@ -24,6 +25,7 @@ import {
   Grid,
   List,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 
 interface ARK {
@@ -38,54 +40,101 @@ interface ARK {
   created_at: string;
 }
 
+const isMissingColumnError = (error: any, column: string) => {
+  const message = (error?.message || "").toLowerCase();
+  return error?.code === "42703" || message.includes(`column "${column}"`) || message.includes(`column ${column}`);
+};
+
 export default function MyARKsPage() {
   const [arks, setARKs] = useState<ARK[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "completed" | "paused">("all");
   const [view, setView] = useState<"grid" | "list" | "timeline">("grid");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchARKs();
-  }, []);
-
-  const fetchARKs = async () => {
+  const fetchARKs = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (user) {
-        const { data: arksData, error } = await supabase.from("arks").select("*").eq("student_id", user.id);
+      if (!user) {
+        setARKs([]);
+        return;
+      }
 
-        if (error) {
-          console.error("Error fetching ARKs:", error);
-        } else if (arksData) {
-          setARKs(arksData as any);
+      const { data: joinedData, error: joinedError } = await supabase
+        .from("arks")
+        .select("*, students!inner(user_id)")
+        .eq("students.user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (!joinedError && joinedData) {
+        const normalized = joinedData.map(({ students, ...ark }: any) => ark as ARK);
+        setARKs(normalized);
+        return;
+      }
+
+      const candidateColumns = ["student_id", "user_id"];
+      let fallbackData: ARK[] | null = null;
+      let lastError: any = joinedError;
+
+      for (const column of candidateColumns) {
+        const { data, error } = await supabase
+          .from("arks")
+          .select("*")
+          .eq(column as string, user.id)
+          .order("created_at", { ascending: false });
+
+        if (!error) {
+          fallbackData = data as ARK[];
+          lastError = null;
+          break;
+        }
+
+        lastError = error;
+
+        if (!isMissingColumnError(error, column)) {
+          break;
         }
       }
-    } catch (error) {
+
+      if (fallbackData) {
+        setARKs(fallbackData);
+      } else if (lastError) {
+        const message =
+          lastError.message ||
+          lastError.hint ||
+          "Unable to load your ARKs right now. Please try again in a moment.";
+        console.error("Error fetching ARKs:", { message, details: lastError });
+        setLoadError(message);
+        toast.error(message);
+      } else {
+        setARKs([]);
+      }
+    } catch (error: any) {
+      const message = error?.message || "Something went wrong while loading your ARKs.";
       console.error("Failed to fetch ARKs:", error);
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchARKs();
+  }, [fetchARKs]);
 
   const filteredARKs = arks.filter((ark) => {
     const matchesSearch = ark.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === "all" || ark.status === filter;
     return matchesSearch && matchesFilter;
   });
-
-  const statusCounts = useMemo(() => {
-    return {
-      all: arks.length,
-      active: arks.filter((ark) => ark.status === "active").length,
-      completed: arks.filter((ark) => ark.status === "completed").length,
-      paused: arks.filter((ark) => ark.status === "paused").length,
-    } as Record<typeof filter, number> & { all: number };
-  }, [arks]);
 
   const timelineARKs = useMemo(
     () =>
@@ -132,6 +181,28 @@ export default function MyARKsPage() {
 
   return (
     <div className="min-h-screen bg-black overflow-x-hidden">
+      {loadError && (
+        <div className="bg-red-500/10 border-b border-red-500/30">
+          <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3 text-red-200">
+              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold">We couldn&apos;t load your ARKs.</p>
+                <p className="text-sm text-red-200/80">{loadError}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-500/60 text-red-200 hover:bg-red-500/20"
+              onClick={fetchARKs}
+            >
+              Try again
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="border-b border-slate-700 bg-slate-900/50 w-full">
         <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 w-full max-w-full">

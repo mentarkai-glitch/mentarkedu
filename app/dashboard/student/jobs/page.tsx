@@ -122,6 +122,11 @@ export default function JobMatcherPage() {
     localStorage.setItem('mentark-job-matcher-saved-jobs', JSON.stringify(savedJobs));
   }, [savedJobs]);
 
+  const isMissingColumnError = (error: any, column: string) => {
+    const message = (error?.message || '').toLowerCase();
+    return error?.code === '42703' || message.includes(`column "${column}"`) || message.includes(`column ${column}`);
+  };
+
   const loadUserArks = async () => {
     try {
       const supabase = createClient();
@@ -131,13 +136,43 @@ export default function JobMatcherPage() {
       if (!user) return;
       
       // Get user's ARKs
-      const { data: arksData, error } = await supabase
+      const { data: joinedData, error: joinedError } = await supabase
         .from("arks")
-        .select("*")
-        .eq("student_id", user.id);
+        .select("id,title,category,nextMilestone,students!inner(user_id)")
+        .eq("students.user_id", user.id);
+
+      if (!joinedError && joinedData) {
+        setArks(joinedData.map(({ students, ...ark }) => ark as ARK));
+        return;
+      }
+
+      const candidateColumns = ['student_id', 'user_id'];
+      let fallbackData: any[] | null = null;
+      let lastError: any = joinedError;
+
+      for (const column of candidateColumns) {
+        const { data, error } = await supabase
+          .from("arks")
+          .select("*")
+          .eq(column, user.id);
+
+        if (!error) {
+          fallbackData = data as any[];
+          lastError = null;
+          break;
+        }
+
+        lastError = error;
+        if (!isMissingColumnError(error, column)) {
+          break;
+        }
+      }
       
-      if (!error && arksData) {
-        setArks(arksData as any);
+      if (fallbackData) {
+        setArks(fallbackData as any);
+      } else if (lastError) {
+        console.error('Error loading ARKs:', lastError);
+        toast.error(lastError.message || 'Unable to load your ARKs right now.');
       }
     } catch (error) {
       console.error('Error loading ARKs:', error);
