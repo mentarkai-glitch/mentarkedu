@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   FileQuestion,
@@ -16,6 +16,14 @@ import {
   Wifi,
   WifiOff,
   RefreshCcw,
+  TrendingUp,
+  BarChart3,
+  Activity,
+  Award,
+  TrendingDown,
+  Clock,
+  Brain,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +32,18 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import type {
+  PracticeSession,
+  PracticeQuestion as PracticeQuestionType,
+  PracticeAnalytics,
+  MistakePattern,
+  AdaptiveDifficulty,
+  DifficultyLevel,
+  MistakeType,
+} from '@/lib/types';
 
 interface Mistake {
   topic: string;
@@ -34,14 +53,15 @@ interface Mistake {
 }
 
 interface PracticeQuestion {
+  id?: string;
   question: string;
   options: string[];
   correctAnswer: number;
   explanation: string;
-  difficulty: string;
+  difficulty: DifficultyLevel;
+  topic?: string;
+  subject?: string;
 }
-
-type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
 const MISTAKE_STORAGE_KEY = 'mentark-practice-mistakes-v1';
 const LAST_RESULTS_KEY = 'mentark-practice-results-v1';
@@ -77,6 +97,12 @@ export default function PracticeQuestionsPage() {
   const [questionCount, setQuestionCount] = useState(5);
   const [isOnline, setIsOnline] = useState(true);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analytics, setAnalytics] = useState<PracticeAnalytics | null>(null);
+  const [mistakePatterns, setMistakePatterns] = useState<MistakePattern[]>([]);
+  const [adaptiveDifficulties, setAdaptiveDifficulties] = useState<AdaptiveDifficulty[]>([]);
+  const [startTime, setStartTime] = useState<number | null>(null);
    
   // Mistakes state
   const [mistakes, setMistakes] = useState<Mistake[]>([]);
@@ -89,10 +115,20 @@ export default function PracticeQuestionsPage() {
   
   // Questions state
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
+  const [questionIds, setQuestionIds] = useState<string[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
   const [pastResults, setPastResults] = useState<PracticeQuestion[]>([]);
   const [recentSummary, setRecentSummary] = useState<{ correct: number; total: number; accuracy: number } | null>(null);
+
+  // Load analytics on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchAnalytics();
+      fetchMistakePatterns();
+      fetchAdaptiveDifficulties();
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -130,32 +166,6 @@ export default function PracticeQuestionsPage() {
     }
   }, [mistakes]);
 
-  const scoreSummary = useMemo(() => {
-    if (!showResults || questions.length === 0) return null;
-    const correct = questions.reduce((acc, q, idx) => {
-      const answer = selectedAnswers[idx];
-      return answer === q.correctAnswer ? acc + 1 : acc;
-    }, 0);
-    const accuracy = Math.round((correct / questions.length) * 100);
-    return { correct, total: questions.length, accuracy };
-  }, [questions, selectedAnswers, showResults]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || questions.length === 0 || !showResults || !scoreSummary) return;
-    try {
-      localStorage.setItem(
-        LAST_RESULTS_KEY,
-        JSON.stringify({
-          questions,
-          generatedAt: generatedAt ?? new Date().toISOString(),
-          summary: scoreSummary,
-        })
-      );
-    } catch (err) {
-      console.warn('Failed to persist results', err);
-    }
-  }, [questions, showResults, generatedAt, scoreSummary]);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const updateStatus = () => setIsOnline(navigator.onLine);
@@ -167,6 +177,56 @@ export default function PracticeQuestionsPage() {
       window.removeEventListener('offline', updateStatus);
     };
   }, []);
+
+  const fetchAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const response = await fetch('/api/practice/analytics?days=30');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setAnalytics(data.data.analytics);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  const fetchMistakePatterns = async () => {
+    try {
+      const response = await fetch('/api/practice/mistake-patterns?analyze=true');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.analysis) {
+          setMistakePatterns(data.data.analysis.patterns || []);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch mistake patterns:', error);
+    }
+  };
+
+  const fetchAdaptiveDifficulties = async () => {
+    try {
+      // This would need a new endpoint - for now, we'll get it from analytics
+      // We can extend analytics to include adaptive difficulties
+    } catch (error) {
+      console.error('Failed to fetch adaptive difficulties:', error);
+    }
+  };
+
+  const scoreSummary = useMemo(() => {
+    if (!showResults || questions.length === 0) return null;
+    const correct = questions.reduce((acc, q, idx) => {
+      const answer = selectedAnswers[idx];
+      return answer === q.correctAnswer ? acc + 1 : acc;
+    }, 0);
+    const accuracy = Math.round((correct / questions.length) * 100);
+    return { correct, total: questions.length, accuracy };
+  }, [questions, selectedAnswers, showResults]);
 
   const displaySummary = scoreSummary ?? recentSummary;
 
@@ -181,15 +241,6 @@ export default function PracticeQuestionsPage() {
     setCurrentMistake({ topic: '', question: '', attemptedAnswer: '', correctAnswer: '' });
   };
 
-  const handleQuickTemplate = (template: Mistake) => {
-    setCurrentMistake({
-      topic: template.topic,
-      question: template.question,
-      attemptedAnswer: template.attemptedAnswer,
-      correctAnswer: template.correctAnswer,
-    });
-  };
-
   const handleGenerateQuestions = async () => {
     if (mistakes.length === 0) {
       setError('Add a mistake so we know what to practise.');
@@ -202,26 +253,58 @@ export default function PracticeQuestionsPage() {
 
     setLoading(true);
     setError(null);
+    setStartTime(Date.now());
+    
     try {
-      const response = await fetch('/api/study-analyzer/practice-questions', {
+      // Extract topic and subject from mistakes
+      const primaryMistake = mistakes[0];
+      const topic = primaryMistake.topic;
+      const subject = ''; // Can be extracted from mistakes if needed
+
+      // Create practice session with new API
+      const sessionResponse = await fetch('/api/practice/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ mistakes, count: questionCount }),
+        body: JSON.stringify({
+          topic,
+          subject,
+          count: questionCount,
+          mistakes,
+        }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`Practice service returned ${response.status}`);
+
+      if (!sessionResponse.ok) {
+        throw new Error(`Practice service returned ${sessionResponse.status}`);
       }
 
-      const data = await response.json();
-      if (data.success) {
-        setQuestions(data.data.questions);
+      const sessionData = await sessionResponse.json();
+      
+      if (sessionData.success) {
+        const session = sessionData.data.session as PracticeSession;
+        const questionsData = sessionData.data.questions as PracticeQuestionType[];
+        
+        setCurrentSessionId(session.id);
+        
+        // Convert to UI format
+        const uiQuestions: PracticeQuestion[] = questionsData.map((q) => ({
+          id: q.id,
+          question: q.question_text,
+          options: q.options,
+          correctAnswer: q.correct_answer_index,
+          explanation: q.explanation || '',
+          difficulty: q.difficulty,
+          topic: q.topic || topic,
+          subject: q.subject || subject,
+        }));
+
+        setQuestionIds(questionsData.map((q) => q.id));
+        setQuestions(uiQuestions);
         setTab('practice');
         setSelectedAnswers({});
         setShowResults(false);
         setGeneratedAt(new Date().toISOString());
-        setPastResults(data.data.questions);
+        setPastResults(uiQuestions);
         setRecentSummary(null);
       }
     } catch (error) {
@@ -232,26 +315,91 @@ export default function PracticeQuestionsPage() {
     }
   };
 
-  const handleSubmitAnswers = () => {
-    if (questions.length === 0) return;
+  const handleSubmitAnswers = async () => {
+    if (questions.length === 0 || !currentSessionId) return;
     const answered = Object.keys(selectedAnswers).length === questions.length;
     if (!answered) {
       setError('Answer all questions before submitting.');
       return;
     }
+
     setError(null);
-    setShowResults(true);
-    const correct = questions.reduce((acc, q, idx) => {
-      const answer = selectedAnswers[idx];
-      return answer === q.correctAnswer ? acc + 1 : acc;
-    }, 0);
-    const summary = {
-      correct,
-      total: questions.length,
-      accuracy: Math.round((correct / questions.length) * 100),
-    };
-    setRecentSummary(summary);
-    setGeneratedAt((prev) => prev ?? new Date().toISOString());
+    setLoading(true);
+
+    try {
+      const timeSpent = startTime ? Math.round((Date.now() - startTime) / 1000) : undefined;
+
+      // Record all attempts
+      const attemptPromises = questions.map((q, idx) => {
+        if (!questionIds[idx]) return null;
+        
+        const selectedIndex = selectedAnswers[idx];
+        const isCorrect = selectedIndex === q.correctAnswer;
+
+        return fetch('/api/practice/attempts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            question_id: questionIds[idx],
+            session_id: currentSessionId,
+            selected_answer_index: selectedIndex,
+            time_spent_seconds: timeSpent ? Math.round(timeSpent / questions.length) : undefined,
+          }),
+        });
+      });
+
+      await Promise.all(attemptPromises.filter(Boolean));
+
+      // Update session as completed
+      await fetch(`/api/practice/sessions?id=${currentSessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          completed_at: new Date().toISOString(),
+          time_spent_seconds: timeSpent,
+        }),
+      });
+
+      // Refresh analytics
+      await fetchAnalytics();
+      await fetchMistakePatterns();
+
+      setShowResults(true);
+      const correct = questions.reduce((acc, q, idx) => {
+        const answer = selectedAnswers[idx];
+        return answer === q.correctAnswer ? acc + 1 : acc;
+      }, 0);
+      const summary = {
+        correct,
+        total: questions.length,
+        accuracy: Math.round((correct / questions.length) * 100),
+      };
+      setRecentSummary(summary);
+      setGeneratedAt((prev) => prev ?? new Date().toISOString());
+
+      // Persist results
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(
+            LAST_RESULTS_KEY,
+            JSON.stringify({
+              questions,
+              generatedAt: generatedAt ?? new Date().toISOString(),
+              summary,
+            })
+          );
+        } catch (err) {
+          console.warn('Failed to persist results', err);
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting answers:', error);
+      setError('Failed to save results. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -259,6 +407,17 @@ export default function PracticeQuestionsPage() {
       case 'easy': return 'bg-green-500/20 text-green-400 border-green-500/50';
       case 'medium': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
       case 'hard': return 'bg-red-500/20 text-red-400 border-red-500/50';
+      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+    }
+  };
+
+  const getMistakeTypeColor = (type: MistakeType) => {
+    switch (type) {
+      case 'conceptual': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';
+      case 'calculation': return 'bg-purple-500/20 text-purple-400 border-purple-500/50';
+      case 'time_management': return 'bg-orange-500/20 text-orange-400 border-orange-500/50';
+      case 'reading_comprehension': return 'bg-pink-500/20 text-pink-400 border-pink-500/50';
+      case 'application': return 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50';
       default: return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
     }
   };
@@ -281,7 +440,7 @@ export default function PracticeQuestionsPage() {
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
                   Practice Questions
                 </h1>
-                <p className="text-slate-400">AI-generated targeted practice from your mistakes</p>
+                <p className="text-slate-400">AI-powered adaptive practice with analytics</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
@@ -331,48 +490,38 @@ export default function PracticeQuestionsPage() {
             <Card className="bg-slate-900/60 border-slate-800">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>Question count</span>
-                  <RefreshCcw className="h-4 w-4 text-slate-300" />
+                  <span>Total sessions</span>
+                  <Activity className="h-4 w-4 text-slate-300" />
                 </div>
-                <div className="mt-3 flex items-center gap-3">
-                  <Input
-                    type="number"
-                    min={3}
-                    max={10}
-                    value={questionCount}
-                    onChange={(e) => {
-                      const next = parseInt(e.target.value, 10);
-                      if (!Number.isNaN(next)) {
-                        setQuestionCount(Math.min(10, Math.max(3, next)));
-                      }
-                    }}
-                    className="w-20 bg-slate-950 border-slate-700 text-white"
-                  />
-                  <span className="text-xs text-slate-500">Questions per set</span>
-                </div>
+                <p className="mt-3 text-2xl font-semibold text-white">
+                  {analytics?.total_sessions || 0}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">Practice sessions completed</p>
               </CardContent>
             </Card>
 
             <Card className="bg-slate-900/60 border-slate-800">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>Ready to practise</span>
-                  <Sparkles className="h-4 w-4 text-yellow-300" />
+                  <span>Average accuracy</span>
+                  <TrendingUp className="h-4 w-4 text-green-300" />
                 </div>
-                <p className="mt-3 text-2xl font-semibold text-white">{questions.length > 0 ? 'Yes' : 'No'}</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {questions.length > 0 ? 'Review and submit your answers.' : 'Add mistakes and generate fresh questions.'}
+                <p className="mt-3 text-2xl font-semibold text-white">
+                  {analytics?.average_accuracy ? `${Math.round(analytics.average_accuracy)}%` : '—'}
                 </p>
+                <p className="text-xs text-slate-500 mt-1">Across all practice sessions</p>
               </CardContent>
             </Card>
           </div>
 
           <Tabs value={tab} onValueChange={setTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-900/50 border border-yellow-500/30">
-              <TabsTrigger value="mistakes">📝 Record Mistakes</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 bg-slate-900/50 border border-yellow-500/30">
+              <TabsTrigger value="mistakes">📝 Mistakes</TabsTrigger>
               <TabsTrigger value="practice" disabled={questions.length === 0}>
                 🎯 Practice {questions.length > 0 ? `(${questions.length})` : ''}
               </TabsTrigger>
+              <TabsTrigger value="analytics">📊 Analytics</TabsTrigger>
+              <TabsTrigger value="patterns">🔍 Patterns</TabsTrigger>
             </TabsList>
 
             <TabsContent value="mistakes" className="mt-6">
@@ -468,8 +617,17 @@ export default function PracticeQuestionsPage() {
                     disabled={mistakes.length === 0 || loading}
                     className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    {loading ? 'Generating Practice Questions...' : 'Generate Practice Questions'}
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating Practice Questions...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate Practice Questions
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -487,7 +645,12 @@ export default function PracticeQuestionsPage() {
                         <CardHeader>
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-yellow-400">Question {idx + 1}</CardTitle>
-                            <Badge className={getDifficultyColor(q.difficulty)}>{q.difficulty}</Badge>
+                            <div className="flex items-center gap-2">
+                              {q.topic && (
+                                <Badge variant="outline" className="text-xs">{q.topic}</Badge>
+                              )}
+                              <Badge className={getDifficultyColor(q.difficulty)}>{q.difficulty}</Badge>
+                            </div>
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -534,7 +697,7 @@ export default function PracticeQuestionsPage() {
                                   ? 'You nailed this one!'
                                   : `Correct answer: ${q.options[q.correctAnswer]}`}
                               </p>
-                              <p>{q.explanation}</p>
+                              {q.explanation && <p>{q.explanation}</p>}
                             </div>
                           )}
                         </CardContent>
@@ -546,9 +709,17 @@ export default function PracticeQuestionsPage() {
                     {!showResults && (
                       <Button
                         onClick={handleSubmitAnswers}
+                        disabled={loading}
                         className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
                       >
-                        Submit answers
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          'Submit answers'
+                        )}
                       </Button>
                     )}
                     {showResults && (
@@ -566,9 +737,11 @@ export default function PracticeQuestionsPage() {
                           variant="outline"
                           onClick={() => {
                             setQuestions([]);
+                            setQuestionIds([]);
                             setSelectedAnswers({});
                             setShowResults(false);
                             setRecentSummary(null);
+                            setCurrentSessionId(null);
                             setTab('mistakes');
                           }}
                           className="border-slate-700 text-slate-200 hover:border-yellow-400/60"
@@ -607,6 +780,269 @@ export default function PracticeQuestionsPage() {
                 <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-10 text-center text-slate-500">
                   Log a few mistakes first and tap "Generate Practice Questions" to get a tailored set.
                 </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="analytics" className="mt-6">
+              {analyticsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : analytics ? (
+                <div className="space-y-6">
+                  {/* Overall Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="bg-slate-900/60 border-slate-800">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                          <span>Total Sessions</span>
+                          <Activity className="h-4 w-4" />
+                        </div>
+                        <p className="text-3xl font-bold text-white">{analytics.total_sessions}</p>
+                        <p className="text-xs text-slate-500 mt-1">Practice sessions completed</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-slate-900/60 border-slate-800">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                          <span>Total Questions</span>
+                          <FileQuestion className="h-4 w-4" />
+                        </div>
+                        <p className="text-3xl font-bold text-white">{analytics.total_questions}</p>
+                        <p className="text-xs text-slate-500 mt-1">Questions attempted</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between text-xs text-green-200 mb-2">
+                          <span>Average Accuracy</span>
+                          <TrendingUp className="h-4 w-4" />
+                        </div>
+                        <p className="text-3xl font-bold text-white">
+                          {Math.round(analytics.average_accuracy)}%
+                        </p>
+                        <Progress
+                          value={analytics.average_accuracy}
+                          className="mt-2 h-2 bg-green-500/10"
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Accuracy Trend */}
+                  {analytics.accuracy_trend.length > 0 && (
+                    <Card className="bg-slate-900/50 border-yellow-500/30">
+                      <CardHeader>
+                        <CardTitle className="text-yellow-400">Accuracy Trend</CardTitle>
+                        <CardDescription>Your performance over the last 30 days</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {analytics.accuracy_trend.slice(-7).map((trend, idx) => (
+                            <div key={idx} className="flex items-center gap-4">
+                              <div className="w-24 text-xs text-slate-400">
+                                {new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm text-white">{Math.round(trend.accuracy)}%</span>
+                                  <span className="text-xs text-slate-500">{trend.questions} questions</span>
+                                </div>
+                                <Progress
+                                  value={trend.accuracy}
+                                  className="h-2 bg-slate-800"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Strengths & Weaknesses */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Strengths */}
+                    <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
+                      <CardHeader>
+                        <CardTitle className="text-green-400 flex items-center gap-2">
+                          <Award className="w-5 h-5" />
+                          Strengths
+                        </CardTitle>
+                        <CardDescription>Topics you're excelling at</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {analytics.strengths.length > 0 ? (
+                          <div className="space-y-3">
+                            {analytics.strengths.map((strength, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-green-500/30">
+                                <div>
+                                  <p className="text-white font-semibold">{strength.topic}</p>
+                                  {strength.subject && (
+                                    <p className="text-xs text-slate-400">{strength.subject}</p>
+                                  )}
+                                </div>
+                                <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                                  {Math.round(strength.accuracy)}%
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-slate-400 text-sm">No strengths identified yet. Keep practicing!</p>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Weaknesses */}
+                    <Card className="bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/30">
+                      <CardHeader>
+                        <CardTitle className="text-red-400 flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5" />
+                          Areas to Improve
+                        </CardTitle>
+                        <CardDescription>Topics needing more practice</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {analytics.weaknesses.length > 0 ? (
+                          <div className="space-y-3">
+                            {analytics.weaknesses.map((weakness, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-red-500/30">
+                                <div>
+                                  <p className="text-white font-semibold">{weakness.topic}</p>
+                                  {weakness.subject && (
+                                    <p className="text-xs text-slate-400">{weakness.subject}</p>
+                                  )}
+                                  {weakness.common_mistakes.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {weakness.common_mistakes.map((mistake, mIdx) => (
+                                        <Badge key={mIdx} variant="outline" className="text-xs border-red-500/50 text-red-300">
+                                          {mistake.replace('_', ' ')}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <Badge className="bg-red-500/20 text-red-400 border-red-500/50">
+                                  {Math.round(weakness.accuracy)}%
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-slate-400 text-sm">No weaknesses identified. Great job!</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Topic Breakdown */}
+                  {analytics.topic_breakdown.length > 0 && (
+                    <Card className="bg-slate-900/50 border-yellow-500/30">
+                      <CardHeader>
+                        <CardTitle className="text-yellow-400">Topic Breakdown</CardTitle>
+                        <CardDescription>Performance by topic</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {analytics.topic_breakdown.slice(0, 10).map((topic, idx) => (
+                            <div key={idx} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-white font-semibold">{topic.topic}</p>
+                                  {topic.subject && (
+                                    <p className="text-xs text-slate-400">{topic.subject}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <Badge className={getDifficultyColor(topic.average_difficulty)}>
+                                    {topic.average_difficulty}
+                                  </Badge>
+                                  <span className="text-sm text-white font-semibold">
+                                    {Math.round(topic.accuracy)}%
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Progress
+                                  value={topic.accuracy}
+                                  className="flex-1 h-2 bg-slate-800"
+                                />
+                                <span className="text-xs text-slate-400 w-20 text-right">
+                                  {topic.correct}/{topic.attempts}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : (
+                <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <CardContent className="p-10 text-center text-slate-400">
+                    <BarChart3 className="w-12 h-12 mx-auto mb-4 text-slate-500" />
+                    <p>No analytics data yet. Complete some practice sessions to see insights.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="patterns" className="mt-6">
+              {mistakePatterns.length > 0 ? (
+                <div className="space-y-6">
+                  <Card className="bg-slate-900/50 border-yellow-500/30">
+                    <CardHeader>
+                      <CardTitle className="text-yellow-400 flex items-center gap-2">
+                        <Brain className="w-5 h-5" />
+                        Mistake Patterns
+                      </CardTitle>
+                      <CardDescription>Common mistake types and their frequencies</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {mistakePatterns.map((pattern, idx) => (
+                          <Card key={idx} className="bg-slate-800 border-slate-700">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge className={getMistakeTypeColor(pattern.mistake_type)}>
+                                      {pattern.mistake_type.replace('_', ' ')}
+                                    </Badge>
+                                    <span className="text-white font-semibold">{pattern.topic}</span>
+                                  </div>
+                                  {pattern.subject && (
+                                    <p className="text-xs text-slate-400">{pattern.subject}</p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-yellow-400">{pattern.frequency}</p>
+                                  <p className="text-xs text-slate-500">occurrences</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-slate-400">
+                                Last occurred: {new Date(pattern.last_occurred_at).toLocaleDateString()}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <CardContent className="p-10 text-center text-slate-400">
+                    <Brain className="w-12 h-12 mx-auto mb-4 text-slate-500" />
+                    <p>No mistake patterns detected yet. Start practicing to identify patterns.</p>
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
           </Tabs>
