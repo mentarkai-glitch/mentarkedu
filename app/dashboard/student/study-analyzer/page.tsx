@@ -16,7 +16,7 @@ import {
   SpacedRepetitionQueueItem,
   StudyPathProgressEntry,
 } from '@/lib/types';
-import { Loader2, TrendingUp, Brain, Clock, ArrowRight } from 'lucide-react';
+import { Loader2, TrendingUp, Brain, Clock, ArrowRight, ChevronLeft, ChevronRight, Sparkles, BookOpen, Video, FileText, ExternalLink } from 'lucide-react';
 import { trackEvent } from '@/lib/services/analytics';
 
 export default function StudyAnalyzerPage() {
@@ -26,6 +26,7 @@ export default function StudyAnalyzerPage() {
   const [queueItems, setQueueItems] = useState<SpacedRepetitionQueueItem[]>([]);
   const [masterySummary, setMasterySummary] = useState<StudyPathProgressEntry[]>([]);
   const [sessionSaving, setSessionSaving] = useState(false);
+  const [recommendationIndex, setRecommendationIndex] = useState(0);
   const [sessionForm, setSessionForm] = useState({
     sessionType: 'solo',
     materialType: 'notes',
@@ -411,59 +412,171 @@ export default function StudyAnalyzerPage() {
                           No learning nodes yet—complete Study Workspace to seed your path.
                         </p>
                       ) : (
-                        learningPath.slice(0, 4).map((node) => (
-                          <div key={node.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-white text-sm font-semibold break-words">
-                                {node.topic_name || node.topic_id}
-                              </span>
-                              <Badge className="bg-emerald-500/10 text-emerald-200 border-emerald-500/20">
-                                {Math.round(node.mastery_level)}% mastery
-                              </Badge>
-                            </div>
-                            <Progress
-                              value={node.mastery_level}
-                              className="h-2 bg-emerald-500/10"
-                              indicatorClassName="bg-gradient-to-r from-emerald-400 to-cyan-400"
-                            />
-                            {node.recommended_next?.nextResources && (
-                              <p className="text-xs text-slate-500 mt-2">
-                                Next: {node.recommended_next.nextResources.join(', ')}
-                              </p>
-                            )}
+                        <div className="space-y-3">
+                          {/* Learning Path Timeline */}
+                          <div className="relative pl-6 space-y-4">
+                            {learningPath.slice(0, 6).map((node, idx) => (
+                              <div key={node.id} className="relative">
+                                {/* Timeline connector */}
+                                {idx < learningPath.slice(0, 6).length - 1 && (
+                                  <div className="absolute left-[9px] top-8 bottom-[-16px] w-0.5 bg-gradient-to-b from-emerald-400/50 to-transparent" />
+                                )}
+                                
+                                {/* Timeline dot */}
+                                <div className="absolute left-0 top-2 w-4 h-4 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 border-2 border-slate-900" />
+                                
+                                {/* Node card */}
+                                <div className="p-4 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/30 transition-all">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-white text-sm font-semibold break-words">
+                                      {node.topic_name || node.topic_id}
+                                    </span>
+                                    <Badge className={`${
+                                      node.mastery_level >= 80 ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40' :
+                                      node.mastery_level >= 50 ? 'bg-yellow-500/20 text-yellow-200 border-yellow-500/40' :
+                                      'bg-blue-500/20 text-blue-200 border-blue-500/40'
+                                    }`}>
+                                      {Math.round(node.mastery_level)}% mastery
+                                    </Badge>
+                                  </div>
+                                  <Progress
+                                    value={node.mastery_level}
+                                    className="h-2 bg-slate-800 mb-2"
+                                    indicatorClassName={`${
+                                      node.mastery_level >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
+                                      node.mastery_level >= 50 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
+                                      'bg-gradient-to-r from-blue-400 to-cyan-400'
+                                    }`}
+                                  />
+                                  {node.recommended_next?.nextResources && (
+                                    <div className="mt-2">
+                                      <p className="text-xs text-slate-400 mb-1">Recommended next steps:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {Array.isArray(node.recommended_next.nextResources) && node.recommended_next.nextResources.slice(0, 3).map((resource: string, rIdx: number) => (
+                                          <Badge key={rIdx} variant="outline" className="text-xs border-slate-700 text-slate-300">
+                                            {resource}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))
+                          
+                          {learningPath.length > 6 && (
+                            <p className="text-xs text-slate-500 text-center">
+                              + {learningPath.length - 6} more topics in your learning path
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
 
                     <div className="space-y-6">
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                          <Brain className="w-4 h-4 text-emerald-300" />
-                          AI Recommendations
+                          <Sparkles className="w-4 h-4 text-emerald-300" />
+                          AI Content Recommendations
                         </h3>
                         {studyRecommendations.length === 0 ? (
                           <p className="text-slate-500 text-sm">
                             You&apos;re caught up. New resources will appear once more data comes in.
                           </p>
                         ) : (
-                          studyRecommendations.slice(0, 3).map((rec) => (
-                            <div key={rec.id} className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-white text-sm font-semibold capitalize">
-                                  {rec.resource_type || 'Resource'}
-                                </span>
-                                {rec.score !== undefined && (
-                                  <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-500/40">
-                                    {(rec.score * 100).toFixed(0)}% fit
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-slate-200">
-                                {rec.feedback_notes || rec.metadata?.summary || 'Review this recommendation to keep progress high.'}
-                              </p>
+                          <div className="relative">
+                            {/* Carousel */}
+                            <div className="relative overflow-hidden rounded-lg bg-slate-900 border border-emerald-500/30">
+                              {studyRecommendations.slice(recommendationIndex, recommendationIndex + 1).map((rec) => {
+                                const getResourceIcon = () => {
+                                  const type = (rec.resource_type || '').toLowerCase();
+                                  if (type.includes('video') || type.includes('youtube')) return <Video className="w-5 h-5" />;
+                                  if (type.includes('article') || type.includes('paper')) return <FileText className="w-5 h-5" />;
+                                  if (type.includes('book') || type.includes('course')) return <BookOpen className="w-5 h-5" />;
+                                  return <Sparkles className="w-5 h-5" />;
+                                };
+
+                                const getResourceColor = () => {
+                                  const type = (rec.resource_type || '').toLowerCase();
+                                  if (type.includes('video')) return 'from-purple-500/20 to-pink-500/20 border-purple-500/30';
+                                  if (type.includes('article')) return 'from-blue-500/20 to-cyan-500/20 border-blue-500/30';
+                                  if (type.includes('book')) return 'from-orange-500/20 to-amber-500/20 border-orange-500/30';
+                                  return 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30';
+                                };
+
+                                return (
+                                  <div key={rec.id} className={`p-4 bg-gradient-to-br ${getResourceColor()}`}>
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-lg bg-slate-900/50 text-emerald-300">
+                                          {getResourceIcon()}
+                                        </div>
+                                        <div>
+                                          <span className="text-white text-sm font-semibold capitalize">
+                                            {rec.resource_type || 'Resource'}
+                                          </span>
+                                          {rec.source && (
+                                            <p className="text-xs text-slate-400 mt-0.5">
+                                              {rec.source === 'semantic_scholar' ? 'Academic Paper' : rec.source === 'youtube' ? 'Video' : rec.source}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {rec.score !== undefined && (
+                                        <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-500/40">
+                                          {(rec.score * 100).toFixed(0)}% match
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-slate-200 mb-3 line-clamp-2">
+                                      {rec.feedback_notes || rec.metadata?.summary || 'AI recommends this resource based on your learning path.'}
+                                    </p>
+                                    {rec.metadata?.url && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                        className="w-full border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
+                                      >
+                                        <a href={rec.metadata.url} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink className="w-3 h-3 mr-2" />
+                                          Open Resource
+                                        </a>
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          ))
+
+                            {/* Carousel Navigation */}
+                            {studyRecommendations.length > 1 && (
+                              <div className="flex items-center justify-between mt-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setRecommendationIndex((prev) => (prev > 0 ? prev - 1 : studyRecommendations.length - 1))}
+                                  className="border-slate-700 text-slate-400 hover:text-white"
+                                >
+                                  <ChevronLeft className="w-4 h-4 mr-1" />
+                                  Previous
+                                </Button>
+                                <span className="text-xs text-slate-500">
+                                  {recommendationIndex + 1} / {studyRecommendations.length}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setRecommendationIndex((prev) => (prev < studyRecommendations.length - 1 ? prev + 1 : 0))}
+                                  className="border-slate-700 text-slate-400 hover:text-white"
+                                >
+                                  Next
+                                  <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
 

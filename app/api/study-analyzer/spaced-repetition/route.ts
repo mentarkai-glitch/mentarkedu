@@ -6,6 +6,7 @@ import {
   handleApiError,
 } from "@/lib/utils/api-helpers";
 import type { SpacedRepetitionQueueItem } from "@/lib/types";
+import { sm2Algorithm, scoreToQuality } from "@/lib/algorithms/sm2";
 
 async function requireStudentId(supabase: any): Promise<string | null> {
   const {
@@ -27,23 +28,27 @@ function calculateNextReview(
   existing: Partial<SpacedRepetitionQueueItem> | null,
   performanceScore: number
 ) {
-  const baseEase = existing?.ease_factor ?? 2.5;
-  const baseInterval = existing?.interval_days ?? 1;
-  const successStreak = existing?.success_streak ?? 0;
+  // Convert performance score to SM-2 quality (0-5)
+  const quality = scoreToQuality(performanceScore);
+  
+  // Build SM-2 card from existing data
+  const sm2Card = {
+    easeFactor: existing?.ease_factor ?? 2.5,
+    interval: existing?.interval_days ?? 1,
+    repetitions: existing?.success_streak ?? 0,
+    lastReviewed: existing?.last_reviewed_at ? new Date(existing.last_reviewed_at) : undefined,
+  };
 
-  const isSuccessful = performanceScore >= 3;
-  const easeDelta = isSuccessful ? 0.1 : -0.2;
-  const newEase = Math.max(1.3, baseEase + easeDelta);
-  const newInterval = isSuccessful ? Math.max(1, Math.round(baseInterval * newEase)) : 1;
-  const newStreak = isSuccessful ? successStreak + 1 : 0;
+  // Apply SM-2 algorithm
+  const updatedCard = sm2Algorithm(sm2Card, quality);
 
   const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + newInterval);
+  dueDate.setDate(dueDate.getDate() + updatedCard.interval);
 
   return {
-    interval_days: newInterval,
-    ease_factor: Number(newEase.toFixed(2)),
-    success_streak: newStreak,
+    interval_days: updatedCard.interval,
+    ease_factor: updatedCard.easeFactor,
+    success_streak: updatedCard.repetitions,
     due_at: dueDate.toISOString(),
     last_reviewed_at: new Date().toISOString(),
   };

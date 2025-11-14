@@ -10,6 +10,13 @@ import type {
   DailyTaskDependency,
   AgendaStatus,
 } from "@/lib/types";
+import {
+  getGoogleCalendarToken,
+  createCalendarEventFromTask,
+  updateCalendarEventFromTask,
+  deleteCalendarEventFromTask,
+  linkAgendaItemToCalendar,
+} from "@/lib/services/calendar-sync";
 
 type UpsertAgendaPayload = {
   item: Partial<DailyAgendaItem> & { title: string };
@@ -160,6 +167,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Sync with Google Calendar if connected
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const accessToken = await getGoogleCalendarToken(user.id);
+        if (accessToken && upserted.start_at && upserted.end_at) {
+          const existingMetadata = (upserted as any).metadata || {};
+          const existingEventId = existingMetadata.google_calendar_event_id;
+
+          if (existingEventId) {
+            // Update existing calendar event
+            await updateCalendarEventFromTask(upserted as DailyAgendaItem, existingEventId, accessToken);
+          } else {
+            // Create new calendar event
+            const calendarEventId = await createCalendarEventFromTask(upserted as DailyAgendaItem, accessToken);
+            if (calendarEventId) {
+              await linkAgendaItemToCalendar(agendaId, calendarEventId, user.id);
+            }
+          }
+        }
+      }
+    } catch (calendarError) {
+      // Don't fail the request if calendar sync fails
+      console.warn("Calendar sync failed (non-critical):", calendarError);
+    }
+
     return successResponse({
       item: upserted as DailyAgendaItem,
     });
@@ -184,6 +217,14 @@ export async function DELETE(request: NextRequest) {
       return errorResponse("Agenda item id is required", 400);
     }
 
+    // Get item metadata before deleting to check for calendar event
+    const { data: itemToDelete } = await supabase
+      .from("daily_agenda_items")
+      .select("metadata")
+      .eq("id", id)
+      .eq("student_id", studentId)
+      .single();
+
     const { error } = await supabase
       .from("daily_agenda_items")
       .delete()
@@ -191,6 +232,23 @@ export async function DELETE(request: NextRequest) {
       .eq("student_id", studentId);
 
     if (error) throw error;
+
+    // Delete calendar event if exists
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && itemToDelete?.metadata?.google_calendar_event_id) {
+        const accessToken = await getGoogleCalendarToken(user.id);
+        if (accessToken) {
+          await deleteCalendarEventFromTask(
+            itemToDelete.metadata.google_calendar_event_id,
+            accessToken
+          );
+        }
+      }
+    } catch (calendarError) {
+      // Don't fail the request if calendar deletion fails
+      console.warn("Calendar event deletion failed (non-critical):", calendarError);
+    }
 
     return successResponse({ deleted: true });
   } catch (error) {
