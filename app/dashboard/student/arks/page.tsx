@@ -67,50 +67,19 @@ export default function MyARKsPage() {
         return;
       }
 
-      const { data: joinedData, error: joinedError } = await supabase
+      const { data: arksData, error } = await supabase
         .from("arks")
-        .select("*, students!inner(user_id)")
-        .eq("students.user_id", user.id)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (!joinedError && joinedData) {
-        const normalized = joinedData.map(({ students, ...ark }: any) => ark as ARK);
-        setARKs(normalized);
-        return;
-      }
-
-      const candidateColumns = ["student_id", "user_id"];
-      let fallbackData: ARK[] | null = null;
-      let lastError: any = joinedError;
-
-      for (const column of candidateColumns) {
-        const { data, error } = await supabase
-          .from("arks")
-          .select("*")
-          .eq(column as string, user.id)
-          .order("created_at", { ascending: false });
-
-        if (!error) {
-          fallbackData = data as ARK[];
-          lastError = null;
-          break;
-        }
-
-        lastError = error;
-
-        if (!isMissingColumnError(error, column)) {
-          break;
-        }
-      }
-
-      if (fallbackData) {
-        setARKs(fallbackData);
-      } else if (lastError) {
+      if (arksData) {
+        setARKs(arksData as ARK[]);
+      } else if (error) {
         const message =
-          lastError.message ||
-          lastError.hint ||
+          error.message ||
+          error.hint ||
           "Unable to load your ARKs right now. Please try again in a moment.";
-        console.error("Error fetching ARKs:", { message, details: lastError });
+        console.error("Error fetching ARKs:", { message, details: error });
         setLoadError(message);
         toast.error(message);
       } else {

@@ -136,43 +136,16 @@ export default function JobMatcherPage() {
       if (!user) return;
       
       // Get user's ARKs
-      const { data: joinedData, error: joinedError } = await supabase
+      const { data: arksData, error } = await supabase
         .from("arks")
-        .select("id,title,category,nextMilestone,students!inner(user_id)")
-        .eq("students.user_id", user.id);
-
-      if (!joinedError && joinedData) {
-        setArks(joinedData.map(({ students, ...ark }) => ark as ARK));
-        return;
-      }
-
-      const candidateColumns = ['student_id', 'user_id'];
-      let fallbackData: any[] | null = null;
-      let lastError: any = joinedError;
-
-      for (const column of candidateColumns) {
-        const { data, error } = await supabase
-          .from("arks")
-          .select("*")
-          .eq(column, user.id);
-
-        if (!error) {
-          fallbackData = data as any[];
-          lastError = null;
-          break;
-        }
-
-        lastError = error;
-        if (!isMissingColumnError(error, column)) {
-          break;
-        }
-      }
+        .select("*")
+        .order("created_at", { ascending: false });
       
-      if (fallbackData) {
-        setArks(fallbackData as any);
-      } else if (lastError) {
-        console.error('Error loading ARKs:', lastError);
-        toast.error(lastError.message || 'Unable to load your ARKs right now.');
+      if (arksData) {
+        setArks(arksData as any);
+      } else if (error) {
+        console.error('Error loading ARKs:', error);
+        toast.error(error.message || 'Unable to load your ARKs right now.');
       }
     } catch (error) {
       console.error('Error loading ARKs:', error);

@@ -21,7 +21,11 @@ import {
   ArrowRight,
   Plus,
   ListChecks,
-  Brain
+  Brain,
+  Link2,
+  ExternalLink,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { trackEvent } from "@/lib/services/analytics";
@@ -121,11 +125,93 @@ export default function DailyAssistantPage() {
     energyByBand: {},
   });
   const [loading, setLoading] = useState(true);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const hasTrackedLoad = useRef(false);
 
   useEffect(() => {
     fetchDailyData();
+    checkCalendarStatus();
+
+    // Check for OAuth callback parameters
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const calendarConnected = params.get("calendar_connected");
+      const error = params.get("error");
+
+      if (calendarConnected === "true") {
+        // Calendar successfully connected
+        setCalendarConnected(true);
+        fetchCalendarEvents();
+        // Clean URL
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (error) {
+        console.error("Calendar connection error:", error);
+        // Clean URL
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
   }, []);
+
+  const checkCalendarStatus = async () => {
+    try {
+      const response = await fetch("/api/calendar/google/status");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCalendarConnected(data.data.connected);
+          if (data.data.connected) {
+            fetchCalendarEvents();
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check calendar status:", error);
+    }
+  };
+
+  const fetchCalendarEvents = async () => {
+    try {
+      setCalendarLoading(true);
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
+      const response = await fetch(
+        `/api/calendar/google/events?timeMin=${startOfDay}&timeMax=${endOfDay}&maxResults=10`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCalendarEvents(data.data.events || []);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch calendar events:", error);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleConnectCalendar = async () => {
+    try {
+      setCalendarLoading(true);
+      const response = await fetch("/api/calendar/google/connect");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.auth_url) {
+          // Redirect to Google OAuth
+          window.location.href = data.data.auth_url;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to initiate calendar connection:", error);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
 
   const fetchDailyData = async () => {
     try {
@@ -297,6 +383,134 @@ export default function DailyAssistantPage() {
       </div>
 
       <div className="container mx-auto px-8 py-8 space-y-6">
+        {/* Calendar Connection Card */}
+        <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <Calendar className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Google Calendar</h3>
+                  <p className="text-slate-400 text-sm">
+                    {calendarConnected
+                      ? "Connected - Your calendar events will sync here"
+                      : "Connect your Google Calendar to sync events and tasks"}
+                  </p>
+                </div>
+              </div>
+              {calendarConnected ? (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Connected
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchCalendarEvents}
+                    disabled={calendarLoading}
+                    className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${calendarLoading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  onClick={handleConnectCalendar}
+                  disabled={calendarLoading}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  {calendarLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-4 h-4 mr-2" />
+                      Connect Calendar
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Calendar Events */}
+        {calendarConnected && calendarEvents.length > 0 && (
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-blue-400" />
+                Today&apos;s Calendar Events
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {calendarEvents.map((event: any) => {
+                  const start = event.start?.dateTime
+                    ? new Date(event.start.dateTime)
+                    : event.start?.date
+                    ? new Date(event.start.date)
+                    : null;
+                  const end = event.end?.dateTime
+                    ? new Date(event.end.dateTime)
+                    : event.end?.date
+                    ? new Date(event.end.date)
+                    : null;
+
+                  return (
+                    <div
+                      key={event.id}
+                      className="flex items-start gap-3 p-4 rounded-lg bg-slate-900/50 border border-blue-500/30 hover:border-blue-500/50 transition-all"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-white font-semibold mb-1">{event.summary || "No title"}</h4>
+                        {event.description && (
+                          <p className="text-slate-400 text-sm line-clamp-2 mb-2">{event.description}</p>
+                        )}
+                        {start && (
+                          <div className="flex items-center gap-4 text-xs text-slate-400">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>
+                                {start.toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                                {end && ` - ${end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                              </span>
+                            </div>
+                            {event.location && (
+                              <span className="text-slate-500">📍 {event.location}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {event.htmlLink && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="text-blue-400 hover:text-blue-300"
+                        >
+                          <a href={event.htmlLink} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30">
