@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import { getGoogleOAuthToken } from './google-oauth';
 
 export interface DocumentAIOptions {
   file: File | Buffer;
@@ -89,13 +90,8 @@ export async function processDocument(
     const base64Content = await fileToBase64(options.file);
     const mimeType = options.mimeType || getMimeType(options.file);
 
-    // Google Document AI requires OAuth token, not API key directly
-    // However, for basic OCR, we can use the Document AI REST API with API key
-    // For processors, we need OAuth or service account
-    // Let's use the simpler OCR endpoint first that works with API key
-    
-    // Build request URL for REST API (works with API key)
-    const url = `https://documentai.googleapis.com/v1/projects/${projectId}/locations/${location}/processors/${processorId}:process`;
+    // Build request URL
+    const url = `https://${location}-documentai.googleapis.com/v1/projects/${projectId}/locations/${location}/processors/${processorId}:process`;
 
     // Prepare request body
     const requestBody = {
@@ -105,29 +101,76 @@ export async function processDocument(
       },
     };
 
-    // Make API request - Note: This requires OAuth, not API key
-    // For API key, we need to use a different endpoint or get OAuth token
-    // Let's try with API key first, and handle OAuth if needed
-    
+    // Try multiple authentication methods:
+    // 1. Service account (preferred for server-side Document AI)
+    // 2. OAuth token (if service account available)
+    // 3. API key (may work for basic operations, but typically requires service account)
+
+    let authHeader: string | null = null;
     let response;
-    try {
-      // Try with API key (may not work for processors, but try anyway)
+
+    // Method 1: Try service account first (best for Document AI)
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      try {
+        const { google } = await import('googleapis');
+        const auth = new google.auth.GoogleAuth({
+          keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+        });
+        const client = await auth.getClient();
+        const token = await client.getAccessToken();
+        if (token.token) {
+          authHeader = `Bearer ${token.token}`;
+        }
+      } catch (serviceAccountError) {
+        console.warn('Service account auth failed:', serviceAccountError);
+      }
+    }
+
+    // Method 2: Try OAuth token (for service account via getGoogleOAuthToken)
+    if (!authHeader) {
+      try {
+        const oauthToken = await getGoogleOAuthToken();
+        if (oauthToken) {
+          authHeader = `Bearer ${oauthToken}`;
+        }
+      } catch (oauthError) {
+        console.warn('OAuth token generation failed:', oauthError);
+      }
+    }
+
+    // Method 3: Try API key (may not work for processors)
+    if (!authHeader && apiKey) {
+      try {
+        response = await axios.post(url, requestBody, {
+          headers: {
+            'X-Goog-Api-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (apiKeyError: any) {
+        // If API key fails, provide helpful error message
+        if (apiKeyError.response?.status === 401 || apiKeyError.response?.status === 403) {
+          return {
+            success: false,
+            error: 'Document AI requires service account credentials for server-side operations. OAuth client credentials are for user-facing flows. Please set up a service account and add GOOGLE_APPLICATION_CREDENTIALS environment variable. See docs/DOCUMENT_AI_OAUTH_SETUP.md for instructions.',
+          };
+        }
+        throw apiKeyError;
+      }
+    } else if (authHeader) {
+      // Use service account or OAuth token
       response = await axios.post(url, requestBody, {
         headers: {
-          'X-Goog-Api-Key': apiKey,
+          'Authorization': authHeader,
           'Content-Type': 'application/json',
         },
       });
-    } catch (authError: any) {
-      // If API key doesn't work, we need OAuth token
-      // For now, return an error asking for OAuth setup
-      if (authError.response?.status === 401 || authError.response?.status === 403) {
-        return {
-          success: false,
-          error: 'Document AI requires OAuth authentication. Please set up service account credentials or OAuth token.',
-        };
-      }
-      throw authError;
+    } else {
+      return {
+        success: false,
+        error: 'No authentication method available. Document AI requires service account credentials. Please set GOOGLE_APPLICATION_CREDENTIALS environment variable pointing to your service account JSON file. See docs/DOCUMENT_AI_OAUTH_SETUP.md for setup instructions.',
+      };
     }
 
     const document = response.data.document;
