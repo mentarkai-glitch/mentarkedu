@@ -14,6 +14,10 @@ import {
   Share2,
   Wifi,
   WifiOff,
+  Upload,
+  FileCheck,
+  Loader2,
+  X,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +63,12 @@ export default function FormFillerPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [history, setHistory] = useState<Array<{ collegeId: string; courseId: string; timestamp: string }>>([]);
   const [exporting, setExporting] = useState(false);
+  const [uploadedDocument, setUploadedDocument] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [extractedData, setExtractedData] = useState<{
+    text?: string;
+    form_fields?: Record<string, string | boolean>;
+  } | null>(null);
 
   useEffect(() => {
     loadColleges();
@@ -272,7 +282,7 @@ export default function FormFillerPage() {
           <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
             <CardHeader>
               <CardTitle className="text-yellow-400">Select Your Target</CardTitle>
-              <CardDescription>Choose a college and course to auto-fill admission forms</CardDescription>
+              <CardDescription>Choose a college and course to auto-fill admission forms, or upload a document to extract data</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {history.length > 0 && (
@@ -326,6 +336,155 @@ export default function FormFillerPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              {/* Document Upload Section */}
+              <div className="border-t border-slate-700 pt-4 mt-4">
+                <label className="text-sm font-medium mb-2 block text-slate-300">
+                  <FileText className="w-4 h-4 inline mr-1" />
+                  Upload Document (Optional)
+                </label>
+                <div className="space-y-3">
+                  {!uploadedDocument ? (
+                    <div className="border-2 border-dashed border-slate-700 rounded-lg p-6 text-center hover:border-yellow-500/50 transition-colors">
+                      <input
+                        type="file"
+                        id="document-upload"
+                        className="hidden"
+                        accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          // Validate file type
+                          const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/tiff', 'image/bmp'];
+                          if (!allowedTypes.includes(file.type)) {
+                            toast.error('Invalid file type. Supported: PDF, PNG, JPEG, TIFF, BMP');
+                            return;
+                          }
+                          
+                          // Validate file size (20MB)
+                          if (file.size > 20 * 1024 * 1024) {
+                            toast.error('File size exceeds 20MB limit');
+                            return;
+                          }
+                          
+                          setUploadedDocument(file);
+                          setUploading(true);
+                          setExtractedData(null);
+                          
+                          try {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            formData.append('processorType', 'form-parser'); // Use form parser for better extraction
+                            
+                            const response = await fetch('/api/vision/upload-document', {
+                              method: 'POST',
+                              body: formData,
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                              setExtractedData({
+                                text: data.data.extracted_text,
+                                form_fields: data.data.form_fields,
+                              });
+                              toast.success('Document processed successfully');
+                              
+                              // Auto-fill form if we have form fields
+                              if (data.data.form_fields && Object.keys(data.data.form_fields).length > 0) {
+                                // We'll use this data to enhance form filling
+                                toast.info('Extracted form fields ready for auto-fill');
+                              }
+                            } else {
+                              toast.error(data.message || 'Failed to process document');
+                              setUploadedDocument(null);
+                            }
+                          } catch (error) {
+                            console.error('Document upload error:', error);
+                            toast.error('Failed to upload document');
+                            setUploadedDocument(null);
+                          } finally {
+                            setUploading(false);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="document-upload"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <Upload className="w-8 h-8 text-slate-400" />
+                        <span className="text-sm text-slate-400">
+                          Click to upload or drag and drop
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          PDF, PNG, JPEG (max 20MB)
+                        </span>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-lg bg-slate-800 border border-slate-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileCheck className="w-5 h-5 text-yellow-400" />
+                          <div>
+                            <p className="text-sm font-medium text-white">{uploadedDocument.name}</p>
+                            <p className="text-xs text-slate-400">
+                              {(uploadedDocument.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {uploading && (
+                            <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setUploadedDocument(null);
+                              setExtractedData(null);
+                            }}
+                            className="text-slate-400 hover:text-red-400"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {extractedData && (
+                        <div className="mt-3 pt-3 border-t border-slate-700">
+                          {extractedData.form_fields && Object.keys(extractedData.form_fields).length > 0 ? (
+                            <div className="space-y-2">
+                              <p className="text-xs text-slate-400">Extracted Form Fields:</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {Object.entries(extractedData.form_fields).slice(0, 6).map(([key, value]) => (
+                                  <div key={key} className="text-xs bg-slate-900/50 p-2 rounded">
+                                    <span className="text-slate-500">{key}:</span>{' '}
+                                    <span className="text-slate-300">{String(value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              {Object.keys(extractedData.form_fields).length > 6 && (
+                                <p className="text-xs text-slate-500">
+                                  + {Object.keys(extractedData.form_fields).length - 6} more fields
+                                </p>
+                              )}
+                            </div>
+                          ) : extractedData.text ? (
+                            <div>
+                              <p className="text-xs text-slate-400 mb-2">Extracted Text:</p>
+                              <p className="text-xs text-slate-300 line-clamp-3 bg-slate-900/50 p-2 rounded">
+                                {extractedData.text.substring(0, 200)}...
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
