@@ -71,22 +71,77 @@ export async function GET(request: NextRequest) {
       return errorResponse(error.message, 500);
     }
 
+    // Get ARKs for all students
+    const studentIds = students?.map((s) => s.user_id) || [];
+    const { data: arksData } = await supabase
+      .from("arks")
+      .select("id, student_id, status")
+      .in("student_id", studentIds);
+
+    // Get practice sessions for engagement score
+    const { data: practiceData } = await supabase
+      .from("practice_sessions")
+      .select("student_id, started_at")
+      .in("student_id", studentIds)
+      .gte("started_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+    // Get last activity from daily checkins
+    const { data: checkinsData } = await supabase
+      .from("daily_checkins")
+      .select("student_id, date")
+      .in("student_id", studentIds)
+      .order("date", { ascending: false })
+      .limit(500);
+
+    // Calculate ARK counts per student
+    const arksByStudent = new Map<string, { active: number; completed: number }>();
+    (arksData || []).forEach((ark: any) => {
+      const existing = arksByStudent.get(ark.student_id) || { active: 0, completed: 0 };
+      if (ark.status === "active") existing.active++;
+      if (ark.status === "completed") existing.completed++;
+      arksByStudent.set(ark.student_id, existing);
+    });
+
+    // Calculate engagement scores (practice sessions in last 7 days)
+    const engagementByStudent = new Map<string, number>();
+    (practiceData || []).forEach((p: any) => {
+      engagementByStudent.set(p.student_id, (engagementByStudent.get(p.student_id) || 0) + 1);
+    });
+
+    // Get last activity dates
+    const lastActivityByStudent = new Map<string, string>();
+    (checkinsData || []).forEach((c: any) => {
+      if (!lastActivityByStudent.has(c.student_id)) {
+        lastActivityByStudent.set(c.student_id, c.date);
+      }
+    });
+
     // Transform data
     const transformedStudents = students
-      ?.map((student) => ({
-        id: student.user_id,
-        full_name: `${(student.users as any)?.profile_data?.first_name || ""} ${
-          (student.users as any)?.profile_data?.last_name || ""
-        }`.trim() || "Unknown",
-        email: (student.users as any)?.email || "",
-        avatar_url: (student.users as any)?.profile_data?.avatar_url,
-        grade: student.grade,
-        batch: student.batch,
-        risk_score: student.risk_score,
-        risk_level: student.risk_score >= 70 ? "high" : student.risk_score >= 40 ? "medium" : "low",
-        active_arks: 0, // TODO: Calculate from arks table
-        completed_arks: 0, // TODO: Calculate from arks table
-      }))
+      ?.map((student) => {
+        const arks = arksByStudent.get(student.user_id) || { active: 0, completed: 0 };
+        const engagement = engagementByStudent.get(student.user_id) || 0;
+        const lastActivity = lastActivityByStudent.get(student.user_id);
+        
+        return {
+          id: student.user_id,
+          full_name: `${(student.users as any)?.profile_data?.first_name || ""} ${
+            (student.users as any)?.profile_data?.last_name || ""
+          }`.trim() || "Unknown",
+          email: (student.users as any)?.email || "",
+          avatar_url: (student.users as any)?.profile_data?.avatar_url,
+          grade: student.grade,
+          batch: student.batch,
+          risk_score: student.risk_score,
+          risk_level: student.risk_score >= 70 ? "high" : student.risk_score >= 40 ? "medium" : "low",
+          active_arks: arks.active,
+          completed_arks: arks.completed,
+          engagement_score: Math.min(engagement * 10, 100), // 0-100 scale
+          last_activity: lastActivity || null,
+          interests: student.interests || [],
+          goals: student.goals || [],
+        };
+      })
       .filter((s) => {
         if (!search) return true;
         const searchLower = search.toLowerCase();
