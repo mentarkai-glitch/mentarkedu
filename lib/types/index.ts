@@ -461,6 +461,132 @@ export interface ContentRecommendation {
   created_at: string;
 }
 
+// ==================== PRACTICE QUESTIONS TYPES ====================
+
+export type DifficultyLevel = "easy" | "medium" | "hard";
+
+export type MistakeType = 
+  | "conceptual" 
+  | "calculation" 
+  | "time_management" 
+  | "reading_comprehension" 
+  | "application" 
+  | "other";
+
+export interface PracticeSession {
+  id: string;
+  student_id: string;
+  subject?: string;
+  topic?: string;
+  difficulty_level: DifficultyLevel;
+  total_questions: number;
+  correct_answers: number;
+  accuracy?: number;
+  time_spent_seconds?: number;
+  started_at: string;
+  completed_at?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PracticeQuestion {
+  id: string;
+  student_id: string;
+  session_id?: string;
+  question_text: string;
+  options: string[];
+  correct_answer_index: number;
+  difficulty: DifficultyLevel;
+  topic?: string;
+  subject?: string;
+  explanation?: string;
+  generated_at: string;
+  metadata?: Record<string, any>;
+}
+
+export interface PracticeAttempt {
+  id: string;
+  question_id: string;
+  student_id: string;
+  session_id?: string;
+  selected_answer_index?: number;
+  is_correct: boolean;
+  time_spent_seconds?: number;
+  attempted_at: string;
+  metadata?: Record<string, any>;
+}
+
+export interface MistakePattern {
+  id: string;
+  student_id: string;
+  topic: string;
+  subject?: string;
+  mistake_type: MistakeType;
+  frequency: number;
+  last_occurred_at: string;
+  pattern_data?: Record<string, any>;
+  updated_at: string;
+}
+
+export interface AdaptiveDifficulty {
+  student_id: string;
+  topic: string;
+  subject?: string;
+  current_difficulty: DifficultyLevel;
+  performance_score?: number;
+  total_attempts: number;
+  correct_attempts: number;
+  streak_count: number;
+  last_updated_at: string;
+  metadata?: Record<string, any>;
+}
+
+export interface PracticeAnalytics {
+  total_sessions: number;
+  total_questions: number;
+  average_accuracy: number;
+  total_time_spent_seconds: number;
+  accuracy_trend: Array<{
+    date: string;
+    accuracy: number;
+    questions: number;
+  }>;
+  topic_breakdown: Array<{
+    topic: string;
+    subject?: string;
+    attempts: number;
+    correct: number;
+    accuracy: number;
+    average_difficulty: DifficultyLevel;
+  }>;
+  mistake_patterns: MistakePattern[];
+  strengths: Array<{
+    topic: string;
+    subject?: string;
+    accuracy: number;
+  }>;
+  weaknesses: Array<{
+    topic: string;
+    subject?: string;
+    accuracy: number;
+    common_mistakes: MistakeType[];
+  }>;
+}
+
+export interface PracticePerformance {
+  session_id: string;
+  correct: number;
+  total: number;
+  accuracy: number;
+  time_spent_seconds: number;
+  difficulty_progression: Array<{
+    question_index: number;
+    difficulty: DifficultyLevel;
+    is_correct: boolean;
+  }>;
+}
+
 export type SpacedRepetitionOrigin = "study_session" | "practice_questions" | "manual";
 
 export interface SpacedRepetitionQueueItem {
