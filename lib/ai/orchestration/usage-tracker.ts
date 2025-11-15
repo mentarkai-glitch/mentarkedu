@@ -174,7 +174,7 @@ export async function getCostAnalytics(
   timeWindow: 'day' | 'week' | 'month' = 'day'
 ): Promise<CostAnalytics | null> {
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     
     // Calculate time window
     const timeWindowMs = {
@@ -229,7 +229,8 @@ export async function getCostAnalytics(
     
     // Calculate trend (compare with previous period)
     const previousSince = new Date(Date.now() - timeWindowMs[timeWindow] * 2);
-    const { data: previousData } = await supabase
+    const supabaseForTrend = await getSupabaseClient();
+    const { data: previousData } = await supabaseForTrend
       .from('ai_usage_logs')
       .select('cost')
       .gte('timestamp', previousSince.toISOString())
@@ -270,7 +271,7 @@ export async function getUserUsageStats(userId: string, timeWindow: 'day' | 'wee
   successRate: number;
 } | null> {
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     
     // Calculate time window
     const timeWindowMs = {
@@ -356,7 +357,7 @@ export async function checkUsageLimits(userId: string, userTier: 'free' | 'premi
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     const { data, error } = await supabase
       .from('ai_usage_logs')
       .select('tokens_used, cost')
@@ -432,7 +433,7 @@ function calculateCost(model: AIModel, tokens: number): number {
  */
 async function updateModelMetrics(record: UsageRecord): Promise<void> {
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     
     // Update performance metrics
     await supabase.from('performance_metrics').insert({
@@ -481,7 +482,7 @@ export async function getTopModelsForTask(task: AITask, limit: number = 3): Prom
   totalCost: number;
 }>> {
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     
     // Get performance data for the last 7 days
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -567,7 +568,7 @@ export async function getTopModelsForTask(task: AITask, limit: number = 3): Prom
  */
 export async function cleanupOldLogs(): Promise<void> {
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     
     const { error } = await supabase
