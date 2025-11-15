@@ -392,7 +392,7 @@ export function logErrorToSentry(error: ApiError) {
       scope.setLevel(severityMap[error.severity]);
 
       if (error.context) {
-        scope.setContext("error_context", error.context);
+        scope.setContext("error_context", error.context as Record<string, any>);
         if (error.context.userId) {
           scope.setUser({ id: error.context.userId });
         }

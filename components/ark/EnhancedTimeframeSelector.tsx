@@ -63,50 +63,29 @@ export function EnhancedTimeframeSelector({
           .map((t, i) => `${i + 1}. ${t.name} (${t.duration}, ~${t.durationWeeks} weeks)`)
           .join("\n");
 
-        const prompt = `You are an AI assistant helping a student choose the best timeframe for their learning goal.
-
-Student Context:
-${contextParts.join("\n")}
-
-Available Timeframes:
-${timeframesList}
-
-Task: Based on the goal complexity, student availability, and academic stage, recommend the most suitable timeframe ID (return just the timeframe ID from the list, like "short", "medium", "long", etc.).
-
-Also provide a brief one-sentence reason for your recommendation.
-
-Return JSON format:
-{
-  "recommended_timeframe_id": "medium",
-  "reason": "Your goal requires moderate effort and you have 10 hours/week available, making a 3-month timeframe ideal."
-}`;
-
-        const aiContext: AIContext = {
-          task: "mentor_chat",
-          user_id: "ark_creation",
-          session_id: "timeframe_recommendation",
-          metadata: {
-            system_prompt: "You are an expert at matching learning goals with appropriate timeframes based on complexity, student availability, and academic stage.",
-            user_tier: "pro",
+        // Call API route instead of using aiOrchestrator directly
+        const response = await fetch("/api/ark-suggestions/timeframe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        };
+          body: JSON.stringify({
+            goal,
+            categoryId,
+            timeframes,
+            onboardingProfile,
+            deepDiveAnswers,
+          }),
+        });
 
-        const response = await aiOrchestrator(aiContext, prompt);
+        if (!response.ok) {
+          throw new Error("Failed to get AI recommendation");
+        }
 
-        if (response.content) {
-          // Parse JSON response
-          let jsonContent = response.content.trim();
-          const jsonMatch = jsonContent.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-          if (jsonMatch) {
-            jsonContent = jsonMatch[1];
-          }
+        const data = await response.json();
 
-          const objMatch = jsonContent.match(/\{[\s\S]*\}/);
-          if (objMatch) {
-            jsonContent = objMatch[0];
-          }
-
-          const result = JSON.parse(jsonContent);
+        if (data.success && data.data) {
+          const result = data.data;
           const recommendedId = result.recommended_timeframe_id;
 
           // Find matching timeframe

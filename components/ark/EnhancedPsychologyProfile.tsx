@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { PsychologySlider } from "./PsychologySlider";
 import { Sparkles, Loader2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { aiOrchestrator } from "@/lib/ai/orchestrator";
-import type { AIContext } from "@/lib/types";
 
 interface EnhancedPsychologyProfileProps {
   motivation: number;
@@ -59,59 +57,34 @@ export function EnhancedPsychologyProfile({
         }
       }
 
-      const prompt = `You are an AI assistant helping a student set realistic psychology profile values for their learning goal.
-
-Student Context:
-${contextParts.join("\n")}
-
-Current Values:
-- Motivation: ${motivation}/10
-- Stress: ${stress}/10
-- Confidence: ${confidence}/10
-
-Task: Based on the goal complexity and student profile, recommend optimal values for motivation, stress, and confidence that will help the student succeed. Consider that:
-- Higher motivation allows for more ambitious goals
-- Higher stress means we should reduce workload
-- Higher confidence means we can set more challenging milestones
-
-Return JSON format:
-{
-  "motivation": 8,
-  "stress": 4,
-  "confidence": 7,
-  "reason": "Given your goal and historical profile, I recommend moderate-high motivation with low stress to ensure sustainable progress."
-}`;
-
-      const aiContext: AIContext = {
-        task: "mentor_chat",
-        user_id: "ark_creation",
-        session_id: "psychology_recommendation",
-        metadata: {
-          system_prompt: "You are an expert psychologist who helps students set realistic expectations and psychology profiles for learning goals.",
-          user_tier: "pro",
+      // Call API route instead of using aiOrchestrator directly
+      const response = await fetch("/api/ark-suggestions/psychology", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      };
+        body: JSON.stringify({
+          goal,
+          motivation,
+          stress,
+          confidence,
+          onboardingProfile,
+        }),
+      });
 
-      const response = await aiOrchestrator(aiContext, prompt);
+      if (!response.ok) {
+        throw new Error("Failed to get AI recommendation");
+      }
 
-      if (response.content) {
-        let jsonContent = response.content.trim();
-        const jsonMatch = jsonContent.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-        if (jsonMatch) {
-          jsonContent = jsonMatch[1];
-        }
-
-        const objMatch = jsonContent.match(/\{[\s\S]*\}/);
-        if (objMatch) {
-          jsonContent = objMatch[0];
-        }
-
-        const result = JSON.parse(jsonContent);
+      const data = await response.json();
+      
+      if (data.success && data.data?.recommendation) {
+        const recommendation = data.data.recommendation;
         setAiRecommendations({
-          motivation: Math.max(1, Math.min(10, result.motivation || motivation)),
-          stress: Math.max(1, Math.min(10, result.stress || stress)),
-          confidence: Math.max(1, Math.min(10, result.confidence || confidence)),
-          reason: result.reason || "Based on your goal and profile",
+          motivation: Math.max(1, Math.min(10, recommendation.motivation || motivation)),
+          stress: Math.max(1, Math.min(10, recommendation.stress || stress)),
+          confidence: Math.max(1, Math.min(10, recommendation.confidence || confidence)),
+          reason: recommendation.reason || "Based on your goal and profile",
         });
       }
     } catch (error) {

@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest) {
     // Verify ownership
     const { data: existing, error: fetchError } = await supabase
       .from("job_recommendations")
-      .select("student_id")
+      .select("student_id, viewed_at")
       .eq("id", recommendation_id)
       .single();
 
