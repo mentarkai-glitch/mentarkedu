@@ -123,3 +123,4 @@ COMMENT ON COLUMN job_recommendations.relevance_score IS 'AI-calculated relevanc
 COMMENT ON COLUMN job_recommendations.job_data IS 'Full job data from external API (JSearch, Indeed, etc.) stored as JSON';
 COMMENT ON COLUMN job_recommendations.status IS 'Track student engagement: recommended (new), viewed, applied, ignored, saved';
 
+
