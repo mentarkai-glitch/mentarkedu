@@ -54,6 +54,37 @@ export async function GET(request: NextRequest) {
       .select("*", { count: "exact", head: true })
       .eq("status", "completed");
 
+    // Calculate month-over-month growth rate
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Count students created this month
+    const { count: studentsThisMonth } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true })
+      .eq("institute_id", instituteId)
+      .eq("role", "student")
+      .gte("created_at", thisMonthStart.toISOString());
+
+    // Count students created last month
+    const { count: studentsLastMonth } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true })
+      .eq("institute_id", instituteId)
+      .eq("role", "student")
+      .gte("created_at", lastMonthStart.toISOString())
+      .lte("created_at", lastMonthEnd.toISOString());
+
+    // Calculate growth rate
+    let growthRate = 0;
+    if (studentsLastMonth && studentsLastMonth > 0) {
+      growthRate = ((studentsThisMonth || 0) - studentsLastMonth) / studentsLastMonth * 100;
+    } else if (studentsThisMonth && studentsThisMonth > 0) {
+      growthRate = 100; // 100% growth if no students last month
+    }
+
     const { data: riskPredictions } = await supabase
       .from("risk_predictions")
       .select("risk_level")
@@ -116,7 +147,7 @@ export async function GET(request: NextRequest) {
           ? Math.round(((completedArks || 0) / (totalStudents || 1)) * 100)
           : 0,
         engagement_rate: Math.min(95, Math.round(((riskPredictions?.length || 0) / Math.max(totalStudents || 1, 1)) * 55 + 40)),
-        growth_rate: 12.5, // TODO: Calculate month-over-month
+        growth_rate: Math.round(growthRate * 10) / 10, // Round to 1 decimal place
         avg_students_per_teacher:
           totalTeachers && totalStudents ? Math.round(totalStudents / totalTeachers) : 0,
       },

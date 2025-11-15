@@ -2,6 +2,52 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-helpers";
 
+/**
+ * Calculate recommended practice sessions based on recent performance
+ */
+function calculateRecommendedPracticeSessions(
+  totalSessions: number,
+  averageAccuracy: number,
+  recentSessions: any[]
+): number {
+  // Base recommendation: 3 sessions per week if accuracy is good
+  let recommended = 3;
+
+  // Increase if accuracy is low (need more practice)
+  if (averageAccuracy < 60) {
+    recommended = 5; // More practice needed
+  } else if (averageAccuracy < 75) {
+    recommended = 4; // Moderate practice
+  }
+
+  // Adjust based on recent activity
+  const last7Days = recentSessions.filter((s: any) => {
+    const sessionDate = new Date(s.started_at);
+    const daysDiff = (Date.now() - sessionDate.getTime()) / (1000 * 60 * 60 * 24);
+    return daysDiff <= 7;
+  });
+
+  // If no recent sessions, recommend more
+  if (last7Days.length === 0) {
+    recommended = Math.max(recommended, 4);
+  }
+
+  // If recent accuracy is trending down, recommend more practice
+  if (recentSessions.length >= 3) {
+    const recent3 = recentSessions.slice(0, 3);
+    const recentAvg = recent3.reduce((sum: number, s: any) => {
+      const acc = s.total_questions > 0 ? (s.correct_answers || 0) / s.total_questions * 100 : 0;
+      return sum + acc;
+    }, 0) / recent3.length;
+
+    if (recentAvg < averageAccuracy - 10) {
+      recommended += 1; // Accuracy dropping, recommend extra session
+    }
+  }
+
+  return Math.min(recommended, 7); // Cap at 7 per week
+}
+
 async function requireStudentId(supabase: any): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -101,31 +147,18 @@ export async function GET(request: NextRequest) {
       .eq("student_id", studentId)
       .single();
 
-    // 6. Streak
+    // 6. Streak (using streak tracker utility)
     const { data: checkins } = await supabase
       .from("daily_checkins")
       .select("date")
       .eq("student_id", studentId)
-      .order("date", { ascending: false })
-      .limit(100);
+      .order("date", { ascending: false });
 
-    let currentStreak = 0;
-    if (checkins && checkins.length > 0) {
-      let expectedDate = new Date();
-      expectedDate.setHours(0, 0, 0, 0);
-      
-      for (const checkin of checkins) {
-        const checkinDate = new Date(checkin.date);
-        checkinDate.setHours(0, 0, 0, 0);
-        
-        if (checkinDate.getTime() === expectedDate.getTime()) {
-          currentStreak++;
-          expectedDate.setDate(expectedDate.getDate() - 1);
-        } else if (checkinDate.getTime() < expectedDate.getTime()) {
-          break;
-        }
-      }
-    }
+    const checkinDates = (checkins || []).map((c: any) => c.date);
+    const { calculateStreak } = await import("@/lib/gamification/streak-tracker");
+    const streakData = calculateStreak(checkinDates);
+    const currentStreak = streakData.current_streak;
+    const longestStreak = streakData.longest_streak;
 
     // 7. Pending Items
     // Spaced Repetition Items
@@ -245,7 +278,7 @@ export async function GET(request: NextRequest) {
         },
         streak: {
           current: currentStreak,
-          longest: currentStreak, // TODO: Calculate longest streak from historical data
+          longest: longestStreak,
         },
       },
       trends,
@@ -256,7 +289,11 @@ export async function GET(request: NextRequest) {
           title: a.title,
           due_date: a.target_completion_date,
         })),
-        practice_sessions: 0, // TODO: Calculate recommended practice sessions
+        practice_sessions: calculateRecommendedPracticeSessions(
+          totalPracticeSessions,
+          averagePracticeAccuracy,
+          practiceData || []
+        ),
       },
       period,
     });

@@ -60,6 +60,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface Milestone {
   id: string;
@@ -145,6 +156,11 @@ export default function ARKDetailPage() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [streakDays, setStreakDays] = useState(0);
   const [studentStats, setStudentStats] = useState<any>(null);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [noteContent, setNoteContent] = useState("");
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null);
 
   useEffect(() => {
     if (arkId) {
@@ -517,14 +533,8 @@ export default function ARKDetailPage() {
               todayTasksCount={todayTasks.length}
               upcomingMilestonesCount={milestones.filter(m => m.status === 'pending' || m.status === 'in_progress').length}
               recentProgress={recentProgress}
-              onAddNote={() => {
-                // TODO: Implement add note
-                console.log('Add note clicked');
-              }}
-              onReschedule={() => {
-                // TODO: Implement reschedule
-                console.log('Reschedule clicked');
-              }}
+              onAddNote={() => setShowAddNote(true)}
+              onReschedule={() => setShowReschedule(true)}
             />
           </div>
 
@@ -551,7 +561,21 @@ export default function ARKDetailPage() {
               onTaskClick={(taskId) => {
                 // Scroll to task in timeline view
                 setActiveTab('timeline');
-                // TODO: Scroll to specific task
+                // Scroll to specific task after tab change
+                setTimeout(() => {
+                  const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+                  if (taskElement) {
+                    taskElement.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'center' 
+                    });
+                    // Highlight the task briefly
+                    taskElement.classList.add('ring-2', 'ring-yellow-500', 'ring-offset-2', 'ring-offset-black');
+                    setTimeout(() => {
+                      taskElement.classList.remove('ring-2', 'ring-yellow-500', 'ring-offset-2', 'ring-offset-black');
+                    }, 2000);
+                  }
+                }, 300); // Wait for tab transition
               }}
             />
 
@@ -728,6 +752,7 @@ export default function ARKDetailPage() {
                       {timeline.map((task) => (
                   <motion.div
                     key={task.id}
+                    data-task-id={task.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                   >
@@ -913,6 +938,157 @@ export default function ARKDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Note Dialog */}
+      <Dialog open={showAddNote} onOpenChange={setShowAddNote}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Add Note</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Add a note to this ARK for future reference
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-white mb-2 block">Note Content</Label>
+              <Textarea
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Enter your note here..."
+                className="bg-slate-700 border-slate-600 text-white min-h-[120px]"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddNote(false);
+                setNoteContent("");
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!noteContent.trim()) {
+                  toast.error("Please enter a note");
+                  return;
+                }
+                try {
+                  const response = await fetch(`/api/arks/${arkId}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: noteContent }),
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    toast.success("Note added successfully");
+                    setShowAddNote(false);
+                    setNoteContent("");
+                    fetchARKData();
+                  } else {
+                    toast.error(data.error || "Failed to add note");
+                  }
+                } catch (error: any) {
+                  console.error('Failed to add note:', error);
+                  toast.error(error.message || "Failed to add note");
+                }
+              }}
+              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+            >
+              Add Note
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={showReschedule} onOpenChange={setShowReschedule}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Reschedule ARK</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Update the completion date for this ARK or a specific milestone
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-white mb-2 block">Target Completion Date</Label>
+              <Input
+                type="date"
+                value={rescheduleDate}
+                onChange={(e) => setRescheduleDate(e.target.value)}
+                className="bg-slate-700 border-slate-600 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-white mb-2 block">Or Reschedule Milestone (Optional)</Label>
+              <select
+                value={selectedMilestoneId || ""}
+                onChange={(e) => setSelectedMilestoneId(e.target.value || null)}
+                className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-white"
+              >
+                <option value="">Select a milestone...</option>
+                {milestones.map((milestone) => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowReschedule(false);
+                setRescheduleDate("");
+                setSelectedMilestoneId(null);
+              }}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!rescheduleDate) {
+                  toast.error("Please select a date");
+                  return;
+                }
+                try {
+                  const body: any = selectedMilestoneId
+                    ? { milestone_id: selectedMilestoneId, milestone_target_date: rescheduleDate }
+                    : { target_completion_date: rescheduleDate };
+
+                  const response = await fetch(`/api/arks/${arkId}/reschedule`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    toast.success(data.data.message || "Rescheduled successfully");
+                    setShowReschedule(false);
+                    setRescheduleDate("");
+                    setSelectedMilestoneId(null);
+                    fetchARKData();
+                  } else {
+                    toast.error(data.error || "Failed to reschedule");
+                  }
+                } catch (error: any) {
+                  console.error('Failed to reschedule:', error);
+                  toast.error(error.message || "Failed to reschedule");
+                }
+              }}
+              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+            >
+              Reschedule
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink, BookOpen, GraduationCap } from 'lucide-react';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 
 const HISTORY_KEY = 'mentark-doubt-history-v1';
@@ -27,12 +27,22 @@ interface YouTubeVideo {
   embed_url: string;
 }
 
+interface KhanAcademyResult {
+  title: string;
+  description: string;
+  url: string;
+  thumbnail?: string;
+  type: 'course' | 'video' | 'exercise' | 'article';
+  source: 'khan_academy';
+}
+
 interface SolvedDoubt {
   question: string;
   answer: string;
   category: DoubtCategory;
   timestamp: string;
   videos?: YouTubeVideo[];
+  khanAcademyResults?: KhanAcademyResult[];
 }
 
 const EXAMPLE_DOUBTS: Array<{ prompt: string; category: DoubtCategory }> = [
@@ -49,6 +59,7 @@ export default function DoubtSolverPage() {
   const [loading, setLoading] = useState(false);
   const [answer, setAnswer] = useState('');
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
+  const [khanAcademyResults, setKhanAcademyResults] = useState<KhanAcademyResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<SolvedDoubt[]>([]);
   const [isOnline, setIsOnline] = useState(true);
@@ -99,39 +110,52 @@ export default function DoubtSolverPage() {
     setLoading(true);
     setAnswer('');
     setVideos([]);
+    setKhanAcademyResults([]);
     setError(null);
 
     try {
-      const response = await fetch('/api/doubt-solver', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ question, category }),
-      });
+      // Fetch AI answer and YouTube videos
+      const [doubtResponse, khanAcademyResponse] = await Promise.allSettled([
+        fetch('/api/doubt-solver', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ question, category }),
+        }),
+        // Fetch Khan Academy results in parallel
+        fetch(`/api/resources/khan-academy?q=${encodeURIComponent(question)}`),
+      ]);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || errorData.message || `Solver returned ${response.status}`;
-        throw new Error(errorMessage);
+      // Process doubt solver response
+      let resolvedAnswer = '';
+      let resolvedVideos: YouTubeVideo[] = [];
+
+      if (doubtResponse.status === 'fulfilled' && doubtResponse.value.ok) {
+        const data = await doubtResponse.value.json();
+        const solution = data.data || data;
+        
+        if (!data.error && !solution.error) {
+          resolvedAnswer = solution.answer || solution.explanation || '';
+          resolvedVideos = solution.videos || [];
+        }
       }
 
-      const data = await response.json();
-      const solution = data.data || data;
-      
-      // Check if there's an error in the response
-      if (data.error || solution.error) {
-        throw new Error(data.error || solution.error || 'Failed to solve doubt');
+      // Process Khan Academy response
+      let resolvedKhanAcademyResults: KhanAcademyResult[] = [];
+      if (khanAcademyResponse.status === 'fulfilled' && khanAcademyResponse.value.ok) {
+        const khanData = await khanAcademyResponse.value.json();
+        if (khanData.success && khanData.data?.results) {
+          resolvedKhanAcademyResults = khanData.data.results.slice(0, 5); // Limit to top 5
+        }
       }
-      
-      const resolvedAnswer = solution.answer || solution.explanation || 'No answer generated';
-      const resolvedVideos = solution.videos || [];
-      
-      if (!resolvedAnswer || resolvedAnswer === 'No answer generated') {
+
+      if (!resolvedAnswer) {
         throw new Error('The doubt solver could not generate an answer. Please try rephrasing your question.');
       }
       
       setAnswer(resolvedAnswer);
       setVideos(resolvedVideos);
+      setKhanAcademyResults(resolvedKhanAcademyResults);
       
       setHistory((prev) => [
         {
@@ -140,6 +164,7 @@ export default function DoubtSolverPage() {
           category,
           timestamp: new Date().toISOString(),
           videos: resolvedVideos,
+          khanAcademyResults: resolvedKhanAcademyResults,
         },
         ...prev,
       ].slice(0, 10));
@@ -150,6 +175,7 @@ export default function DoubtSolverPage() {
       setError(errorMessage);
       setAnswer(`Error: ${errorMessage}`);
       setVideos([]);
+      setKhanAcademyResults([]);
     } finally {
       setLoading(false);
     }
@@ -335,6 +361,74 @@ export default function DoubtSolverPage() {
                           </div>
                         </motion.a>
                       ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {khanAcademyResults.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-blue-500/30"
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <GraduationCap className="w-5 h-5 text-blue-400" />
+                      <span className="font-semibold text-blue-400">Khan Academy Resources</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {khanAcademyResults.map((result, idx) => {
+                        const typeIcon = result.type === 'video' ? Play : result.type === 'course' ? BookOpen : result.type === 'exercise' ? CheckCircle : BookOpen;
+                        const typeColor = result.type === 'video' ? 'text-red-400' : result.type === 'course' ? 'text-blue-400' : result.type === 'exercise' ? 'text-green-400' : 'text-purple-400';
+                        return (
+                          <motion.a
+                            key={idx}
+                            href={result.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group rounded-lg border border-slate-700 hover:border-blue-500/50 transition-all bg-slate-800/50 p-4"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="flex items-start gap-3">
+                              {result.thumbnail && (
+                                <img
+                                  src={result.thumbnail}
+                                  alt={result.title}
+                                  className="w-16 h-16 rounded-lg object-cover border border-slate-700 flex-shrink-0"
+                                />
+                              )}
+                              {!result.thumbnail && (
+                                <div className={`w-16 h-16 rounded-lg border border-slate-700 flex-shrink-0 flex items-center justify-center bg-slate-900`}>
+                                  <span className={`text-2xl`}>
+                                    {result.type === 'video' ? '▶️' : result.type === 'course' ? '📚' : result.type === 'exercise' ? '✏️' : '📄'}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {React.createElement(typeIcon, { className: `w-4 h-4 ${typeColor}` })}
+                                  <Badge className={`bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs capitalize`}>
+                                    {result.type}
+                                  </Badge>
+                                </div>
+                                <h4 className="text-sm font-semibold text-white line-clamp-2 mb-1 group-hover:text-blue-400 transition-colors">
+                                  {result.title}
+                                </h4>
+                                {result.description && (
+                                  <p className="text-xs text-slate-400 line-clamp-2 mb-2">
+                                    {result.description}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                  <span>Khan Academy</span>
+                                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              </div>
+                            </div>
+                          </motion.a>
+                        );
+                      })}
                     </div>
                   </motion.div>
                 )}

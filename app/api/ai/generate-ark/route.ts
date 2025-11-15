@@ -20,6 +20,11 @@ import { getRecommendedMilestoneCount } from "@/lib/data/student-timeframes";
 import { generateTimelineFromMilestones } from "@/lib/utils/timeline-generator";
 import { extractKeywordContext, gatherComprehensiveResources } from "@/lib/ai/orchestration/api-router";
 
+// Vercel serverless function configuration
+// maxDuration: 60 seconds for Pro plan, 10 seconds for Hobby (default)
+export const maxDuration = 60; // Maximum execution time for Vercel
+export const runtime = 'nodejs'; // Use Node.js runtime
+
 const FALLBACK_MODEL = env.OPENAI_FALLBACK_MODEL || "gpt-4o-mini";
 
 const providersConfigured = [
@@ -60,8 +65,16 @@ function getComplexityScore(category: string, goal: string, psychologyProfile: a
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let errorContext: any = {
+    endpoint: '/api/ai/generate-ark',
+    method: 'POST',
+    timestamp: new Date().toISOString(),
+  };
+
   try {
     const body = await request.json();
+    errorContext.bodyKeys = Object.keys(body || {});
 
     if (!providersConfigured) {
       console.error("ARK generation attempted without any AI provider keys configured.");
@@ -835,6 +848,9 @@ export async function POST(request: NextRequest) {
     
     console.log('🎉 ARK creation completed successfully!');
 
+    const executionTime = Date.now() - startTime;
+    console.log(`✅ ARK generation completed in ${executionTime}ms`);
+
     return successResponse({
       ark: {
         ...arkData,
@@ -844,10 +860,50 @@ export async function POST(request: NextRequest) {
       model: orchestratedResponse.model,
       tokens_used: orchestratedResponse.tokens_used,
       orchestration_metadata: orchestratedResponse.orchestration_metadata,
-      navigation_suggestions: orchestratedResponse.navigation_suggestions
+      navigation_suggestions: orchestratedResponse.navigation_suggestions,
+      execution_time_ms: executionTime
     });
-  } catch (error) {
-    return handleApiError(error);
+  } catch (error: any) {
+    const executionTime = Date.now() - startTime;
+    errorContext.executionTimeMs = executionTime;
+    errorContext.errorMessage = error?.message;
+    errorContext.errorStack = error?.stack;
+    errorContext.errorName = error?.name;
+
+    // Enhanced logging for Vercel debugging
+    console.error('❌ ARK Generation Error:', {
+      message: error?.message,
+      name: error?.name,
+      executionTime: `${executionTime}ms`,
+      context: errorContext,
+      stack: error?.stack?.split('\n').slice(0, 5), // First 5 lines of stack
+    });
+
+    // Check for Vercel timeout issues
+    if (executionTime > 50000) { // Close to 60s limit
+      console.error('⚠️ Execution time close to Vercel limit:', executionTime);
+      errorContext.timeoutWarning = true;
+    }
+
+    // Check for specific error types
+    if (error?.message?.includes('timeout') || error?.message?.includes('TIMEOUT')) {
+      errorContext.errorType = 'timeout';
+      return errorResponse(
+        'ARK generation timed out. This may take longer than expected. Please try again or contact support.',
+        504,
+        errorContext
+      );
+    }
+
+    if (error?.message?.includes('database') || error?.message?.includes('Supabase')) {
+      errorContext.errorType = 'database';
+    }
+
+    if (error?.message?.includes('AI') || error?.message?.includes('model') || error?.message?.includes('API key')) {
+      errorContext.errorType = 'ai_provider';
+    }
+
+    return handleApiError(error, errorContext);
   }
 }
 

@@ -15,6 +15,13 @@ import {
   History,
   Wifi,
   WifiOff,
+  Eye,
+  CheckCircle,
+  X,
+  Filter,
+  RefreshCw,
+  Target,
+  Search,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/services/analytics';
@@ -48,6 +56,31 @@ interface Job {
   experience_level?: string;
 }
 
+interface JobRecommendation {
+  id: string;
+  student_id: string;
+  ark_id?: string;
+  job_title: string;
+  job_description?: string;
+  job_apply_link: string;
+  job_location: string;
+  job_is_remote: boolean;
+  job_posted_at_datetime_utc?: string;
+  company_name: string;
+  company_logo?: string;
+  company_url?: string;
+  employment_type: string;
+  relevance_score: number;
+  skills_match_count: number;
+  skills_matched?: string[];
+  job_data?: any;
+  status: 'recommended' | 'viewed' | 'applied' | 'ignored' | 'saved';
+  recommended_at: string;
+  viewed_at?: string;
+  applied_at?: string;
+  updated_at: string;
+}
+
 interface ARK {
   id: string;
   title: string;
@@ -59,11 +92,15 @@ const HISTORY_STORAGE_KEY = 'mentark-job-matcher-history-v1';
 const MAX_HISTORY = 5;
 
 export default function JobMatcherPage() {
+  const [activeTab, setActiveTab] = useState<'recommended' | 'search'>('recommended');
   const [loading, setLoading] = useState(false);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
   const [arks, setArks] = useState<ARK[]>([]);
   const [selectedArk, setSelectedArk] = useState<string>('');
   const [location, setLocation] = useState('India');
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [recommendations, setRecommendations] = useState<JobRecommendation[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'recommended' | 'viewed' | 'applied' | 'ignored' | 'saved'>('all');
   const [searchSummary, setSearchSummary] = useState('');
   const [skillsMatched, setSkillsMatched] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -74,6 +111,7 @@ export default function JobMatcherPage() {
 
   useEffect(() => {
     loadUserArks();
+    loadRecommendations();
     if (typeof window !== 'undefined') {
       try {
         const storedPrefs = localStorage.getItem(PREFERENCES_STORAGE_KEY);
@@ -103,6 +141,14 @@ export default function JobMatcherPage() {
       };
     }
   }, []);
+
+  useEffect(() => {
+    if (statusFilter !== 'all') {
+      loadRecommendations(statusFilter);
+    } else {
+      loadRecommendations();
+    }
+  }, [statusFilter]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -152,6 +198,69 @@ export default function JobMatcherPage() {
     }
   };
 
+  const loadRecommendations = async (status?: string) => {
+    setLoadingRecommendations(true);
+    try {
+      const params = new URLSearchParams();
+      if (status && status !== 'all') {
+        params.append('status', status);
+      }
+      if (selectedArk) {
+        params.append('ark_id', selectedArk);
+      }
+
+      const response = await fetch(`/api/job-recommendations?${params.toString()}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setRecommendations(data.data.recommendations || []);
+      } else {
+        console.error('Error loading recommendations:', data.error);
+      }
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+      toast.error('Failed to load job recommendations');
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
+  const updateRecommendationStatus = async (recommendationId: string, newStatus: JobRecommendation['status']) => {
+    try {
+      const response = await fetch('/api/job-recommendations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recommendation_id: recommendationId,
+          status: newStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update local state
+        setRecommendations(prev =>
+          prev.map(rec =>
+            rec.id === recommendationId
+              ? { ...rec, status: newStatus, ...data.data.recommendation }
+              : rec
+          )
+        );
+        toast.success(`Job marked as ${newStatus}`);
+        trackEvent('job_recommendation_status_updated', {
+          recommendation_id: recommendationId,
+          status: newStatus,
+        });
+      } else {
+        toast.error(data.error || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating recommendation status:', error);
+      toast.error('Failed to update job status');
+    }
+  };
+
   const handleSearchJobs = async () => {
     if (!selectedArk) {
       setError('Please select an ARK first');
@@ -198,6 +307,8 @@ export default function JobMatcherPage() {
           ...prev.filter((item) => !(item.arkId === selectedArk && item.location === location)),
         ].slice(0, MAX_HISTORY));
         toast.success('Latest matches ready');
+        // Reload recommendations after new search
+        setTimeout(() => loadRecommendations(), 2000);
         trackEvent("job_matcher_search_success", {
           ark_id: selectedArk,
           location,
@@ -274,6 +385,27 @@ export default function JobMatcherPage() {
     );
   }, [jobs, clientFilter]);
 
+  const filteredRecommendations = useMemo(() => {
+    let filtered = recommendations;
+    
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(r => r.status === statusFilter);
+    }
+
+    // Client-side search filter
+    if (clientFilter.trim()) {
+      const q = clientFilter.toLowerCase();
+      filtered = filtered.filter((rec) =>
+        [rec.job_title, rec.company_name, rec.job_description || '']
+          .filter(Boolean)
+          .some((field) => field!.toLowerCase().includes(q))
+      );
+    }
+
+    return filtered;
+  }, [recommendations, statusFilter, clientFilter]);
+
   return (
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
@@ -310,11 +442,255 @@ export default function JobMatcherPage() {
               <Badge variant="outline" className="bg-slate-800 border-slate-700 text-xs">
                 Saved: {savedJobsList.length}
               </Badge>
+              {recommendations.length > 0 && (
+                <Badge variant="outline" className="bg-slate-800 border-slate-700 text-xs">
+                  Recommendations: {recommendations.length}
+                </Badge>
+              )}
             </div>
           </div>
 
-          {/* Search Form */}
-          <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'recommended' | 'search')} className="mb-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-900/50 border-yellow-500/30">
+              <TabsTrigger value="recommended" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                <Target className="w-4 h-4 mr-2" />
+                Recommended ({recommendations.filter(r => r.status === 'recommended' || statusFilter === 'all' || r.status === statusFilter).length})
+              </TabsTrigger>
+              <TabsTrigger value="search" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                <Search className="w-4 h-4 mr-2" />
+                Search New
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Recommended Tab */}
+            <TabsContent value="recommended" className="mt-6">
+              {/* Filter and Refresh */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 max-w-xs">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Recommendations</SelectItem>
+                    <SelectItem value="recommended">New (Recommended)</SelectItem>
+                    <SelectItem value="viewed">Viewed</SelectItem>
+                    <SelectItem value="applied">Applied</SelectItem>
+                    <SelectItem value="saved">Saved</SelectItem>
+                    <SelectItem value="ignored">Ignored</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => loadRecommendations(statusFilter !== 'all' ? statusFilter : undefined)}
+                  variant="outline"
+                  className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+
+              {/* Recommendations List */}
+              {loadingRecommendations ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="bg-slate-900/50 border-yellow-500/30">
+                      <CardContent className="pt-6">
+                        <Skeleton className="h-32 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : filteredRecommendations.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredRecommendations.map((rec) => (
+                    <Card key={rec.id} className="bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-start gap-3 mb-3">
+                              {rec.company_logo && (
+                                <img 
+                                  src={rec.company_logo} 
+                                  alt={rec.company_name}
+                                  className="w-12 h-12 rounded-lg object-cover border border-slate-700"
+                                />
+                              )}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="text-xl font-bold text-white">{rec.job_title}</h3>
+                                  <Badge className={`${
+                                    rec.status === 'applied' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
+                                    rec.status === 'viewed' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' :
+                                    rec.status === 'saved' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' :
+                                    rec.status === 'ignored' ? 'bg-red-500/20 text-red-400 border-red-500/50' :
+                                    'bg-purple-500/20 text-purple-400 border-purple-500/50'
+                                  }`}>
+                                    {rec.status}
+                                  </Badge>
+                                  <Badge className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border-yellow-500/50">
+                                    {rec.relevance_score}% Match
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-400 mb-2">
+                                  <Building className="w-4 h-4" />
+                                  <span>{rec.company_name}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                  {rec.job_is_remote && (
+                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                                      Remote
+                                    </Badge>
+                                  )}
+                                  <Badge variant="outline" className="bg-slate-800">
+                                    {rec.employment_type}
+                                  </Badge>
+                                  {rec.skills_matched && rec.skills_matched.length > 0 && (
+                                    <Badge variant="outline" className="bg-blue-500/10 border-blue-500/50">
+                                      {rec.skills_match_count} Skills Matched
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {rec.job_description && (
+                                  <p className="text-slate-300 text-sm mb-4 line-clamp-2">
+                                    {rec.job_description.substring(0, 200)}...
+                                  </p>
+                                )}
+
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                                  <div className="flex items-center gap-2 text-slate-400">
+                                    <MapPin className="w-4 h-4" />
+                                    <span className="text-xs">{rec.job_location}</span>
+                                  </div>
+                                  {rec.job_posted_at_datetime_utc && (
+                                    <div className="flex items-center gap-2 text-slate-400">
+                                      <Clock className="w-4 h-4" />
+                                      <span className="text-xs">
+                                        {formatDate(rec.job_posted_at_datetime_utc)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 text-slate-400">
+                                    <Star className="w-4 h-4" />
+                                    <span className="text-xs">Recommended {formatDate(rec.recommended_at)}</span>
+                                  </div>
+                                </div>
+
+                                {rec.skills_matched && rec.skills_matched.length > 0 && (
+                                  <div className="mb-4">
+                                    <p className="text-xs text-slate-500 mb-2">Matched Skills</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {rec.skills_matched.slice(0, 5).map((skill, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-xs bg-slate-800 border-blue-500/50">
+                                          {skill}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <a
+                              href={rec.job_apply_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => {
+                                if (rec.status === 'recommended') {
+                                  updateRecommendationStatus(rec.id, 'viewed');
+                                }
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold rounded-lg transition-colors whitespace-nowrap"
+                            >
+                              Apply Now
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                            <div className="flex gap-2">
+                              {rec.status !== 'viewed' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10 flex-1"
+                                  onClick={() => updateRecommendationStatus(rec.id, 'viewed')}
+                                >
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  Viewed
+                                </Button>
+                              )}
+                              {rec.status !== 'applied' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-green-500/40 text-green-400 hover:bg-green-500/10 flex-1"
+                                  onClick={() => updateRecommendationStatus(rec.id, 'applied')}
+                                >
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Applied
+                                </Button>
+                              )}
+                              {rec.status !== 'saved' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                                  onClick={() => updateRecommendationStatus(rec.id, 'saved')}
+                                >
+                                  <Save className="w-3 h-3" />
+                                </Button>
+                              )}
+                              {rec.status !== 'ignored' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-500/40 text-red-400 hover:bg-red-500/10"
+                                  onClick={() => updateRecommendationStatus(rec.id, 'ignored')}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <CardContent className="pt-12 pb-12">
+                    <div className="flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
+                        <Target className="w-12 h-12 text-yellow-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">No Recommendations Yet</h3>
+                        <p className="text-slate-400 text-sm mb-4">
+                          {statusFilter !== 'all' 
+                            ? `No ${statusFilter} recommendations found.`
+                            : 'Search for jobs to get personalized recommendations based on your ARKs'}
+                        </p>
+                        <Button
+                          onClick={() => setActiveTab('search')}
+                          className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                        >
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          Search for Jobs
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Search New Tab */}
+            <TabsContent value="search" className="mt-6">
+              {/* Search Form */}
+              <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
             <CardHeader>
               <CardTitle className="text-yellow-400">Find Your Perfect Job</CardTitle>
               <CardDescription>Select an ARK to match jobs aligned with your learning goals</CardDescription>
@@ -615,7 +991,9 @@ export default function JobMatcherPage() {
                 ))}
               </CardContent>
             </Card>
-          )}
+              )}
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </div>
     </div>

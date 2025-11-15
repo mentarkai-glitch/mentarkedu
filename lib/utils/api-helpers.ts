@@ -1,6 +1,14 @@
 import type { ApiResponse, PaginatedResponse } from "@/lib/types";
-import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
+import {
+  ApiError,
+  parseError,
+  logErrorToSentry,
+  getUserFriendlyMessage,
+  ErrorCategory,
+  ErrorSeverity,
+  type ErrorContext,
+} from "./enhanced-error-handler";
 
 /**
  * Create standardized success response
@@ -24,15 +32,45 @@ export function successResponse<T>(
  * Create standardized error response
  */
 export function errorResponse(
-  error: string,
-  status: number = 400
+  error: string | ApiError,
+  status?: number,
+  context?: ErrorContext
 ): NextResponse<ApiResponse> {
+  let apiError: ApiError;
+
+  if (error instanceof ApiError) {
+    apiError = error;
+    if (context) {
+      apiError.context = { ...apiError.context, ...context };
+    }
+  } else {
+    apiError = parseError(new Error(error), context);
+    if (status) {
+      apiError.statusCode = status;
+    }
+  }
+
+  // Log to Sentry for medium and above severity
+  if (
+    apiError.severity === ErrorSeverity.MEDIUM ||
+    apiError.severity === ErrorSeverity.HIGH ||
+    apiError.severity === ErrorSeverity.CRITICAL
+  ) {
+    logErrorToSentry(apiError);
+  }
+
   return NextResponse.json(
     {
       success: false,
-      error,
+      error: getUserFriendlyMessage(apiError),
+      ...(apiError.code && { code: apiError.code }),
+      ...(apiError.retryable && { retryable: apiError.retryable }),
+      ...(process.env.NODE_ENV === "development" && {
+        details: apiError.message,
+        category: apiError.category,
+      }),
     },
-    { status }
+    { status: apiError.statusCode }
   );
 }
 
@@ -58,19 +96,16 @@ export function paginatedResponse<T>(
 }
 
 /**
- * Handle API errors consistently
+ * Handle API errors consistently with enhanced error handling
  */
-export function handleApiError(error: unknown): NextResponse<ApiResponse> {
-  if (typeof Sentry.captureException === "function") {
-    Sentry.captureException(error);
-  }
+export function handleApiError(
+  error: unknown,
+  context?: ErrorContext
+): NextResponse<ApiResponse> {
   console.error("API Error:", error);
 
-  if (error instanceof Error) {
-    return errorResponse(error.message, 500);
-  }
-
-  return errorResponse("An unexpected error occurred", 500);
+  const apiError = parseError(error, context);
+  return errorResponse(apiError, undefined, context);
 }
 
 /**

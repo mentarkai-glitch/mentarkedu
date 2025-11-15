@@ -1,5 +1,6 @@
 import { searchYouTubeVideos, searchCourseVideos } from './youtube';
 import axios from 'axios';
+import { scrapingBeeService } from './scraping/scrapingbee';
 
 /**
  * Enhanced roadmap resource fetcher using multiple APIs
@@ -190,12 +191,133 @@ export async function fetchCareerNews(
 }
 
 /**
+ * Fetch college recommendations using ScrapingBee
+ */
+export async function fetchCollegeRecommendations(
+  stream: string,
+  geographicPreference?: string[]
+): Promise<RoadmapResource[]> {
+  try {
+    if (!scrapingBeeService.isAvailable()) {
+      console.log('ScrapingBee not available, skipping college recommendations');
+      return [];
+    }
+
+    const result = await scrapingBeeService.scrapeNIRFRankings(stream);
+    
+    if (!result.success || result.colleges.length === 0) {
+      return [];
+    }
+
+    return result.colleges.map(college => ({
+      type: 'article' as const,
+      title: `${college.name} - Rank ${college.rank}`,
+      description: `NIRF ranked college in ${college.city} for ${stream}`,
+      url: college.url || '#',
+      source: 'NIRF Rankings',
+      relevance_score: college.rank <= 10 ? 0.9 : 0.7
+    }));
+  } catch (error) {
+    console.error('College scraping error:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch exam schedules using ScrapingBee
+ */
+export async function fetchExamSchedules(
+  stream: string
+): Promise<RoadmapResource[]> {
+  try {
+    if (!scrapingBeeService.isAvailable()) {
+      console.log('ScrapingBee not available, skipping exam schedules');
+      return [];
+    }
+
+    const examTypes: Array<'JEE' | 'NEET' | 'CUET'> = [];
+    
+    // Determine which exams are relevant
+    if (stream.includes('Science') || stream.includes('PCM')) {
+      examTypes.push('JEE');
+    }
+    if (stream.includes('PCB') || stream.includes('Medical')) {
+      examTypes.push('NEET');
+    }
+    examTypes.push('CUET'); // CUET is common for most streams
+
+    const schedules = await Promise.all(
+      examTypes.map(exam => scrapingBeeService.scrapeExamSchedule(exam))
+    );
+
+    const allSchedules: RoadmapResource[] = [];
+    
+    schedules.forEach((result, idx) => {
+      if (result.success && result.schedule.length > 0) {
+        result.schedule.forEach(schedule => {
+          allSchedules.push({
+            type: 'article' as const,
+            title: `${schedule.exam} Exam Schedule`,
+            description: `Exam Date: ${schedule.date}`,
+            url: schedule.url || '#',
+            source: `${schedule.exam} Official`,
+            relevance_score: 0.95
+          });
+        });
+      }
+    });
+
+    return allSchedules;
+  } catch (error) {
+    console.error('Exam schedule scraping error:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch scholarships using ScrapingBee
+ */
+export async function fetchScholarships(
+  stream: string,
+  budgetConstraint: boolean
+): Promise<RoadmapResource[]> {
+  if (!budgetConstraint) return []; // Only fetch if budget is a constraint
+
+  try {
+    if (!scrapingBeeService.isAvailable()) {
+      console.log('ScrapingBee not available, skipping scholarships');
+      return [];
+    }
+
+    const result = await scrapingBeeService.scrapeScholarships(stream, budgetConstraint);
+    
+    if (!result.success || result.scholarships.length === 0) {
+      return [];
+    }
+
+    return result.scholarships.map(scholarship => ({
+      type: 'article' as const,
+      title: scholarship.name,
+      description: `Amount: ${scholarship.amount} | ${scholarship.eligibility.substring(0, 100)}...`,
+      url: scholarship.url || '#',
+      source: 'Scholarship Portal',
+      relevance_score: 0.8
+    }));
+  } catch (error) {
+    console.error('Scholarship scraping error:', error);
+    return [];
+  }
+}
+
+/**
  * Enhance roadmap with resources from multiple APIs
  */
 export async function enhanceRoadmapWithResources(
   roadmap: any,
   stream: string,
-  language: string = 'en'
+  language: string = 'en',
+  budgetConstraint: boolean = false,
+  geographicPreference?: string[]
 ): Promise<any> {
   const enhancedRoadmap = { ...roadmap };
   
@@ -213,8 +335,8 @@ export async function enhanceRoadmapWithResources(
   // Get unique topics
   const uniqueTopics = [...new Set(topics)].slice(0, 3);
 
-  // Fetch resources in parallel
-  const [videos, papers, projects, news] = await Promise.all([
+  // Fetch resources in parallel (including ScrapingBee data)
+  const [videos, papers, projects, news, colleges, examSchedules, scholarships] = await Promise.all([
     uniqueTopics.length > 0 
       ? fetchYouTubeResources(uniqueTopics[0], stream, 5)
       : Promise.resolve([]),
@@ -224,7 +346,10 @@ export async function enhanceRoadmapWithResources(
     stream.toLowerCase().includes('computer') || stream.toLowerCase().includes('science')
       ? fetchGitHubProjects(uniqueTopics[0] || 'programming', stream, 3)
       : Promise.resolve([]),
-    fetchCareerNews(stream, 3)
+    fetchCareerNews(stream, 3),
+    fetchCollegeRecommendations(stream, geographicPreference),
+    fetchExamSchedules(stream),
+    fetchScholarships(stream, budgetConstraint)
   ]);
 
   // Add resources to milestones
@@ -274,12 +399,32 @@ export async function enhanceRoadmapWithResources(
     }));
   }
 
+  // Add ScrapingBee scraped data
+  if (colleges.length > 0) {
+    enhancedRoadmap.college_recommendations = colleges;
+  }
+  
+  if (examSchedules.length > 0) {
+    enhancedRoadmap.exam_schedules = examSchedules;
+    // Also add to exam_timeline if it doesn't exist
+    if (!enhancedRoadmap.exam_timeline || enhancedRoadmap.exam_timeline.length === 0) {
+      enhancedRoadmap.exam_timeline = examSchedules.map(s => s.title);
+    }
+  }
+  
+  if (scholarships.length > 0) {
+    enhancedRoadmap.scholarships = scholarships;
+  }
+
   // Add resource summary
   enhancedRoadmap.resource_summary = {
     total_videos: videos.length,
     total_papers: papers.length,
     total_projects: projects.length,
-    total_news: news.length
+    total_news: news.length,
+    total_colleges: colleges.length,
+    total_exam_schedules: examSchedules.length,
+    total_scholarships: scholarships.length
   };
 
   return enhancedRoadmap;

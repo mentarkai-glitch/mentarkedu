@@ -10,6 +10,8 @@ import {
   getSuggestions, 
   searchSuggestions 
 } from '@/lib/data/ark-suggestions';
+import { aiOrchestrator } from '@/lib/ai/orchestrator';
+import type { AIContext } from '@/lib/types';
 
 export interface SuggestionOptions {
   categoryId: string;
@@ -102,18 +104,227 @@ export async function getSmartSuggestions(
     userInput?: string;
     previousAnswers?: Record<string, any>;
     onboardingProfile?: any;
+    userId?: string;
+    limit?: number;
   }
 ): Promise<string[]> {
-  // For now, return merged suggestions
-  // TODO: Integrate with AI to rank suggestions based on context
-  const suggestions = getSuggestions(categoryId, suggestionType);
-  
-  // Filter based on user input if provided
-  if (context.userInput) {
-    return searchSuggestions(categoryId, suggestionType, context.userInput);
+  try {
+    // Get base suggestions
+    const allSuggestions = getSuggestions(categoryId, suggestionType);
+    
+    // If no context provided, return basic filtered results
+    if (!context.userInput && !context.previousAnswers && !context.onboardingProfile) {
+      return allSuggestions.slice(0, context.limit || 20);
+    }
+
+    // Build context for AI ranking
+    const contextSummary = buildContextSummary(context);
+    
+    // If we have enough context, use AI to rank suggestions
+    if (contextSummary && allSuggestions.length > 0) {
+      const rankedSuggestions = await rankSuggestionsWithAI(
+        allSuggestions,
+        categoryId,
+        suggestionType,
+        contextSummary,
+        context.userId || 'anonymous'
+      );
+      
+      return rankedSuggestions.slice(0, context.limit || 20);
+    }
+
+    // Fallback: Simple text search if user input provided
+    if (context.userInput) {
+      return searchSuggestions(categoryId, suggestionType, context.userInput).slice(0, context.limit || 20);
+    }
+    
+    return allSuggestions.slice(0, context.limit || 20);
+  } catch (error) {
+    console.error('Error in getSmartSuggestions:', error);
+    // Fallback to basic suggestions on error
+    const suggestions = getSuggestions(categoryId, suggestionType);
+    if (context.userInput) {
+      return searchSuggestions(categoryId, suggestionType, context.userInput).slice(0, context.limit || 20);
+    }
+    return suggestions.slice(0, context.limit || 20);
   }
-  
-  return suggestions;
+}
+
+/**
+ * Build a summary of user context for AI ranking
+ */
+function buildContextSummary(context: {
+  userInput?: string;
+  previousAnswers?: Record<string, any>;
+  onboardingProfile?: any;
+}): string | null {
+  const parts: string[] = [];
+
+  if (context.userInput) {
+    parts.push(`Current input: "${context.userInput}"`);
+  }
+
+  if (context.previousAnswers && Object.keys(context.previousAnswers).length > 0) {
+    const answers = Object.entries(context.previousAnswers)
+      .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+      .slice(0, 5); // Limit to first 5 answers
+    parts.push(`Previous answers: ${answers.join(', ')}`);
+  }
+
+  if (context.onboardingProfile) {
+    const profile = context.onboardingProfile;
+    const profileParts: string[] = [];
+    
+    if (profile.interests && Array.isArray(profile.interests)) {
+      profileParts.push(`Interests: ${profile.interests.slice(0, 3).join(', ')}`);
+    }
+    if (profile.academic_stage) {
+      profileParts.push(`Academic stage: ${profile.academic_stage}`);
+    }
+    if (profile.career_goals) {
+      profileParts.push(`Career goals: ${profile.career_goals}`);
+    }
+    if (profile.learning_style) {
+      profileParts.push(`Learning style: ${profile.learning_style}`);
+    }
+
+    if (profileParts.length > 0) {
+      parts.push(`Profile: ${profileParts.join('; ')}`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join('\n') : null;
+}
+
+/**
+ * Rank suggestions using AI based on context
+ */
+async function rankSuggestionsWithAI(
+  suggestions: string[],
+  categoryId: string,
+  suggestionType: string,
+  contextSummary: string,
+  userId: string
+): Promise<string[]> {
+  try {
+    // Limit suggestions to rank (AI costs increase with more items)
+    const suggestionsToRank = suggestions.slice(0, 50);
+    
+    const prompt = `You are an AI assistant helping a student create personalized learning goals (ARKs).
+
+Category: ${categoryId}
+Suggestion Type: ${suggestionType}
+
+Student Context:
+${contextSummary}
+
+Available Suggestions:
+${suggestionsToRank.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+Task: Rank these suggestions from most relevant to least relevant based on the student's context.
+
+Return ONLY a JSON array of the suggestions in ranked order (most relevant first). No explanations, no markdown, just the JSON array.
+
+Example format: ["Suggestion 1", "Suggestion 2", "Suggestion 3"]`;
+
+    const aiContext: AIContext = {
+      task: "mentor_chat",
+      user_id: userId,
+      session_id: "ark_suggestion_ranking",
+      metadata: {
+        system_prompt: "You are an expert at understanding student learning goals and preferences.",
+        user_tier: "pro",
+      },
+    };
+
+    const response = await aiOrchestrator(aiContext, prompt);
+
+    if (!response.content) {
+      throw new Error("No response from AI");
+    }
+
+    // Parse JSON response
+    let ranked: string[] = [];
+    try {
+      // Try to extract JSON from markdown code blocks if present
+      let jsonContent = response.content.trim();
+      const jsonMatch = jsonContent.match(/```(?:json)?\s*(\[[\s\S]*\])\s*```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1];
+      }
+      
+      // Remove any leading/trailing non-JSON text
+      const arrayMatch = jsonContent.match(/\[[\s\S]*\]/);
+      if (arrayMatch) {
+        jsonContent = arrayMatch[0];
+      }
+
+      ranked = JSON.parse(jsonContent);
+      
+      if (!Array.isArray(ranked)) {
+        throw new Error("Response is not an array");
+      }
+
+      // Validate that all ranked items exist in original suggestions
+      const suggestionLower = new Set(suggestions.map(s => s.toLowerCase()));
+      ranked = ranked.filter(item => 
+        typeof item === 'string' && 
+        suggestionLower.has(item.toLowerCase())
+      );
+
+      // Add any suggestions not ranked by AI (in original order)
+      const rankedLower = new Set(ranked.map(s => s.toLowerCase()));
+      suggestions.forEach(s => {
+        if (!rankedLower.has(s.toLowerCase()) && !ranked.includes(s)) {
+          ranked.push(s);
+        }
+      });
+
+      return ranked;
+    } catch (parseError) {
+      console.error("Error parsing AI ranking response:", parseError);
+      // Fallback: Use simple text matching
+      return rankSuggestionsByTextMatch(suggestions, contextSummary);
+    }
+  } catch (error) {
+    console.error("Error in rankSuggestionsWithAI:", error);
+    // Fallback to text-based ranking
+    return rankSuggestionsByTextMatch(suggestions, contextSummary);
+  }
+}
+
+/**
+ * Fallback ranking based on text matching when AI fails
+ */
+function rankSuggestionsByTextMatch(
+  suggestions: string[],
+  contextSummary: string
+): string[] {
+  const contextLower = contextSummary.toLowerCase();
+  const contextWords = contextLower.split(/\s+/).filter(w => w.length > 3);
+
+  const scored = suggestions.map(suggestion => {
+    let score = 0;
+    const suggestionLower = suggestion.toLowerCase();
+
+    // Exact phrase match
+    if (contextLower.includes(suggestionLower) || suggestionLower.includes(contextLower)) {
+      score += 100;
+    }
+
+    // Word matches
+    contextWords.forEach(word => {
+      if (suggestionLower.includes(word)) {
+        score += 10;
+      }
+    });
+
+    return { suggestion, score };
+  });
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.suggestion);
 }
 
 /**

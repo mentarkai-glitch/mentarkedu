@@ -23,60 +23,189 @@ export interface STTOptions {
 }
 
 /**
- * Convert text to speech (STUB)
+ * Convert text to speech using Google Cloud TTS API
  */
 export async function textToSpeech(
   options: TTSOptions
-): Promise<{ success: boolean; audio_url?: string; error?: string }> {
-  console.log("🔊 TTS requested (STUB):", options.text.substring(0, 50));
+): Promise<{ success: boolean; audio_url?: string; audio_data?: string; error?: string }> {
+  try {
+    const apiKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
 
-  // Check if API key is configured
-  if (!process.env.GOOGLE_CLOUD_TTS_API_KEY) {
+    if (!apiKey) {
+      return {
+        success: false,
+        error: "Google Cloud TTS API key not configured",
+      };
+    }
+
+    // Determine voice gender
+    let ssmlGender: 'MALE' | 'FEMALE' | 'NEUTRAL' = 'NEUTRAL';
+    if (options.voice === 'male') ssmlGender = 'MALE';
+    if (options.voice === 'female') ssmlGender = 'FEMALE';
+
+    const requestBody = {
+      input: { text: options.text },
+      voice: {
+        languageCode: options.language || 'en-US',
+        ssmlGender,
+        name: undefined as string | undefined, // Let API choose best voice for language
+      },
+      audioConfig: {
+        audioEncoding: 'MP3' as const,
+        speakingRate: Math.max(0.25, Math.min(4.0, options.speed || 1.0)),
+        pitch: 0.0,
+        volumeGainDb: 0.0,
+      },
+    };
+
+    // For Indian English, use specific voice
+    if (options.language === 'en-IN') {
+      requestBody.voice.name = 'en-IN-Standard-A';
+    }
+
+    const response = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        `TTS API error: ${response.status} ${errorData.error?.message || response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data.audioContent) {
+      throw new Error('No audio content received from TTS API');
+    }
+
+    // Return base64 audio data (can be converted to blob URL on client)
+    return {
+      success: true,
+      audio_data: data.audioContent,
+      // Optionally create a blob URL (requires browser environment)
+      // audio_url: typeof window !== 'undefined' ? URL.createObjectURL(new Blob([base64ToArrayBuffer(data.audioContent)], { type: 'audio/mp3' })) : undefined,
+    };
+  } catch (error: any) {
+    console.error('TTS error:', error);
     return {
       success: false,
-      error: "Google Cloud TTS API not configured",
+      error: error.message || 'Failed to generate speech',
     };
   }
-
-  // TODO: Implement actual Google Cloud TTS integration
-  // const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${API_KEY}`, {
-  //   method: 'POST',
-  //   body: JSON.stringify({
-  //     input: { text: options.text },
-  //     voice: { languageCode: options.language || 'en-US', ssmlGender: 'NEUTRAL' },
-  //     audioConfig: { audioEncoding: 'MP3', speakingRate: options.speed || 1.0 }
-  //   })
-  // });
-
-  return {
-    success: false,
-    error: "TTS service not yet implemented - stub only",
-  };
 }
 
 /**
- * Convert speech to text (STUB)
+ * Convert speech to text using Google Cloud Speech-to-Text API
  */
 export async function speechToText(
   options: STTOptions
-): Promise<{ success: boolean; transcript?: string; error?: string }> {
-  console.log("🎤 STT requested (STUB):", options.audioBlob.size, "bytes");
+): Promise<{ success: boolean; transcript?: string; confidence?: number; error?: string }> {
+  try {
+    const apiKey = process.env.GOOGLE_CLOUD_STT_API_KEY || process.env.GOOGLE_CLOUD_TTS_API_KEY; // Can use same API key
 
-  // Check if API key is configured
-  if (!process.env.GOOGLE_CLOUD_STT_API_KEY) {
+    if (!apiKey) {
+      return {
+        success: false,
+        error: "Google Cloud STT API key not configured",
+      };
+    }
+
+    // Convert Blob to base64
+    const base64Audio = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix if present
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(options.audioBlob);
+    });
+
+    // Detect audio encoding from blob type
+    let encoding: 'LINEAR16' | 'WEBM_OPUS' | 'MP3' | 'FLAC' = 'LINEAR16';
+    const mimeType = options.audioBlob.type.toLowerCase();
+    if (mimeType.includes('webm') || mimeType.includes('opus')) {
+      encoding = 'WEBM_OPUS';
+    } else if (mimeType.includes('mp3')) {
+      encoding = 'MP3';
+    } else if (mimeType.includes('flac')) {
+      encoding = 'FLAC';
+    }
+
+    const requestBody = {
+      config: {
+        encoding,
+        sampleRateHertz: 16000, // Default, can be auto-detected
+        languageCode: options.language || 'en-US',
+        enableAutomaticPunctuation: true,
+        enableWordTimeOffsets: false,
+      },
+      audio: {
+        content: base64Audio,
+      },
+    };
+
+    const response = await fetch(
+      `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        `STT API error: ${response.status} ${errorData.error?.message || response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      return {
+        success: false,
+        error: 'No transcription results returned',
+      };
+    }
+
+    // Get the best transcription (first result)
+    const bestResult = data.results[0];
+    const alternative = bestResult.alternatives?.[0];
+
+    if (!alternative || !alternative.transcript) {
+      return {
+        success: false,
+        error: 'No transcript found in results',
+      };
+    }
+
+    return {
+      success: true,
+      transcript: alternative.transcript,
+      confidence: alternative.confidence || 0,
+    };
+  } catch (error: any) {
+    console.error('STT error:', error);
     return {
       success: false,
-      error: "Google Cloud STT API not configured",
+      error: error.message || 'Failed to transcribe speech',
     };
   }
-
-  // TODO: Implement actual Google Cloud STT integration
-  // Convert audioBlob to base64 and send to Google Cloud STT API
-
-  return {
-    success: false,
-    error: "STT service not yet implemented - stub only",
-  };
 }
 
 /**

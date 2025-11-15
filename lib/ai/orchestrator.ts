@@ -6,6 +6,7 @@ import { callCohere } from "./models/cohere";
 import { callMistral } from "./models/mistral";
 import { callHumeEmotionAnalysis } from "./models/hume";
 import { callDeepL } from "./models/deepl";
+import { callGroq } from "./models/groq";
 import type { AITask, AIContext, AIResponse, AIModel } from "@/lib/types";
 import { selectOptimalModel } from "./orchestration/model-selector";
 import { analyzeContext, determineRequirements } from "./orchestration/context-analyzer";
@@ -335,8 +336,18 @@ async function callModel(
 
 
     case "llama-3.1": {
-      // Llama integration stub - to be implemented when API is available
-      throw new Error("Llama integration not yet implemented");
+      if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY environment variable is not set for Llama models");
+      }
+      const result = await callGroq(prompt, {
+        model: "llama-3.1-70b-versatile",
+        system_prompt: getSystemPrompt(context),
+        temperature: 0.7,
+        max_tokens: 2048,
+      });
+      content = result.content;
+      tokens_used = result.tokens_used;
+      break;
     }
 
     case "cohere-command-r-plus": {

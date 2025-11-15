@@ -8,7 +8,11 @@ import type {
   SubjectRecommendation,
   ExamStrategy,
   AlternativeStream,
-  CareerInsights
+  CareerInsights,
+  WhoYouAreNow,
+  CareerPathWithProgression,
+  CollegeRecommendation,
+  LifeVisualization
 } from './path-finder-scoring';
 
 export function generateCompleteTraitProfile(
@@ -477,5 +481,425 @@ export function generateCareerInsights(
   };
 
   return insights[stream]?.[language] || insights['Commerce'][language];
+}
+
+/**
+ * Generate "Who You Are Now" profile from quiz answers
+ */
+export function generateWhoYouAreNow(
+  answers: QuizAnswer[],
+  traitScores: TraitScores,
+  language: Language = 'en'
+): WhoYouAreNow {
+  const q13Answer = answers.find(a => a.question_id === 'q13')?.answer as string[] || [];
+  const q14Answer = answers.find(a => a.question_id === 'q14')?.answer as string[] || [];
+  const q15Answer = answers.find(a => a.question_id === 'q15')?.answer as string[] || [];
+  const q16Answer = answers.find(a => a.question_id === 'q16')?.answer as string || '';
+  const q8Answer = answers.find(a => a.question_id === 'q8')?.answer as string[] || [];
+  
+  const topStrengths = Object.entries(traitScores)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([trait]) => {
+      const names: Record<string, Record<Language, string>> = {
+        logical: { en: 'Logical Thinking', hi: 'तार्किक सोच', mr: 'तार्किक विचार' },
+        creative: { en: 'Creativity', hi: 'रचनात्मकता', mr: 'सर्जनशीलता' },
+        people: { en: 'People Skills', hi: 'लोगों के कौशल', mr: 'लोक कौशल्ये' },
+        handsOn: { en: 'Practical Skills', hi: 'व्यावहारिक कौशल', mr: 'व्यावहारिक कौशल्ये' },
+        leader: { en: 'Leadership', hi: 'नेतृत्व', mr: 'नेतृत्व' },
+        disciplined: { en: 'Discipline', hi: 'अनुशासन', mr: 'शिस्त' }
+      };
+      return names[trait]?.[language] || trait;
+    });
+
+  const translations = {
+    en: {
+      summary: `You are someone who ${q13Answer.length > 0 ? `feels most alive when ${q13Answer.slice(0, 2).join(' and ')}` : 'has diverse interests'}. Your natural abilities include ${q14Answer.slice(0, 2).join(' and ') || 'multiple talents'}, and you lose track of time when ${q15Answer.slice(0, 1)[0] || 'engaged in activities you love'}.`
+    },
+    hi: {
+      summary: `आप किसी ऐसे व्यक्ति हैं जो ${q13Answer.length > 0 ? `सबसे ज्यादा जीवंत महसूस करते हैं जब ${q13Answer.slice(0, 2).join(' और ')}` : 'विविध रुचियां रखते हैं'}. आपकी प्राकृतिक क्षमताओं में ${q14Answer.slice(0, 2).join(' और ') || 'कई प्रतिभाएं'} शामिल हैं, और आप समय का हिसाब भूल जाते हैं जब ${q15Answer.slice(0, 1)[0] || 'आप उन गतिविधियों में लगे होते हैं जिनसे आप प्यार करते हैं'}.`
+    },
+    mr: {
+      summary: `तुम असे व्यक्ती आहात जे ${q13Answer.length > 0 ? `सर्वात जास्त जिवंत वाटते जेव्हा ${q13Answer.slice(0, 2).join(' आणि ')}` : 'विविध स्वारस्ये आहेत'}. तुमच्या नैसर्गिक क्षमतांमध्ये ${q14Answer.slice(0, 2).join(' आणि ') || 'अनेक प्रतिभा'} समाविष्ट आहेत, आणि तुम्ही वेळेचा हिशोब विसरता जेव्हा ${q15Answer.slice(0, 1)[0] || 'तुम्ही त्या क्रियाकलापांमध्ये गुंतलेले असता ज्यांचे तुम्ही प्रेम करता'}.`
+    }
+  };
+
+  return {
+    passions: q13Answer.slice(0, 5),
+    naturalAbilities: q14Answer.slice(0, 5),
+    flowActivities: q15Answer.slice(0, 5),
+    values: q16Answer ? [q16Answer] : [],
+    currentStrengths: topStrengths,
+    interests: q8Answer.slice(0, 5),
+    summary: translations[language].summary
+  };
+}
+
+/**
+ * Generate career paths with life progression
+ */
+export function generateCareerPathsWithProgression(
+  stream: string,
+  traitScores: TraitScores,
+  answers: QuizAnswer[],
+  language: Language = 'en'
+): CareerPathWithProgression[] {
+  const q17Answer = answers.find(a => a.question_id === 'q17')?.answer as string || '';
+  const q18Answer = answers.find(a => a.question_id === 'q18')?.answer as string || '';
+  const q20Answer = answers.find(a => a.question_id === 'q20')?.answer as number || 5;
+  
+  const careerTemplates: Record<string, Record<Language, CareerPathWithProgression[]>> = {
+    'Science (PCM)': {
+      en: [
+        {
+          careerName: 'Software Engineer',
+          description: 'Build innovative software solutions and applications',
+          fitScore: 95,
+          progression: [
+            {
+              stage: 'Year 1-2',
+              role: 'Junior Developer',
+              responsibilities: ['Write code', 'Debug applications', 'Learn frameworks'],
+              skills: ['Programming', 'Problem-solving', 'Teamwork'],
+              salary: '₹4-8 LPA',
+              lifestyle: 'Balanced work-life, learning-focused'
+            },
+            {
+              stage: 'Year 3-5',
+              role: 'Senior Developer',
+              responsibilities: ['Lead projects', 'Mentor juniors', 'Architecture decisions'],
+              skills: ['System Design', 'Leadership', 'Advanced Programming'],
+              salary: '₹12-25 LPA',
+              lifestyle: 'More responsibility, higher impact'
+            },
+            {
+              stage: 'Year 5-10',
+              role: 'Tech Lead / Engineering Manager',
+              responsibilities: ['Team management', 'Strategic planning', 'Technical vision'],
+              skills: ['Management', 'Strategy', 'Technical Leadership'],
+              salary: '₹30-60 LPA',
+              lifestyle: 'Leadership role, significant impact'
+            }
+          ],
+          milestones: [
+            { year: 1, milestone: 'First job in tech', description: 'Start your career as a developer' },
+            { year: 3, milestone: 'Promotion to Senior', description: 'Take on more responsibility' },
+            { year: 5, milestone: 'Tech Lead role', description: 'Lead a team of developers' },
+            { year: 10, milestone: 'Engineering Manager', description: 'Manage multiple teams' }
+          ]
+        }
+      ],
+      hi: [
+        {
+          careerName: 'सॉफ्टवेयर इंजीनियर',
+          description: 'नवाचारी सॉफ्टवेयर समाधान और अनुप्रयोग बनाएं',
+          fitScore: 95,
+          progression: [
+            {
+              stage: 'वर्ष 1-2',
+              role: 'जूनियर डेवलपर',
+              responsibilities: ['कोड लिखना', 'एप्लिकेशन डीबग करना', 'फ्रेमवर्क सीखना'],
+              skills: ['प्रोग्रामिंग', 'समस्या-समाधान', 'टीमवर्क'],
+              salary: '₹4-8 LPA',
+              lifestyle: 'संतुलित कार्य-जीवन, सीखने पर केंद्रित'
+            },
+            {
+              stage: 'वर्ष 3-5',
+              role: 'सीनियर डेवलपर',
+              responsibilities: ['प्रोजेक्ट का नेतृत्व', 'जूनियरों को मार्गदर्शन', 'आर्किटेक्चर निर्णय'],
+              skills: ['सिस्टम डिज़ाइन', 'नेतृत्व', 'उन्नत प्रोग्रामिंग'],
+              salary: '₹12-25 LPA',
+              lifestyle: 'अधिक जिम्मेदारी, उच्च प्रभाव'
+            },
+            {
+              stage: 'वर्ष 5-10',
+              role: 'टेक लीड / इंजीनियरिंग मैनेजर',
+              responsibilities: ['टीम प्रबंधन', 'रणनीतिक योजना', 'तकनीकी दृष्टि'],
+              skills: ['प्रबंधन', 'रणनीति', 'तकनीकी नेतृत्व'],
+              salary: '₹30-60 LPA',
+              lifestyle: 'नेतृत्व की भूमिका, महत्वपूर्ण प्रभाव'
+            }
+          ],
+          milestones: [
+            { year: 1, milestone: 'टेक में पहली नौकरी', description: 'डेवलपर के रूप में अपना करियर शुरू करें' },
+            { year: 3, milestone: 'सीनियर में पदोन्नति', description: 'अधिक जिम्मेदारी लें' },
+            { year: 5, milestone: 'टेक लीड की भूमिका', description: 'डेवलपर्स की टीम का नेतृत्व करें' },
+            { year: 10, milestone: 'इंजीनियरिंग मैनेजर', description: 'कई टीमों का प्रबंधन करें' }
+          ]
+        }
+      ],
+      mr: [
+        {
+          careerName: 'सॉफ्टवेअर अभियंता',
+          description: 'नवाचारी सॉफ्टवेअर उपाय आणि अनुप्रयोग तयार करा',
+          fitScore: 95,
+          progression: [
+            {
+              stage: 'वर्ष 1-2',
+              role: 'ज्युनियर डेवलपर',
+              responsibilities: ['कोड लिहणे', 'अनुप्रयोग डीबग करणे', 'फ्रेमवर्क शिकणे'],
+              skills: ['प्रोग्रामिंग', 'समस्या-निराकरण', 'संघ कार्य'],
+              salary: '₹4-8 LPA',
+              lifestyle: 'संतुलित काम-जीवन, शिकण्यावर केंद्रित'
+            },
+            {
+              stage: 'वर्ष 3-5',
+              role: 'सीनियर डेवलपर',
+              responsibilities: ['प्रकल्पांचे नेतृत्व', 'ज्युनियरांना मार्गदर्शन', 'आर्किटेक्चर निर्णय'],
+              skills: ['सिस्टम डिझाइन', 'नेतृत्व', 'प्रगत प्रोग्रामिंग'],
+              salary: '₹12-25 LPA',
+              lifestyle: 'अधिक जबाबदारी, उच्च प्रभाव'
+            },
+            {
+              stage: 'वर्ष 5-10',
+              role: 'टेक लीड / अभियांत्रिकी व्यवस्थापक',
+              responsibilities: ['संघ व्यवस्थापन', 'रणनीतिक नियोजन', 'तांत्रिक दृष्टी'],
+              skills: ['व्यवस्थापन', 'रणनीती', 'तांत्रिक नेतृत्व'],
+              salary: '₹30-60 LPA',
+              lifestyle: 'नेतृत्वाची भूमिका, महत्त्वपूर्ण प्रभाव'
+            }
+          ],
+          milestones: [
+            { year: 1, milestone: 'तंत्रज्ञानात पहिली नोकरी', description: 'डेवलपर म्हणून तुमचे करिअर सुरू करा' },
+            { year: 3, milestone: 'सीनियरमध्ये पदोन्नती', description: 'अधिक जबाबदारी घ्या' },
+            { year: 5, milestone: 'टेक लीडची भूमिका', description: 'डेवलपर्सच्या संघाचे नेतृत्व करा' },
+            { year: 10, milestone: 'अभियांत्रिकी व्यवस्थापक', description: 'अनेक संघांचे व्यवस्थापन करा' }
+          ]
+        }
+      ]
+    }
+  };
+
+  // Return first career path for now (can be expanded)
+  const templates = careerTemplates[stream] || careerTemplates['Science (PCM)'];
+  return templates[language] || templates.en;
+}
+
+/**
+ * Generate college recommendations
+ */
+export function generateCollegeRecommendations(
+  stream: string,
+  geographicPreference: string[],
+  budgetConstraint: boolean,
+  language: Language = 'en'
+): CollegeRecommendation[] {
+  const colleges: Record<string, Record<Language, CollegeRecommendation[]>> = {
+    'Science (PCM)': {
+      en: [
+        {
+          name: 'IIT Delhi',
+          location: 'New Delhi',
+          stream: 'Engineering',
+          rank: 2,
+          rating: 4.8,
+          fees: '₹2-3 Lakhs/year',
+          admissionRequirements: ['JEE Advanced', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Top NIRF Rank', 'Excellent Placements', 'World-class Faculty'],
+          placementStats: {
+            averagePackage: '₹20-25 LPA',
+            topRecruiters: ['Google', 'Microsoft', 'Amazon', 'Goldman Sachs']
+          },
+          whyFit: 'Perfect for logical thinkers with high study tolerance',
+          url: 'https://home.iitd.ac.in/'
+        },
+        {
+          name: 'NIT Trichy',
+          location: 'Tiruchirappalli',
+          stream: 'Engineering',
+          rank: 9,
+          rating: 4.6,
+          fees: '₹1.5-2 Lakhs/year',
+          admissionRequirements: ['JEE Main', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Top NIT', 'Strong Industry Connections', 'Affordable'],
+          placementStats: {
+            averagePackage: '₹12-18 LPA',
+            topRecruiters: ['TCS', 'Infosys', 'Wipro', 'Cognizant']
+          },
+          whyFit: 'Great balance of quality education and affordability',
+          url: 'https://www.nitt.edu/'
+        }
+      ],
+      hi: [
+        {
+          name: 'आईआईटी दिल्ली',
+          location: 'नई दिल्ली',
+          stream: 'इंजीनियरिंग',
+          rank: 2,
+          rating: 4.8,
+          fees: '₹2-3 लाख/वर्ष',
+          admissionRequirements: ['JEE Advanced', 'कक्षा 12: 75%+', 'भौतिकी, रसायन, गणित'],
+          highlights: ['शीर्ष NIRF रैंक', 'उत्कृष्ट प्लेसमेंट', 'विश्व स्तरीय संकाय'],
+          placementStats: {
+            averagePackage: '₹20-25 LPA',
+            topRecruiters: ['Google', 'Microsoft', 'Amazon', 'Goldman Sachs']
+          },
+          whyFit: 'उच्च अध्ययन सहनशीलता वाले तार्किक विचारकों के लिए परफेक्ट',
+          url: 'https://home.iitd.ac.in/'
+        }
+      ],
+      mr: [
+        {
+          name: 'आयआयटी दिल्ली',
+          location: 'नवी दिल्ली',
+          stream: 'अभियांत्रिकी',
+          rank: 2,
+          rating: 4.8,
+          fees: '₹2-3 लाख/वर्ष',
+          admissionRequirements: ['JEE Advanced', 'इयत्ता 12: 75%+', 'भौतिकशास्त्र, रसायनशास्त्र, गणित'],
+          highlights: ['शीर्ष NIRF रैंक', 'उत्कृष्ट प्लेसमेंट', 'जागतिक स्तराचे संकाय'],
+          placementStats: {
+            averagePackage: '₹20-25 LPA',
+            topRecruiters: ['Google', 'Microsoft', 'Amazon', 'Goldman Sachs']
+          },
+          whyFit: 'उच्च अभ्यास सहनशीलता असलेल्या तार्किक विचारकांसाठी परफेक्ट',
+          url: 'https://home.iitd.ac.in/'
+        }
+      ]
+    }
+  };
+
+  const streamColleges = colleges[stream] || colleges['Science (PCM)'];
+  return streamColleges[language] || streamColleges.en;
+}
+
+/**
+ * Generate life visualization
+ */
+export function generateLifeVisualization(
+  stream: string,
+  careerVision: string,
+  answers: QuizAnswer[],
+  language: Language = 'en'
+): LifeVisualization {
+  const q18Answer = answers.find(a => a.question_id === 'q18')?.answer as string || '';
+  const q22Answer = answers.find(a => a.question_id === 'q22')?.answer as string[] || [];
+  
+  const location = q22Answer.length > 0 ? q22Answer[0] : 'Metro city';
+  
+  const templates: Record<Language, LifeVisualization> = {
+    en: {
+      year5: {
+        age: 22,
+        role: 'Software Engineer / Research Associate / Business Analyst',
+        location: location,
+        lifestyle: q18Answer.includes('High income') ? 'Fast-paced, high-growth environment' : 'Balanced work-life',
+        achievements: [
+          'Completed graduation',
+          'First job secured',
+          'Started building professional network',
+          'Gained industry experience'
+        ],
+        dailyRoutine: [
+          'Morning: Work/Study',
+          'Afternoon: Projects/Learning',
+          'Evening: Networking/Skills',
+          'Night: Rest/Recreation'
+        ]
+      },
+      year10: {
+        age: 27,
+        role: 'Senior Engineer / Team Lead / Manager',
+        location: location,
+        lifestyle: 'Established professional with work-life balance',
+        achievements: [
+          'Career progression',
+          'Leadership role',
+          'Financial stability',
+          'Professional recognition'
+        ],
+        impact: 'Making meaningful contributions to your field and mentoring others'
+      },
+      vision: careerVision || 'Building a successful career in your chosen field',
+      keyMoments: [
+        { year: 1, moment: 'Graduation', description: 'Complete your degree' },
+        { year: 2, moment: 'First Job', description: 'Start your professional journey' },
+        { year: 5, moment: 'Career Growth', description: 'Take on more responsibility' },
+        { year: 10, moment: 'Leadership', description: 'Lead teams and make impact' }
+      ]
+    },
+    hi: {
+      year5: {
+        age: 22,
+        role: 'सॉफ्टवेयर इंजीनियर / अनुसंधान सहयोगी / व्यापार विश्लेषक',
+        location: location,
+        lifestyle: q18Answer.includes('High income') ? 'तेज गति, उच्च वृद्धि वातावरण' : 'संतुलित कार्य-जीवन',
+        achievements: [
+          'स्नातक पूरा',
+          'पहली नौकरी सुरक्षित',
+          'पेशेवर नेटवर्क बनाना शुरू',
+          'उद्योग अनुभव प्राप्त'
+        ],
+        dailyRoutine: [
+          'सुबह: काम/अध्ययन',
+          'दोपहर: परियोजनाएं/सीखना',
+          'शाम: नेटवर्किंग/कौशल',
+          'रात: आराम/मनोरंजन'
+        ]
+      },
+      year10: {
+        age: 27,
+        role: 'सीनियर इंजीनियर / टीम लीड / मैनेजर',
+        location: location,
+        lifestyle: 'कार्य-जीवन संतुलन के साथ स्थापित पेशेवर',
+        achievements: [
+          'करियर प्रगति',
+          'नेतृत्व की भूमिका',
+          'वित्तीय स्थिरता',
+          'पेशेवर मान्यता'
+        ],
+        impact: 'अपने क्षेत्र में सार्थक योगदान देना और दूसरों को मार्गदर्शन करना'
+      },
+      vision: careerVision || 'अपने चुने हुए क्षेत्र में एक सफल करियर बनाना',
+      keyMoments: [
+        { year: 1, moment: 'स्नातक', description: 'अपनी डिग्री पूरी करें' },
+        { year: 2, moment: 'पहली नौकरी', description: 'अपनी पेशेवर यात्रा शुरू करें' },
+        { year: 5, moment: 'करियर वृद्धि', description: 'अधिक जिम्मेदारी लें' },
+        { year: 10, moment: 'नेतृत्व', description: 'टीमों का नेतृत्व करें और प्रभाव डालें' }
+      ]
+    },
+    mr: {
+      year5: {
+        age: 22,
+        role: 'सॉफ्टवेअर अभियंता / संशोधन सहयोगी / व्यवसाय विश्लेषक',
+        location: location,
+        lifestyle: q18Answer.includes('High income') ? 'वेगवान, उच्च वाढ वातावरण' : 'संतुलित काम-जीवन',
+        achievements: [
+          'पदवी पूर्ण',
+          'पहिली नोकरी सुरक्षित',
+          'व्यावसायिक नेटवर्क तयार करणे सुरू',
+          'उद्योग अनुभव प्राप्त'
+        ],
+        dailyRoutine: [
+          'सकाळ: काम/अभ्यास',
+          'दुपार: प्रकल्प/शिकणे',
+          'संध्याकाळ: नेटवर्किंग/कौशल्ये',
+          'रात्र: विश्रांती/मनोरंजन'
+        ]
+      },
+      year10: {
+        age: 27,
+        role: 'सीनियर अभियंता / संघ लीड / व्यवस्थापक',
+        location: location,
+        lifestyle: 'काम-जीवन संतुलनासह स्थापित व्यावसायिक',
+        achievements: [
+          'करिअर प्रगती',
+          'नेतृत्वाची भूमिका',
+          'आर्थिक स्थिरता',
+          'व्यावसायिक मान्यता'
+        ],
+        impact: 'तुमच्या क्षेत्रात अर्थपूर्ण योगदान देणे आणि इतरांना मार्गदर्शन करणे'
+      },
+      vision: careerVision || 'तुमच्या निवडलेल्या क्षेत्रात यशस्वी करिअर तयार करणे',
+      keyMoments: [
+        { year: 1, moment: 'पदवी', description: 'तुमची पदवी पूर्ण करा' },
+        { year: 2, moment: 'पहिली नोकरी', description: 'तुमची व्यावसायिक यात्रा सुरू करा' },
+        { year: 5, moment: 'करिअर वाढ', description: 'अधिक जबाबदारी घ्या' },
+        { year: 10, moment: 'नेतृत्व', description: 'संघांचे नेतृत्व करा आणि प्रभाव टाका' }
+      ]
+    }
+  };
+
+  return templates[language] || templates.en;
 }
 

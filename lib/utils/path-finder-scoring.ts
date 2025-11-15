@@ -6,7 +6,11 @@ import {
   generateSubjectRecommendations,
   generateExamStrategy,
   generateAlternativeStreams,
-  generateCareerInsights
+  generateCareerInsights,
+  generateWhoYouAreNow,
+  generateCareerPathsWithProgression,
+  generateCollegeRecommendations,
+  generateLifeVisualization
 } from './enhanced-results';
 
 export interface QuizAnswer {
@@ -68,6 +72,78 @@ export interface CareerInsights {
   opportunities: string[];
 }
 
+// Enhanced Result Interfaces
+export interface WhoYouAreNow {
+  passions: string[];
+  naturalAbilities: string[];
+  flowActivities: string[];
+  values: string[];
+  currentStrengths: string[];
+  interests: string[];
+  summary: string;
+}
+
+export interface CareerPathWithProgression {
+  careerName: string;
+  description: string;
+  fitScore: number;
+  progression: Array<{
+    stage: string; // e.g., "Year 1-2", "Year 3-5", "Year 5-10"
+    role: string;
+    responsibilities: string[];
+    skills: string[];
+    salary?: string;
+    lifestyle: string;
+  }>;
+  milestones: Array<{
+    year: number;
+    milestone: string;
+    description: string;
+  }>;
+}
+
+export interface CollegeRecommendation {
+  name: string;
+  location: string;
+  stream: string;
+  rank?: number;
+  rating: number;
+  fees: string;
+  admissionRequirements: string[];
+  highlights: string[];
+  placementStats?: {
+    averagePackage: string;
+    topRecruiters: string[];
+  };
+  whyFit: string;
+  url?: string;
+}
+
+export interface LifeVisualization {
+  year5: {
+    age: number;
+    role: string;
+    location: string;
+    lifestyle: string;
+    achievements: string[];
+    dailyRoutine: string[];
+  };
+  year10: {
+    age: number;
+    role: string;
+    location: string;
+    lifestyle: string;
+    achievements: string[];
+    impact: string;
+  };
+  vision: string;
+  keyMoments: Array<{
+    year: number;
+    moment: string;
+    description: string;
+  }>;
+}
+
 export interface QuizResult {
   strengths: string[];
   stream: string;
@@ -89,6 +165,11 @@ export interface QuizResult {
   examStrategy: ExamStrategy;
   alternativeStreams: AlternativeStream[];
   careerInsights: CareerInsights;
+  // New enhanced sections
+  whoYouAreNow: WhoYouAreNow;
+  careerPathsWithProgression: CareerPathWithProgression[];
+  collegeRecommendations: CollegeRecommendation[];
+  lifeVisualization: LifeVisualization;
 }
 
 // Question weights for enhanced scoring
@@ -102,7 +183,20 @@ const questionWeights: Record<string, number> = {
   q9: 1.2,  // Work environment - high weight
   q10: 1.0, // Problem solving - standard
   q11: 1.1, // Future goals - high weight
-  q12: 0.8  // Exam preference - lower weight
+  q12: 0.8, // Exam preference - lower weight
+  q13: 1.2, // What makes you feel alive - high weight (passions)
+  q14: 1.1, // Natural abilities - high weight
+  q15: 1.0, // Flow activities - standard
+  q16: 1.0, // Values - standard
+  q17: 1.3, // 10-year vision - very high weight (text)
+  q18: 1.2, // Lifestyle preference - high weight
+  q19: 1.0, // Extracurriculars - standard
+  q20: 1.1, // Entrepreneurship interest - high weight (slider)
+  q21: 0.9, // Work-life balance - lower weight (slider)
+  q22: 0.8, // Geographic preference - lower weight
+  q23: 0.7, // Family expectations - lower weight
+  q24: 0.9, // Skill learning preference - lower weight
+  q25: 1.0  // Problem type preference - standard
 };
 
 export function calculateScores(answers: QuizAnswer[]): TraitScores {
@@ -380,6 +474,15 @@ export function calculateResult(answers: QuizAnswer[], language: 'en' | 'hi' | '
   const examStrategy = generateExamStrategy(answers, language);
   const alternativeStreams = generateAlternativeStreams(traitScores, stream, language);
   const careerInsights = generateCareerInsights(stream, traitScores, language);
+  
+  // Generate new enhanced sections
+  const whoYouAreNow = generateWhoYouAreNow(answers, traitScores, language);
+  const careerPathsWithProgression = generateCareerPathsWithProgression(stream, traitScores, answers, language);
+  
+  const q22Answer = answers.find(a => a.question_id === 'q22')?.answer as string[] || [];
+  const q17Answer = answers.find(a => a.question_id === 'q17')?.answer as string || '';
+  const collegeRecommendations = generateCollegeRecommendations(stream, q22Answer, budgetConstraint, language);
+  const lifeVisualization = generateLifeVisualization(stream, q17Answer, answers, language);
 
   return {
     strengths,
@@ -397,7 +500,12 @@ export function calculateResult(answers: QuizAnswer[], language: 'en' | 'hi' | '
     subjectRecommendations,
     examStrategy,
     alternativeStreams,
-    careerInsights
+    careerInsights,
+    // New enhanced sections
+    whoYouAreNow,
+    careerPathsWithProgression,
+    collegeRecommendations,
+    lifeVisualization
   };
 }
 

@@ -17,6 +17,8 @@ import { ARKSummary } from "@/components/ark/ARKSummary";
 import { GoalDiscoveryStep } from "@/components/ark/GoalDiscoveryStep";
 import { DeepDiveQuestionsStep } from "@/components/ark/DeepDiveQuestionsStep";
 import { AskMentarkChat } from "@/components/ark/AskMentarkChat";
+import { EnhancedTimeframeSelector } from "@/components/ark/EnhancedTimeframeSelector";
+import { EnhancedPsychologyProfile } from "@/components/ark/EnhancedPsychologyProfile";
 
 // Import data
 import { studentCategories, getCategoryById } from "@/lib/data/student-categories";
@@ -494,6 +496,8 @@ export default function StudentARKCreation() {
             goal={arkData.goalStatement}
             onGoalChange={(goal) => updateArkData({ goalStatement: goal })}
             onGoalSelect={(goal) => updateArkData({ goalStatement: goal })}
+            onboardingProfile={onboardingProfile}
+            previousAnswers={deepDiveAnswers}
           />
         );
 
@@ -512,26 +516,19 @@ export default function StudentARKCreation() {
       case 4:
         const timeframes = getTimeframesForCategory(arkData.categoryId);
         return (
-          <div className="space-y-6 sm:space-y-8">
-            <div className="text-center px-2">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
-                When Do You Want to Achieve This?
-              </h2>
-              <p className="text-base sm:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto">
-                Choose a timeframe that feels realistic for your goal and schedule.
-              </p>
-            </div>
-
-            <TimeframeSelector
-              timeframes={timeframes}
-              selectedId={arkData.timeframeId}
-              onSelect={(timeframe) => updateArkData({
-                timeframeId: timeframe.id,
-                timeframeDuration: timeframe.duration,
-                timeframeDurationWeeks: timeframe.durationWeeks
-              })}
-            />
-          </div>
+          <EnhancedTimeframeSelector
+            timeframes={timeframes}
+            selectedId={arkData.timeframeId}
+            onSelect={(timeframe) => updateArkData({
+              timeframeId: timeframe.id,
+              timeframeDuration: timeframe.duration,
+              timeframeDurationWeeks: timeframe.durationWeeks
+            })}
+            goal={arkData.goalStatement}
+            categoryId={arkData.categoryId}
+            onboardingProfile={onboardingProfile}
+            deepDiveAnswers={deepDiveAnswers}
+          />
         );
 
       case 5:
@@ -602,56 +599,16 @@ export default function StudentARKCreation() {
 
       case 6:
         return (
-          <div className="space-y-6 sm:space-y-8 max-w-2xl mx-auto px-2">
-            <div className="text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
-                How Are You Feeling?
-              </h2>
-              <p className="text-base sm:text-lg lg:text-xl text-gray-300">
-                This helps us adjust the roadmap intensity to match your current state.
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-yellow-900/20 to-orange-900/20 border-yellow-500/20 rounded-lg p-4 sm:p-6">
-              <div className="space-y-6 sm:space-y-8">
-                <PsychologySlider
-                  label="Motivation Level"
-                  description="How motivated are you to achieve this goal right now?"
-                  value={arkData.motivation}
-                  onChange={(value) => updateArkData({ motivation: value })}
-                  lowLabel="Not motivated"
-                  highLabel="Super motivated"
-                />
-
-                <PsychologySlider
-                  label="Stress Level"
-                  description="How stressed or busy are you currently?"
-                  value={arkData.stress}
-                  onChange={(value) => updateArkData({ stress: value })}
-                  lowLabel="Calm & relaxed"
-                  highLabel="Very stressed"
-                />
-
-                <PsychologySlider
-                  label="Confidence Level"
-                  description="How confident are you in your ability to achieve this?"
-                  value={arkData.confidence}
-                  onChange={(value) => updateArkData({ confidence: value })}
-                  lowLabel="Not confident"
-                  highLabel="Very confident"
-                />
-              </div>
-            </div>
-
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-blue-200 text-sm">
-                  <strong className="text-blue-300">How this helps:</strong> Higher stress means lighter workload. Higher motivation means more ambitious tasks. We&apos;ll personalize everything to your current state!
-                </div>
-              </div>
-            </div>
-          </div>
+          <EnhancedPsychologyProfile
+            motivation={arkData.motivation}
+            stress={arkData.stress}
+            confidence={arkData.confidence}
+            onMotivationChange={(value) => updateArkData({ motivation: value })}
+            onStressChange={(value) => updateArkData({ stress: value })}
+            onConfidenceChange={(value) => updateArkData({ confidence: value })}
+            goal={arkData.goalStatement}
+            onboardingProfile={onboardingProfile}
+          />
         );
 
       case 7:

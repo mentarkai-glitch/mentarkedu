@@ -99,17 +99,50 @@ export class JobMatcherAgent extends BaseAgent {
       // Save top 5 jobs as recommendations
       const topJobs = rankedJobs.slice(0, 5);
 
-      // Store job recommendations in database
-      const recommendations = topJobs.map((job, index) => ({
-        ark_id: context.arkId,
-        student_id: context.studentId,
-        job_data: job,
-        relevance_score: index + 1, // Top 5
-        recommended_at: new Date().toISOString(),
-      }));
+      // Calculate skills match for each job
+      const recommendations = topJobs.map((job, index) => {
+        const jobText = `${job.job_title} ${job.job_description || ''}`.toLowerCase();
+        const matchedSkills = skills.filter(skill => 
+          jobText.includes(skill.toLowerCase())
+        );
 
-      // TODO: Create job_recommendations table or store in metadata
-      // await supabase.from('job_recommendations').insert(recommendations);
+        return {
+          student_id: context.studentId,
+          ark_id: context.arkId,
+          job_title: job.job_title,
+          job_description: job.job_description || '',
+          job_apply_link: job.job_apply_link,
+          job_location: job.job_city 
+            ? `${job.job_city}${job.job_state ? `, ${job.job_state}` : ''}, ${job.job_country}`
+            : job.job_country || 'Unknown',
+          job_is_remote: job.job_is_remote || false,
+          job_posted_at_datetime_utc: job.job_posted_at_datetime_utc || null,
+          company_name: job.company_name || 'Unknown Company',
+          company_logo: job.company_logo || null,
+          company_url: null, // JSearch doesn't provide this
+          employment_type: job.job_employment_type || 'FULLTIME',
+          relevance_score: 100 - (index * 10), // Higher score for better matches (100, 90, 80, 70, 60)
+          skills_match_count: matchedSkills.length,
+          skills_matched: matchedSkills,
+          job_data: job, // Store full job data as JSON
+          status: 'recommended' as const,
+        };
+      });
+
+      // Store job recommendations in database
+      try {
+        const { error: insertError } = await supabase
+          .from('job_recommendations')
+          .insert(recommendations);
+
+        if (insertError) {
+          console.error('Error storing job recommendations:', insertError);
+          // Continue even if storage fails - recommendations are still returned
+        }
+      } catch (storageError: any) {
+        console.error('Error in job recommendations storage:', storageError);
+        // Continue even if storage fails
+      }
 
       const actions = [
         `Searched for ${jobResults.total_jobs} jobs`,

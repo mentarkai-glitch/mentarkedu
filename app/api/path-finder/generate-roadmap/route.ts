@@ -7,7 +7,21 @@ import { enhanceRoadmapWithResources } from "@/lib/services/roadmap-enhancer";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { stream, strengths, studyTolerance, budgetConstraint, studentName, language = 'en' } = body;
+    const { 
+      stream, 
+      strengths, 
+      studyTolerance, 
+      budgetConstraint, 
+      studentName, 
+      language = 'en',
+      traitScores,
+      personalityInsights,
+      careerVision,
+      lifestylePreference,
+      geographicPreference,
+      entrepreneurshipInterest,
+      workLifeBalance
+    } = body;
 
     if (!stream || !strengths) {
       return errorResponse("Stream and strengths are required", 400);
@@ -33,7 +47,14 @@ export async function POST(request: NextRequest) {
           studyTolerance,
           budgetConstraint,
           studentName,
-          language
+          language,
+          traitScores,
+          personalityInsights,
+          careerVision,
+          lifestylePreference,
+          geographicPreference,
+          entrepreneurshipInterest,
+          workLifeBalance
         });
 
         // Use AI orchestrator to generate roadmap
@@ -61,16 +82,26 @@ export async function POST(request: NextRequest) {
           roadmapData.model = aiResponse.model;
           roadmapData.tokens_used = aiResponse.tokens_used;
         } catch (parseError) {
+          console.error("Failed to parse AI response as JSON:", parseError);
           // If parsing fails, create structured response from text
           roadmapData = {
             title: `Your 2-Year Roadmap for ${stream}`,
             description: aiResponse.content,
             milestones: [],
             monthly_plan: generateFallbackRoadmap(stream, language),
+            career_exposure: [],
+            exam_timeline: [],
+            resources: [],
             model: aiResponse.model,
             tokens_used: aiResponse.tokens_used
           };
         }
+        
+        // Ensure all required fields exist, even if AI didn't generate them
+        if (!roadmapData.milestones) roadmapData.milestones = [];
+        if (!roadmapData.career_exposure) roadmapData.career_exposure = [];
+        if (!roadmapData.exam_timeline) roadmapData.exam_timeline = [];
+        if (!roadmapData.monthly_plan) roadmapData.monthly_plan = generateFallbackRoadmap(stream, language);
       } catch (aiError: any) {
         console.error("AI generation failed, using fallback:", aiError);
         // Fall through to fallback roadmap
@@ -86,6 +117,8 @@ export async function POST(request: NextRequest) {
         milestones: [],
         monthly_plan: generateFallbackRoadmap(stream, language),
         career_exposure: [],
+        exam_timeline: [],
+        resources: [],
         success_tips: [
           'Stay consistent with your study schedule',
           'Review and revise regularly',
@@ -94,19 +127,27 @@ export async function POST(request: NextRequest) {
         ]
       };
     }
-
-    // Enhance roadmap with resources from multiple APIs
+    
+    // Enhance roadmap with resources from multiple APIs (including ScrapingBee)
     let enhancedRoadmap = roadmapData;
     try {
       enhancedRoadmap = await enhanceRoadmapWithResources(
         roadmapData,
         stream,
-        language
+        language,
+        budgetConstraint,
+        geographicPreference
       );
     } catch (enhanceError) {
       console.error("Roadmap enhancement error (continuing with base roadmap):", enhanceError);
       // Continue with base roadmap if enhancement fails
     }
+    
+    // Ensure all required fields exist after enhancement
+    if (!enhancedRoadmap.milestones) enhancedRoadmap.milestones = [];
+    if (!enhancedRoadmap.career_exposure) enhancedRoadmap.career_exposure = [];
+    if (!enhancedRoadmap.exam_timeline) enhancedRoadmap.exam_timeline = [];
+    if (!enhancedRoadmap.resources) enhancedRoadmap.resources = [];
 
     return successResponse({
       roadmap: enhancedRoadmap,
@@ -129,7 +170,14 @@ function generateRoadmapPrompt({
   studyTolerance,
   budgetConstraint,
   studentName,
-  language
+  language,
+  traitScores,
+  personalityInsights,
+  careerVision,
+  lifestylePreference,
+  geographicPreference,
+  entrepreneurshipInterest,
+  workLifeBalance
 }: {
   stream: string;
   strengths: string[];
@@ -137,6 +185,13 @@ function generateRoadmapPrompt({
   budgetConstraint: boolean;
   studentName?: string;
   language: string;
+  traitScores?: any;
+  personalityInsights?: any;
+  careerVision?: string;
+  lifestylePreference?: string;
+  geographicPreference?: string[];
+  entrepreneurshipInterest?: number;
+  workLifeBalance?: number;
 }): string {
   const lang = language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English';
   const nameGreeting = studentName ? `Hi ${studentName}! ` : '';
@@ -176,13 +231,41 @@ function generateRoadmapPrompt({
 
   const t = translations[language as keyof typeof translations] || translations.en;
 
-  return `${t.title}
-
-${t.context}
+  // Build enhanced context
+  let enhancedContext = `${t.context}
 - ${t.stream}
 - ${t.strengths}
 - ${t.study}
-- ${t.budget}
+- ${t.budget}`;
+
+  if (personalityInsights) {
+    enhancedContext += `\n- Personality Type: ${personalityInsights.type || 'Not specified'}`;
+    enhancedContext += `\n- Key Strengths: ${personalityInsights.strengths?.join(', ') || 'Not specified'}`;
+  }
+
+  if (careerVision) {
+    enhancedContext += `\n- 10-Year Vision: ${careerVision}`;
+  }
+
+  if (lifestylePreference) {
+    enhancedContext += `\n- Lifestyle Preference: ${lifestylePreference}`;
+  }
+
+  if (geographicPreference && geographicPreference.length > 0) {
+    enhancedContext += `\n- Preferred Locations: ${geographicPreference.join(', ')}`;
+  }
+
+  if (entrepreneurshipInterest !== undefined) {
+    enhancedContext += `\n- Entrepreneurship Interest: ${entrepreneurshipInterest}/10`;
+  }
+
+  if (workLifeBalance !== undefined) {
+    enhancedContext += `\n- Work-Life Balance Importance: ${workLifeBalance}/10`;
+  }
+
+  return `${t.title}
+
+${enhancedContext}
 
 ${t.requirement}
 

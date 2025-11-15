@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   ArrowRight,
   ArrowLeft,
@@ -258,17 +259,18 @@ export default function PathFinderPage() {
   const handleMultiSelect = (questionId: string, option: string) => {
     const currentAnswer = getCurrentAnswer(questionId);
     const selectedOptions = Array.isArray(currentAnswer) ? currentAnswer : [];
+    const maxSelections = (questionId === 'q8') ? 3 : 999; // q8 has max 3, others unlimited
     
     if (selectedOptions.includes(option)) {
       // Remove if already selected
       const newSelection = selectedOptions.filter(o => o !== option);
       handleAnswer(questionId, newSelection.length > 0 ? newSelection : []);
     } else {
-      // Add if not selected (max 3)
-      if (selectedOptions.length < 3) {
+      // Add if not selected
+      if (selectedOptions.length < maxSelections) {
         handleAnswer(questionId, [...selectedOptions, option]);
       } else {
-        toast.info('You can select maximum 3 subjects');
+        toast.info(`You can select maximum ${maxSelections} options`);
       }
     }
   };
@@ -323,6 +325,13 @@ export default function PathFinderPage() {
         language
       });
 
+      // Extract additional data from answers
+      const careerVisionAnswer = answers.find(a => a.question_id === 'q17')?.answer as string | undefined;
+      const lifestyleAnswer = answers.find(a => a.question_id === 'q18')?.answer as string | undefined;
+      const geographicAnswer = answers.find(a => a.question_id === 'q22')?.answer as string[] | undefined;
+      const entrepreneurshipAnswer = answers.find(a => a.question_id === 'q20')?.answer as number | undefined;
+      const workLifeBalanceAnswer = answers.find(a => a.question_id === 'q21')?.answer as number | undefined;
+
       const response = await fetch('/api/path-finder/generate-roadmap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -332,7 +341,14 @@ export default function PathFinderPage() {
           studyTolerance: result.studyTolerance,
           budgetConstraint: result.budgetConstraint,
           studentName: studentName || undefined,
-          language
+          language,
+          traitScores: result.traitScores,
+          personalityInsights: result.personalityInsights,
+          careerVision: careerVisionAnswer,
+          lifestylePreference: lifestyleAnswer,
+          geographicPreference: geographicAnswer,
+          entrepreneurshipInterest: entrepreneurshipAnswer,
+          workLifeBalance: workLifeBalanceAnswer
         })
       });
 
@@ -710,13 +726,22 @@ export default function PathFinderPage() {
 
                 {pathFinderQuestions[currentQuestion].type === 'multi_select' && (
                   <div className="space-y-3">
-                    <p className="text-sm text-slate-400 mb-2">Select up to 3 subjects</p>
+                    <p className="text-sm text-slate-400 mb-2">
+                      {pathFinderQuestions[currentQuestion].id === 'q8' 
+                        ? 'Select up to 3 subjects'
+                        : pathFinderQuestions[currentQuestion].id === 'q13' || pathFinderQuestions[currentQuestion].id === 'q14' || pathFinderQuestions[currentQuestion].id === 'q15' || pathFinderQuestions[currentQuestion].id === 'q19' || pathFinderQuestions[currentQuestion].id === 'q22' || pathFinderQuestions[currentQuestion].id === 'q24'
+                        ? 'Select all that apply'
+                        : 'Select up to 3'}
+                    </p>
                     {pathFinderQuestions[currentQuestion].options?.[language].map((option, idx) => {
                       const questionId = pathFinderQuestions[currentQuestion].id;
                       const currentAnswer = getCurrentAnswer(questionId);
                       const selectedOptions = Array.isArray(currentAnswer) ? currentAnswer : [];
                       const isSelected = selectedOptions.includes(option);
-                      const isDisabled = !isSelected && selectedOptions.length >= 3;
+                      const maxSelections = (questionId === 'q8' || questionId === 'q13' || questionId === 'q14' || questionId === 'q15' || questionId === 'q19' || questionId === 'q22' || questionId === 'q24') 
+                        ? (questionId === 'q8' ? 3 : 999) 
+                        : 3;
+                      const isDisabled = !isSelected && selectedOptions.length >= maxSelections;
                       
                       return (
                         <button
@@ -740,11 +765,26 @@ export default function PathFinderPage() {
                         </button>
                       );
                     })}
-                    {Array.isArray(getCurrentAnswer(pathFinderQuestions[currentQuestion].id)) && (
+                    {Array.isArray(getCurrentAnswer(pathFinderQuestions[currentQuestion].id)) && pathFinderQuestions[currentQuestion].id === 'q8' && (
                       <p className="text-xs text-slate-500 mt-2">
                         Selected: {(getCurrentAnswer(pathFinderQuestions[currentQuestion].id) as string[]).length} / 3
                       </p>
                     )}
+                  </div>
+                )}
+
+                {pathFinderQuestions[currentQuestion].type === 'text' && (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={(getCurrentAnswer(pathFinderQuestions[currentQuestion].id) as string) || ''}
+                      onChange={(e) => handleAnswer(pathFinderQuestions[currentQuestion].id, e.target.value)}
+                      placeholder={pathFinderQuestions[currentQuestion].placeholder?.[language] || 'Type your answer here...'}
+                      className="min-h-[120px] bg-slate-800 border-slate-700 text-slate-200"
+                      rows={5}
+                    />
+                    <p className="text-xs text-slate-500">
+                      Describe your vision in detail. This helps us create a more personalized roadmap.
+                    </p>
                   </div>
                 )}
 
@@ -1147,6 +1187,472 @@ export default function PathFinderPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Who You Are Now - Personality Profile & Passion Map */}
+              {result.whoYouAreNow && (
+                <Card className="border-slate-700/70 bg-slate-900/40">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-pink-300" />
+                      Who You Are Now
+                    </CardTitle>
+                    <CardDescription>Your current passions, strengths, and interests</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Summary */}
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20">
+                      <p className="text-slate-300 leading-relaxed">{result.whoYouAreNow.summary}</p>
+                    </div>
+
+                    {/* Passions Map */}
+                    <div>
+                      <h5 className="font-semibold text-pink-300 mb-3 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        What Makes You Feel Alive
+                      </h5>
+                      <div className="flex flex-wrap gap-2">
+                        {result.whoYouAreNow.passions.map((passion, idx) => (
+                          <Badge key={idx} className="bg-pink-500/20 text-pink-300 border-pink-500/30 px-3 py-1">
+                            {passion}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Natural Abilities */}
+                    <div>
+                      <h5 className="font-semibold text-yellow-300 mb-3 flex items-center gap-2">
+                        <Award className="h-4 w-4" />
+                        Natural Abilities
+                      </h5>
+                      <div className="flex flex-wrap gap-2">
+                        {result.whoYouAreNow.naturalAbilities.map((ability, idx) => (
+                          <Badge key={idx} className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 px-3 py-1">
+                            {ability}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Flow Activities */}
+                    <div>
+                      <h5 className="font-semibold text-cyan-300 mb-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Activities You Lose Track of Time Doing
+                      </h5>
+                      <div className="flex flex-wrap gap-2">
+                        {result.whoYouAreNow.flowActivities.map((activity, idx) => (
+                          <Badge key={idx} className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 px-3 py-1">
+                            {activity}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Current Strengths & Interests Grid */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <h5 className="font-semibold text-green-300 mb-3 flex items-center gap-2">
+                          <Target className="h-4 w-4" />
+                          Current Strengths
+                        </h5>
+                        <div className="space-y-2">
+                          {result.whoYouAreNow.currentStrengths.map((strength, idx) => (
+                            <div key={idx} className="flex items-center gap-2 p-2 rounded bg-green-500/10 border border-green-500/20">
+                              <CheckCircle2 className="h-4 w-4 text-green-400" />
+                              <span className="text-sm text-slate-300">{strength}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h5 className="font-semibold text-blue-300 mb-3 flex items-center gap-2">
+                          <BookOpen className="h-4 w-4" />
+                          Subject Interests
+                        </h5>
+                        <div className="flex flex-wrap gap-2">
+                          {result.whoYouAreNow.interests.map((interest, idx) => (
+                            <Badge key={idx} className="bg-blue-500/20 text-blue-300 border-blue-500/30 px-3 py-1">
+                              {interest}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Values */}
+                    {result.whoYouAreNow.values.length > 0 && (
+                      <div>
+                        <h5 className="font-semibold text-purple-300 mb-3 flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4" />
+                          What Matters to You
+                        </h5>
+                        <div className="flex flex-wrap gap-2">
+                          {result.whoYouAreNow.values.map((value, idx) => (
+                            <Badge key={idx} className="bg-purple-500/20 text-purple-300 border-purple-500/30 px-3 py-1">
+                              {value}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Career Paths with Life Progression */}
+              {result.careerPathsWithProgression && result.careerPathsWithProgression.length > 0 && (
+                <Card className="border-slate-700/70 bg-slate-900/40">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Rocket className="h-5 w-5 text-orange-300" />
+                      Your Career Path with Life Progression
+                    </CardTitle>
+                    <CardDescription>See how your career will evolve over the next 10 years</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {result.careerPathsWithProgression.map((careerPath, pathIdx) => (
+                      <div key={pathIdx} className="space-y-4">
+                        {/* Career Header */}
+                        <div className="p-4 rounded-lg bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-500/20">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xl font-bold text-orange-300">{careerPath.careerName}</h4>
+                            <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">
+                              {careerPath.fitScore}% Fit
+                            </Badge>
+                          </div>
+                          <p className="text-slate-300 text-sm">{careerPath.description}</p>
+                        </div>
+
+                        {/* Career Progression Timeline */}
+                        <div className="relative">
+                          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-500/50 via-yellow-500/50 to-teal-500/50"></div>
+                          <div className="space-y-6 pl-12">
+                            {careerPath.progression.map((stage, stageIdx) => (
+                              <div key={stageIdx} className="relative">
+                                <div className="absolute -left-9 top-1 w-4 h-4 rounded-full bg-orange-500 border-2 border-slate-900"></div>
+                                <Card className="border-slate-700/70 bg-slate-800/50">
+                                  <CardHeader className="pb-3">
+                                    <div className="flex items-center justify-between">
+                                      <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">
+                                        {stage.stage}
+                                      </Badge>
+                                      {stage.salary && (
+                                        <Badge variant="outline" className="border-green-500/30 text-green-300">
+                                          {stage.salary}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <h5 className="text-lg font-bold text-slate-200 mt-2">{stage.role}</h5>
+                                  </CardHeader>
+                                  <CardContent className="space-y-3">
+                                    <div>
+                                      <h6 className="text-xs font-semibold text-slate-400 mb-1">Responsibilities:</h6>
+                                      <ul className="space-y-1">
+                                        {stage.responsibilities.map((resp, respIdx) => (
+                                          <li key={respIdx} className="text-sm text-slate-300 flex items-start gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 flex-shrink-0"></span>
+                                            <span>{resp}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <h6 className="text-xs font-semibold text-slate-400 mb-1">Skills to Build:</h6>
+                                      <div className="flex flex-wrap gap-2">
+                                        {stage.skills.map((skill, skillIdx) => (
+                                          <Badge key={skillIdx} variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                                            {skill}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div className="p-2 rounded bg-slate-700/50 border border-slate-600">
+                                      <p className="text-xs text-slate-400">Lifestyle: <span className="text-slate-300">{stage.lifestyle}</span></p>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Key Milestones */}
+                        <div>
+                          <h5 className="font-semibold text-teal-300 mb-3 flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Key Milestones
+                          </h5>
+                          <div className="grid md:grid-cols-2 gap-3">
+                            {careerPath.milestones.map((milestone, mileIdx) => (
+                              <div key={mileIdx} className="p-3 rounded-lg border border-teal-500/30 bg-teal-500/5">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/30 text-xs">
+                                    Year {milestone.year}
+                                  </Badge>
+                                  <span className="font-semibold text-teal-300 text-sm">{milestone.milestone}</span>
+                                </div>
+                                <p className="text-xs text-slate-400">{milestone.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* College Recommendations */}
+              {result.collegeRecommendations && result.collegeRecommendations.length > 0 && (
+                <Card className="border-slate-700/70 bg-slate-900/40">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5 text-blue-300" />
+                      Recommended Colleges for You
+                    </CardTitle>
+                    <CardDescription>Top colleges that match your profile and preferences</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {result.collegeRecommendations.map((college, idx) => (
+                        <Card key={idx} className="border-slate-700/70 bg-slate-800/50">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h5 className="text-lg font-bold text-slate-200 mb-1">{college.name}</h5>
+                                <p className="text-sm text-slate-400 flex items-center gap-1">
+                                  <Globe className="h-3 w-3" />
+                                  {college.location}
+                                </p>
+                              </div>
+                              {college.rank && (
+                                <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                                  Rank #{college.rank}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <span key={i} className={`text-sm ${i < Math.floor(college.rating) ? 'text-yellow-400' : 'text-slate-600'}`}>
+                                    ★
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="text-xs text-slate-400">({college.rating})</span>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div>
+                              <p className="text-xs text-slate-400 mb-1">Fees:</p>
+                              <p className="text-sm font-semibold text-slate-200">{college.fees}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400 mb-1">Admission Requirements:</p>
+                              <ul className="space-y-1">
+                                {college.admissionRequirements.map((req, reqIdx) => (
+                                  <li key={reqIdx} className="text-xs text-slate-300 flex items-start gap-2">
+                                    <span className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></span>
+                                    <span>{req}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            {college.placementStats && (
+                              <div className="p-2 rounded bg-green-500/10 border border-green-500/20">
+                                <p className="text-xs text-slate-400 mb-1">Average Package:</p>
+                                <p className="text-sm font-bold text-green-300">{college.placementStats.averagePackage}</p>
+                                {college.placementStats.topRecruiters.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs text-slate-400 mb-1">Top Recruiters:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {college.placementStats.topRecruiters.slice(0, 3).map((recruiter, recIdx) => (
+                                        <Badge key={recIdx} variant="outline" className="border-green-500/30 text-green-300 text-xs">
+                                          {recruiter}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs text-slate-400 mb-1">Highlights:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {college.highlights.map((highlight, highIdx) => (
+                                  <Badge key={highIdx} className="bg-slate-700 text-slate-300 border-slate-600 text-xs">
+                                    {highlight}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
+                              <p className="text-xs text-slate-400 mb-1">Why This Fits You:</p>
+                              <p className="text-xs text-blue-300">{college.whyFit}</p>
+                            </div>
+                            {college.url && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => window.open(college.url, '_blank')}
+                              >
+                                <ExternalLink className="h-3 w-3 mr-2" />
+                                Visit College Website
+                              </Button>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Life Visualization */}
+              {result.lifeVisualization && (
+                <Card className="border-slate-700/70 bg-slate-900/40">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-300" />
+                      Your Life in 5 & 10 Years
+                    </CardTitle>
+                    <CardDescription>Visualize your future based on your choices</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Vision Statement */}
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                      <h5 className="font-semibold text-purple-300 mb-2">Your Vision</h5>
+                      <p className="text-slate-300 leading-relaxed">{result.lifeVisualization.vision}</p>
+                    </div>
+
+                    {/* Year 5 & Year 10 Side by Side */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {/* Year 5 */}
+                      <Card className="border-purple-500/30 bg-purple-500/5">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-lg font-bold text-purple-300">In 5 Years</h5>
+                            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                              Age {result.lifeVisualization.year5.age}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Role:</p>
+                            <p className="text-sm font-semibold text-slate-200">{result.lifeVisualization.year5.role}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Location:</p>
+                            <p className="text-sm text-slate-300 flex items-center gap-1">
+                              <Globe className="h-3 w-3" />
+                              {result.lifeVisualization.year5.location}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Lifestyle:</p>
+                            <p className="text-sm text-slate-300">{result.lifeVisualization.year5.lifestyle}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Achievements:</p>
+                            <ul className="space-y-1">
+                              {result.lifeVisualization.year5.achievements.map((achievement, idx) => (
+                                <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
+                                  <CheckCircle2 className="h-3 w-3 text-purple-400 mt-0.5 flex-shrink-0" />
+                                  <span>{achievement}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Daily Routine:</p>
+                            <div className="space-y-1">
+                              {result.lifeVisualization.year5.dailyRoutine.map((routine, idx) => (
+                                <div key={idx} className="text-xs text-slate-400 p-1.5 rounded bg-slate-800/50">
+                                  {routine}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Year 10 */}
+                      <Card className="border-pink-500/30 bg-pink-500/5">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-lg font-bold text-pink-300">In 10 Years</h5>
+                            <Badge className="bg-pink-500/20 text-pink-300 border-pink-500/30">
+                              Age {result.lifeVisualization.year10.age}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Role:</p>
+                            <p className="text-sm font-semibold text-slate-200">{result.lifeVisualization.year10.role}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Location:</p>
+                            <p className="text-sm text-slate-300 flex items-center gap-1">
+                              <Globe className="h-3 w-3" />
+                              {result.lifeVisualization.year10.location}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Lifestyle:</p>
+                            <p className="text-sm text-slate-300">{result.lifeVisualization.year10.lifestyle}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Achievements:</p>
+                            <ul className="space-y-1">
+                              {result.lifeVisualization.year10.achievements.map((achievement, idx) => (
+                                <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
+                                  <CheckCircle2 className="h-3 w-3 text-pink-400 mt-0.5 flex-shrink-0" />
+                                  <span>{achievement}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="p-2 rounded bg-pink-500/10 border border-pink-500/20">
+                            <p className="text-xs text-slate-400 mb-1">Your Impact:</p>
+                            <p className="text-xs text-pink-300">{result.lifeVisualization.year10.impact}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Key Moments Timeline */}
+                    <div>
+                      <h5 className="font-semibold text-teal-300 mb-3 flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Key Moments in Your Journey
+                      </h5>
+                      <div className="relative">
+                        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-teal-500/50 via-blue-500/50 to-purple-500/50"></div>
+                        <div className="space-y-4 pl-12">
+                          {result.lifeVisualization.keyMoments.map((moment, idx) => (
+                            <div key={idx} className="relative">
+                              <div className="absolute -left-9 top-1 w-4 h-4 rounded-full bg-teal-500 border-2 border-slate-900"></div>
+                              <div className="p-3 rounded-lg border border-teal-500/30 bg-teal-500/5">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/30 text-xs">
+                                    Year {moment.year}
+                                  </Badge>
+                                  <span className="font-semibold text-teal-300 text-sm">{moment.moment}</span>
+                                </div>
+                                <p className="text-xs text-slate-400">{moment.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Roadmap Teaser */}
@@ -1254,9 +1760,24 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
   
   if (!roadmap) return null;
 
+  // Debug: Log roadmap structure
+  React.useEffect(() => {
+    console.log('Roadmap data structure:', {
+      hasMilestones: !!roadmap.milestones,
+      milestonesLength: roadmap.milestones?.length || 0,
+      hasCareerExposure: !!roadmap.career_exposure,
+      careerExposureLength: roadmap.career_exposure?.length || 0,
+      hasExamTimeline: !!roadmap.exam_timeline,
+      examTimelineLength: roadmap.exam_timeline?.length || 0,
+      hasResources: !!roadmap.resources,
+      resourcesLength: roadmap.resources?.length || 0,
+      roadmapKeys: Object.keys(roadmap)
+    });
+  }, [roadmap]);
+
   // Collect all resources from milestones
   const allResources: any[] = [];
-  if (roadmap.milestones) {
+  if (roadmap.milestones && Array.isArray(roadmap.milestones)) {
     roadmap.milestones.forEach((milestone: any) => {
       if (milestone.resources && Array.isArray(milestone.resources)) {
         allResources.push(...milestone.resources);
@@ -1309,7 +1830,20 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
 
   // Parse monthly plan into Year 1 and Year 2
   const parseYearlyPlan = () => {
-    if (!roadmap.monthly_plan) return { year1: [], year2: [] };
+    if (!roadmap.monthly_plan) {
+      // Generate fallback plan from milestones if available
+      if (roadmap.milestones && Array.isArray(roadmap.milestones) && roadmap.milestones.length > 0) {
+        const mid = Math.ceil(roadmap.milestones.length / 2);
+        const year1 = roadmap.milestones.slice(0, mid).map((m: any) => 
+          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
+        );
+        const year2 = roadmap.milestones.slice(mid).map((m: any) => 
+          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
+        );
+        return { year1, year2 };
+      }
+      return { year1: [], year2: [] };
+    }
     
     if (typeof roadmap.monthly_plan === 'object' && !Array.isArray(roadmap.monthly_plan)) {
       const year1: string[] = [];
@@ -1325,6 +1859,17 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
         }
       });
       
+      // If still empty, try to generate from milestones
+      if (year1.length === 0 && year2.length === 0 && roadmap.milestones && Array.isArray(roadmap.milestones)) {
+        const mid = Math.ceil(roadmap.milestones.length / 2);
+        year1.push(...roadmap.milestones.slice(0, mid).map((m: any) => 
+          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
+        ));
+        year2.push(...roadmap.milestones.slice(mid).map((m: any) => 
+          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
+        ));
+      }
+      
       return { year1, year2 };
     }
     
@@ -1335,6 +1880,18 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
         year1: roadmap.monthly_plan.slice(0, mid),
         year2: roadmap.monthly_plan.slice(mid)
       };
+    }
+    
+    // Final fallback: generate from milestones
+    if (roadmap.milestones && Array.isArray(roadmap.milestones) && roadmap.milestones.length > 0) {
+      const mid = Math.ceil(roadmap.milestones.length / 2);
+      const year1 = roadmap.milestones.slice(0, mid).map((m: any) => 
+        typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
+      );
+      const year2 = roadmap.milestones.slice(mid).map((m: any) => 
+        typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
+      );
+      return { year1, year2 };
     }
     
     return { year1: [], year2: [] };
@@ -1416,9 +1973,21 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                               <span className="line-clamp-2">{item}</span>
                             </li>
                           ))}
+                          {year1.length > 6 && (
+                            <li className="text-xs text-slate-500 italic">
+                              +{year1.length - 6} more items
+                            </li>
+                          )}
                         </ul>
                       ) : (
-                        <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
+                        <div className="space-y-2 text-xs text-slate-400">
+                          <p className="italic">Generating personalized study plan...</p>
+                          {roadmap.milestones && roadmap.milestones.length > 0 && (
+                            <p className="text-slate-500">
+                              Check the Milestones tab for detailed roadmap
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -1433,9 +2002,21 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                               <span className="line-clamp-2">{item}</span>
                             </li>
                           ))}
+                          {year2.length > 6 && (
+                            <li className="text-xs text-slate-500 italic">
+                              +{year2.length - 6} more items
+                            </li>
+                          )}
                         </ul>
                       ) : (
-                        <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
+                        <div className="space-y-2 text-xs text-slate-400">
+                          <p className="italic">Generating personalized study plan...</p>
+                          {roadmap.milestones && roadmap.milestones.length > 0 && (
+                            <p className="text-slate-500">
+                              Check the Milestones tab for detailed roadmap
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1566,7 +2147,14 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
+                      <div className="space-y-2 text-xs text-slate-400">
+                        <p className="italic">Generating personalized study plan...</p>
+                        {roadmap.milestones && roadmap.milestones.length > 0 && (
+                          <p className="text-slate-500">
+                            Check the Milestones tab for detailed roadmap
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -1583,7 +2171,14 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
+                      <div className="space-y-2 text-xs text-slate-400">
+                        <p className="italic">Generating personalized study plan...</p>
+                        {roadmap.milestones && roadmap.milestones.length > 0 && (
+                          <p className="text-slate-500">
+                            Check the Milestones tab for detailed roadmap
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1596,21 +2191,21 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
         {activeCategory === 'resources' && (
           <div className="space-y-6">
             <Card className="border-slate-700/70 bg-slate-900/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-cyan-400" />
-                  <h4 className="text-lg font-bold">Recommended Resources</h4>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-cyan-400" />
+                    <h4 className="text-lg font-bold">Recommended Resources</h4>
+                  </div>
+                  {allResources.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {allResources.length} total
+                    </Badge>
+                  )}
                 </div>
-                {allResources.length > 0 && (
-                  <Badge variant="outline" className="text-xs">
-                    {allResources.length} total
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              {allResources.length > 0 ? (
+              </CardHeader>
+              <CardContent className="p-4">
+                {allResources.length > 0 ? (
                 <div className="space-y-3 max-h-[600px] overflow-y-auto">
                   {Object.entries(categorizedAllResources).map(([category, resources]) => {
                     if (resources.length === 0) return null;
@@ -1664,14 +2259,15 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                     );
                   })}
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <BookOpen className="h-8 w-8 text-slate-600 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500">Resources will be added here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <div className="text-center py-8">
+                    <BookOpen className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500">Resources will be added here</p>
+                    <p className="text-xs text-slate-600 mt-2">Resources are being fetched from external APIs...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Career News */}
             {roadmap.career_news && roadmap.career_news.length > 0 && (

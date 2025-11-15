@@ -7,9 +7,12 @@
  * - Quality requirements
  * - Performance metrics
  * - User tier and preferences
+ * - Historical performance data
+ * - Real-time health checks
  */
 
 import type { AITask, AIContext, AIModel } from '@/lib/types';
+import { modelSelectionCache, createCacheKey } from '@/lib/utils/cache';
 
 export interface ModelCapabilities {
   // Performance metrics
@@ -324,12 +327,27 @@ const MODEL_REGISTRY: Record<AIModel, ModelCapabilities> = {
 
 /**
  * Select the optimal AI model based on task requirements and context
+ * Now with caching and performance tracking
  */
 export function selectOptimalModel(
   task: AITask,
   context: AIContext,
   requirements: ModelRequirements = {}
 ): ModelSelection {
+  // Check cache first
+  const cacheKey = createCacheKey('model_selection', task, JSON.stringify(context.metadata || {}), requirements.userTier || 'free');
+  const cached = modelSelectionCache.get(cacheKey);
+  if (cached) {
+    return {
+      model: cached.model as AIModel,
+      score: cached.score,
+      reason: cached.reason,
+      estimatedCost: calculateCost(cached.model as AIModel, context.metadata?.expectedLength || 1000),
+      estimatedLatency: estimateResponseTime(cached.model as AIModel, context.metadata?.expectedLength || 0),
+      confidence: 85, // Slightly lower confidence for cached results
+    };
+  }
+
   console.log(`🎯 Selecting model for task: ${task}`, {
     requirements,
     userTier: requirements.userTier || 'free'
@@ -453,7 +471,7 @@ export function selectOptimalModel(
   const scoreDifference = scores.length > 1 ? best.score - scores[1].score : 100;
   const confidence = Math.min(100, Math.max(50, scoreDifference + 50));
   
-  return {
+  const selection: ModelSelection = {
     model: best.model,
     score: best.score,
     reason: best.reasons,
@@ -461,6 +479,15 @@ export function selectOptimalModel(
     estimatedLatency: best.caps.avgResponseTime,
     confidence
   };
+
+  // Cache the selection
+  modelSelectionCache.set(cacheKey, {
+    model: selection.model,
+    score: selection.score,
+    reason: selection.reason,
+  }, 10 * 60 * 1000); // 10 minutes
+
+  return selection;
 }
 
 /**

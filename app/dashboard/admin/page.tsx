@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Users, 
   BarChart3, 
@@ -23,8 +24,16 @@ import {
   UserPlus,
   Plus,
   FileText,
-  Home
+  Home,
+  X
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Import components
@@ -105,6 +114,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [showAddTeacher, setShowAddTeacher] = useState(false);
   const [showPlanChange, setShowPlanChange] = useState(false);
+  const [showAssignBatch, setShowAssignBatch] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+  const [availableBatches, setAvailableBatches] = useState<string[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState("");
 
   useEffect(() => {
     fetchAnalytics();
@@ -148,6 +161,61 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to fetch teachers:', error);
+    }
+  };
+
+  const fetchAvailableBatches = async () => {
+    try {
+      const response = await fetch('/api/teacher/students');
+      const data = await response.json();
+      if (data.success && data.data?.students) {
+        // Get unique batches from students
+        const batches = new Set<string>();
+        data.data.students.forEach((student: any) => {
+          if (student.batch) {
+            batches.add(student.batch);
+          }
+        });
+        setAvailableBatches(Array.from(batches).sort());
+      }
+    } catch (error) {
+      console.error('Failed to fetch batches:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (showAssignBatch) {
+      fetchAvailableBatches();
+    }
+  }, [showAssignBatch]);
+
+  const handleAssignBatch = async () => {
+    if (!selectedTeacherId || !selectedBatch) {
+      toast.error('Please select a batch');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/teachers/${selectedTeacherId}/assign-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batch: selectedBatch }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(data.data.message || 'Batch assigned successfully');
+        fetchTeachers();
+        setShowAssignBatch(false);
+        setSelectedTeacherId(null);
+        setSelectedBatch("");
+      } else {
+        toast.error(data.error || 'Failed to assign batch');
+      }
+    } catch (error: any) {
+      console.error('Failed to assign batch:', error);
+      toast.error(error.message || 'Failed to assign batch');
     }
   };
 
@@ -627,10 +695,65 @@ export default function AdminDashboard() {
               teachers={teachers}
               onAddTeacher={() => setShowAddTeacher(true)}
               onAssignBatch={(teacherId) => {
-                // TODO: Open assign batch modal
-                console.log('Assign batch to teacher:', teacherId);
+                setSelectedTeacherId(teacherId);
+                setShowAssignBatch(true);
               }}
             />
+
+            {/* Assign Batch Dialog */}
+            <Dialog open={showAssignBatch} onOpenChange={setShowAssignBatch}>
+              <DialogContent className="bg-slate-800 border-slate-700 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-white">Assign Batch to Teacher</DialogTitle>
+                  <DialogDescription className="text-slate-400">
+                    Select a batch to assign to this teacher
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label className="text-white mb-2 block">Select Batch</Label>
+                    <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+                      <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                        <SelectValue placeholder="Choose a batch..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-700 border-slate-600">
+                        {availableBatches.length > 0 ? (
+                          availableBatches.map((batch) => (
+                            <SelectItem key={batch} value={batch} className="text-white focus:bg-slate-600">
+                              {batch}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled className="text-slate-400">
+                            No batches available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowAssignBatch(false);
+                      setSelectedTeacherId(null);
+                      setSelectedBatch("");
+                    }}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAssignBatch}
+                    disabled={!selectedBatch}
+                    className="bg-cyan-500 hover:bg-cyan-600"
+                  >
+                    Assign Batch
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Templates Tab */}
