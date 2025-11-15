@@ -175,7 +175,10 @@ export function determineStream(
     for (const conditionSet of conditions) {
       let matches = true;
       
-      for (const condition of conditionSet) {
+      // Ensure conditionSet is an array
+      const conditionArray = Array.isArray(conditionSet) ? conditionSet : [conditionSet];
+      
+      for (const condition of conditionArray) {
         if ('trait' in condition) {
           const trait = condition.trait as keyof TraitScores;
           const min = condition.min || 0;

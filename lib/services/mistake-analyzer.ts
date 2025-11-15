@@ -220,10 +220,10 @@ export async function analyzeMistakePatterns(
       (typeFrequency[pattern.mistake_type] || 0) + pattern.frequency;
   });
 
-  const mostCommonType = Object.entries(typeFrequency).reduce(
+  const mostCommonType = (Object.entries(typeFrequency) as [MistakeType, number][]).reduce(
     (max, [type, freq]) => (freq > (typeFrequency[max] || 0) ? type : max),
     patterns[0].mistake_type
-  ) as MistakeType;
+  );
 
   // Find most common topic
   const topicFrequency: Record<string, number> = {};

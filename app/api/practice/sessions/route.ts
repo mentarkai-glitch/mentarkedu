@@ -125,7 +125,12 @@ export async function POST(request: NextRequest) {
     } else if (topic) {
       // Generate questions for topic (enhanced implementation needed)
       const generated = await studyAnalyzerService.generatePracticeQuestions(
-        [{ topic, subject, question: `Generate ${count} questions about ${topic}` }],
+        [{ 
+          topic, 
+          question: `Generate ${count} questions about ${topic}`,
+          attemptedAnswer: "",
+          correctAnswer: ""
+        }],
         count
       );
 

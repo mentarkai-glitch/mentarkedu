@@ -83,6 +83,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!result.success) {
+      return errorResponse(result.error || "Failed to process document", 500);
+    }
+
     // Store document in Supabase (optional)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("documents")
@@ -91,14 +95,18 @@ export async function POST(request: NextRequest) {
         upsert: false,
       });
 
+    // Handle both parseFormFields and extractTextFromDocument return types
+    const extractedText = 'text' in result ? result.text : '';
+    const formFields = 'fields' in result ? result.fields : {};
+
     return successResponse({
       success: true,
       filename: file.name,
       size: file.size,
       mimeType: file.type,
-      extracted_text: result.extracted_text || '',
-      form_fields: result.form_fields || {},
-      entities: result.entities || [],
+      extracted_text: extractedText || '',
+      form_fields: formFields || {},
+      entities: [],
       storage_url: uploadData?.path || null,
       processed_at: new Date().toISOString(),
     });

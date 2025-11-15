@@ -5,7 +5,7 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 // POST: Join a team project
 export async function POST(
   request: NextRequest,
-  { params }: { params: { teamId: string } }
+  { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -15,7 +15,7 @@ export async function POST(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { teamId } = params;
+    const { teamId } = await params;
 
     // Check if team exists
     const { data: team, error: teamError } = await supabase
@@ -66,7 +66,7 @@ export async function POST(
 // DELETE: Leave a team project
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { teamId: string } }
+  { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -76,7 +76,7 @@ export async function DELETE(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { teamId } = params;
+    const { teamId } = await params;
 
     // Check if user is a member
     const { data: userMember, error: userMemberError } = await supabase

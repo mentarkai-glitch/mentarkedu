@@ -5,7 +5,7 @@ import { successResponse, errorResponse } from "@/lib/utils/api-helpers";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { paperId: string } }
+  { params }: { params: Promise<{ paperId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -15,7 +15,7 @@ export async function GET(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { paperId } = params;
+    const { paperId } = await params;
 
     if (!paperId) {
       return errorResponse("Paper ID is required", 400);

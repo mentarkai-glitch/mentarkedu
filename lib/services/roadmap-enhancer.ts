@@ -205,7 +205,7 @@ export async function enhanceRoadmapWithResources(
     roadmap.milestones.forEach((milestone: any) => {
       if (milestone.title) {
         const words = milestone.title.toLowerCase().split(/\s+/);
-        topics.push(...words.filter(w => w.length > 4));
+        topics.push(...words.filter((w: string) => w.length > 4));
       }
     });
   }

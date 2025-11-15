@@ -382,15 +382,15 @@ export function generateCareerInsights(
         opportunities: ['IT sector', 'Engineering', 'Data Science', 'Research']
       },
       hi: {
-        growthPotential: 'उच्च',
+        growthPotential: 'High' as const,
         salaryRange: '₹6-25 LPA (प्रवेश से वरिष्ठ)',
-        jobMarket: 'बढ़ रहा है',
+        jobMarket: 'Growing' as const,
         opportunities: ['आईटी क्षेत्र', 'इंजीनियरिंग', 'डेटा साइंस', 'अनुसंधान']
       },
       mr: {
-        growthPotential: 'उच्च',
+        growthPotential: 'High' as const,
         salaryRange: '₹6-25 LPA (प्रवेश ते वरिष्ठ)',
-        jobMarket: 'वाढत आहे',
+        jobMarket: 'Growing' as const,
         opportunities: ['आयटी क्षेत्र', 'अभियांत्रिकी', 'डेटा विज्ञान', 'संशोधन']
       }
     },
@@ -402,15 +402,15 @@ export function generateCareerInsights(
         opportunities: ['Healthcare', 'Pharmaceuticals', 'Biotechnology', 'Research']
       },
       hi: {
-        growthPotential: 'उच्च',
+        growthPotential: 'High' as const,
         salaryRange: '₹5-30 LPA (प्रवेश से वरिष्ठ)',
-        jobMarket: 'स्थिर',
+        jobMarket: 'Stable' as const,
         opportunities: ['स्वास्थ्य सेवा', 'फार्मास्युटिकल्स', 'बायोटेक्नोलॉजी', 'अनुसंधान']
       },
       mr: {
-        growthPotential: 'उच्च',
+        growthPotential: 'High' as const,
         salaryRange: '₹5-30 LPA (प्रवेश ते वरिष्ठ)',
-        jobMarket: 'स्थिर',
+        jobMarket: 'Stable' as const,
         opportunities: ['आरोग्य सेवा', 'फार्मास्युटिकल्स', 'जैवतंत्रज्ञान', 'संशोधन']
       }
     },
@@ -422,15 +422,15 @@ export function generateCareerInsights(
         opportunities: ['Finance', 'Accounting', 'Business Management', 'Consulting']
       },
       hi: {
-        growthPotential: 'उच्च',
+        growthPotential: 'High' as const,
         salaryRange: '₹4-20 LPA (प्रवेश से वरिष्ठ)',
-        jobMarket: 'स्थिर',
+        jobMarket: 'Stable' as const,
         opportunities: ['वित्त', 'लेखांकन', 'व्यवसाय प्रबंधन', 'परामर्श']
       },
       mr: {
-        growthPotential: 'उच्च',
+        growthPotential: 'High' as const,
         salaryRange: '₹4-20 LPA (प्रवेश ते वरिष्ठ)',
-        jobMarket: 'स्थिर',
+        jobMarket: 'Stable' as const,
         opportunities: ['वित्त', 'लेखांकन', 'व्यवसाय व्यवस्थापन', 'सल्लागार']
       }
     },
@@ -442,15 +442,15 @@ export function generateCareerInsights(
         opportunities: ['Media', 'Design', 'Education', 'Content Creation']
       },
       hi: {
-        growthPotential: 'मध्यम',
+        growthPotential: 'Medium' as const,
         salaryRange: '₹3-15 LPA (प्रवेश से वरिष्ठ)',
-        jobMarket: 'प्रतिस्पर्धी',
+        jobMarket: 'Competitive' as const,
         opportunities: ['मीडिया', 'डिज़ाइन', 'शिक्षा', 'सामग्री निर्माण']
       },
       mr: {
-        growthPotential: 'मध्यम',
+        growthPotential: 'Medium' as const,
         salaryRange: '₹3-15 LPA (प्रवेश ते वरिष्ठ)',
-        jobMarket: 'स्पर्धात्मक',
+        jobMarket: 'Competitive' as const,
         opportunities: ['मीडिया', 'डिझाइन', 'शिक्षण', 'सामग्री निर्माण']
       }
     },
@@ -462,15 +462,15 @@ export function generateCareerInsights(
         opportunities: ['IT Services', 'Hospitality', 'Retail', 'Skilled Trades']
       },
       hi: {
-        growthPotential: 'मध्यम',
+        growthPotential: 'Medium' as const,
         salaryRange: '₹3-12 LPA (प्रवेश से वरिष्ठ)',
-        jobMarket: 'बढ़ रहा है',
+        jobMarket: 'Growing' as const,
         opportunities: ['आईटी सेवाएं', 'आतिथ्य', 'खुदरा', 'कुशल व्यापार']
       },
       mr: {
-        growthPotential: 'मध्यम',
+        growthPotential: 'Medium' as const,
         salaryRange: '₹3-12 LPA (प्रवेश ते वरिष्ठ)',
-        jobMarket: 'वाढत आहे',
+        jobMarket: 'Growing' as const,
         opportunities: ['आयटी सेवा', 'आतिथ्य', 'खुदरा', 'कुशल व्यापार']
       }
     }

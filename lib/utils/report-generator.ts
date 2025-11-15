@@ -189,7 +189,7 @@ export function generatePDFReport(data: ReportData): void {
   }
 
   // Footer
-  const totalPages = doc.getNumberOfPages();
+  const totalPages = (doc as any).internal.pages?.length || 1;
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFontSize(8);

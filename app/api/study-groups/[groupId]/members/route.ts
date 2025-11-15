@@ -5,7 +5,7 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 // GET: Get members of a study group
 export async function GET(
   request: NextRequest,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -15,7 +15,7 @@ export async function GET(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { groupId } = params;
+    const { groupId } = await params;
 
     // Verify user has access to this group
     const { data: memberCheck, error: memberCheckError } = await supabase
@@ -64,7 +64,7 @@ export async function GET(
 // POST: Join a study group
 export async function POST(
   request: NextRequest,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -74,7 +74,7 @@ export async function POST(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { groupId } = params;
+    const { groupId } = await params;
 
     // Check if group exists and get its details
     const { data: group, error: groupError } = await supabase
@@ -137,7 +137,7 @@ export async function POST(
 // DELETE: Leave a study group (or remove a member if you're the leader)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -150,7 +150,7 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get("member_id"); // If provided, removing another member
 
-    const { groupId } = params;
+    const { groupId } = await params;
 
     // Check if user is a member
     const { data: userMember, error: userMemberError } = await supabase

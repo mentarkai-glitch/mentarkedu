@@ -1395,151 +1395,150 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Left Column */}
             <div className="space-y-6">
-          {/* Monthly Study Plan - Year 1 & Year 2 */}
-          <Card className="border-slate-700/70 bg-slate-900/60 h-full">
-            <CardHeader className="bg-gradient-to-r from-teal-500/10 to-teal-500/5 border-b border-teal-500/20 pb-3">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-teal-300" />
-                <h4 className="text-lg font-bold">Monthly Study Plan</h4>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Year 1 */}
-                <div className="space-y-2">
-                  <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 1</h5>
-                  {year1.length > 0 ? (
-                    <ul className="space-y-1.5">
-                      {year1.slice(0, 6).map((item: string, idx: number) => (
-                        <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                          <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
-                          <span className="line-clamp-2">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
-                  )}
-                </div>
-
-                {/* Year 2 */}
-                <div className="space-y-2">
-                  <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 2</h5>
-                  {year2.length > 0 ? (
-                    <ul className="space-y-1.5">
-                      {year2.slice(0, 6).map((item: string, idx: number) => (
-                        <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                          <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
-                          <span className="line-clamp-2">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Career Paths to Explore */}
-          {roadmap.career_exposure && roadmap.career_exposure.length > 0 && (
-            <Card className="border-slate-700/70 bg-slate-900/60">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-pink-300" />
-                  <h4 className="text-lg font-bold">Career Paths to Explore</h4>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 space-y-2">
-                {roadmap.career_exposure.map((career: string, idx: number) => (
-                  <div key={idx} className="p-2 rounded-lg border border-pink-500/30 bg-pink-500/5">
-                    <p className="text-sm font-medium text-pink-300">{career}</p>
+              {/* Monthly Study Plan - Year 1 & Year 2 */}
+              <Card className="border-slate-700/70 bg-slate-900/60 h-full">
+                <CardHeader className="bg-gradient-to-r from-teal-500/10 to-teal-500/5 border-b border-teal-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-teal-300" />
+                    <h4 className="text-lg font-bold">Monthly Study Plan</h4>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Year 1 */}
+                    <div className="space-y-2">
+                      <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 1</h5>
+                      {year1.length > 0 ? (
+                        <ul className="space-y-1.5">
+                          {year1.slice(0, 6).map((item: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                              <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
+                              <span className="line-clamp-2">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
+                      )}
+                    </div>
 
-          {/* Exam Timeline */}
-          {roadmap.exam_timeline && roadmap.exam_timeline.length > 0 && (
-            <Card className="border-slate-700/70 bg-slate-900/60">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-blue-300" />
-                  <h4 className="text-lg font-bold">Exam Timeline & Important Dates</h4>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 space-y-2">
-                {roadmap.exam_timeline.map((exam: string, idx: number) => (
-                  <div key={idx} className="p-2 rounded-lg border border-blue-500/30 bg-blue-500/5">
-                    <p className="text-xs font-medium text-blue-300">{exam}</p>
+                    {/* Year 2 */}
+                    <div className="space-y-2">
+                      <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 2</h5>
+                      {year2.length > 0 ? (
+                        <ul className="space-y-1.5">
+                          {year2.slice(0, 6).map((item: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                              <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
+                              <span className="line-clamp-2">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-slate-500 italic">Plan details coming soon...</p>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                </CardContent>
+              </Card>
 
-              {/* Right Column - Overview */}
-              <div className="space-y-6">
-                {/* Resources Summary */}
-                {roadmap.resource_summary && (
-                  <Card className="border-slate-700/70 bg-slate-900/60">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-cyan-400" />
-                        <h4 className="text-lg font-bold">Resources Summary</h4>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      <div className="flex flex-wrap gap-2">
-                        {roadmap.resource_summary.total_videos > 0 && (
-                          <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
-                            {roadmap.resource_summary.total_videos} Videos
-                          </Badge>
-                        )}
-                        {roadmap.resource_summary.total_papers > 0 && (
-                          <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            {roadmap.resource_summary.total_papers} Papers
-                          </Badge>
-                        )}
-                        {roadmap.resource_summary.total_projects > 0 && (
-                          <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
-                            {roadmap.resource_summary.total_projects} Projects
-                          </Badge>
-                        )}
-                        {roadmap.resource_summary.total_news > 0 && (
-                          <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
-                            {roadmap.resource_summary.total_news} News
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+            {/* Career Paths to Explore */}
+            {roadmap.career_exposure && roadmap.career_exposure.length > 0 && (
+              <Card className="border-slate-700/70 bg-slate-900/60">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-pink-300" />
+                    <h4 className="text-lg font-bold">Career Paths to Explore</h4>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-2">
+                  {roadmap.career_exposure.map((career: string, idx: number) => (
+                    <div key={idx} className="p-2 rounded-lg border border-pink-500/30 bg-pink-500/5">
+                      <p className="text-sm font-medium text-pink-300">{career}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
-                {/* Career Paths Preview */}
-                {roadmap.career_exposure && roadmap.career_exposure.length > 0 && (
-                  <Card className="border-slate-700/70 bg-slate-900/60">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-pink-300" />
-                        <h4 className="text-lg font-bold">Career Paths</h4>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 space-y-2">
-                      {roadmap.career_exposure.slice(0, 3).map((career: string, idx: number) => (
-                        <div key={idx} className="p-2 rounded-lg border border-pink-500/30 bg-pink-500/5">
-                          <p className="text-sm font-medium text-pink-300">{career}</p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
+            {/* Exam Timeline */}
+            {roadmap.exam_timeline && roadmap.exam_timeline.length > 0 && (
+              <Card className="border-slate-700/70 bg-slate-900/60">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-300" />
+                    <h4 className="text-lg font-bold">Exam Timeline & Important Dates</h4>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-2">
+                  {roadmap.exam_timeline.map((exam: string, idx: number) => (
+                    <div key={idx} className="p-2 rounded-lg border border-blue-500/30 bg-blue-500/5">
+                      <p className="text-xs font-medium text-blue-300">{exam}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
+
+          {/* Right Column - Overview */}
+          <div className="space-y-6">
+            {/* Resources Summary */}
+            {roadmap.resource_summary && (
+              <Card className="border-slate-700/70 bg-slate-900/60">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-cyan-400" />
+                    <h4 className="text-lg font-bold">Resources Summary</h4>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {roadmap.resource_summary.total_videos > 0 && (
+                      <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
+                        {roadmap.resource_summary.total_videos} Videos
+                      </Badge>
+                    )}
+                    {roadmap.resource_summary.total_papers > 0 && (
+                      <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                        {roadmap.resource_summary.total_papers} Papers
+                      </Badge>
+                    )}
+                    {roadmap.resource_summary.total_projects > 0 && (
+                      <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
+                        {roadmap.resource_summary.total_projects} Projects
+                      </Badge>
+                    )}
+                    {roadmap.resource_summary.total_news > 0 && (
+                      <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                        {roadmap.resource_summary.total_news} News
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Career Paths Preview */}
+            {roadmap.career_exposure && roadmap.career_exposure.length > 0 && (
+              <Card className="border-slate-700/70 bg-slate-900/60">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-pink-300" />
+                    <h4 className="text-lg font-bold">Career Paths</h4>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-2">
+                  {roadmap.career_exposure.slice(0, 3).map((career: string, idx: number) => (
+                    <div key={idx} className="p-2 rounded-lg border border-pink-500/30 bg-pink-500/5">
+                      <p className="text-sm font-medium text-pink-300">{career}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
         )}
 
         {/* Study Plan Category */}

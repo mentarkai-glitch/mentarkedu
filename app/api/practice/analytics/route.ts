@@ -162,7 +162,10 @@ export async function GET(request: NextRequest) {
         topicStats[topicKey].correct++;
       }
 
-      const difficulty = question.difficulty || "medium";
+      const difficulty: DifficultyLevel = 
+        (question.difficulty && ["easy", "medium", "hard"].includes(question.difficulty)) 
+          ? question.difficulty as DifficultyLevel 
+          : "medium";
       topicStats[topicKey].difficulties[difficulty] = 
         (topicStats[topicKey].difficulties[difficulty] || 0) + 1;
     });

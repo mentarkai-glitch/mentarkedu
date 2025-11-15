@@ -5,7 +5,7 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 // GET: Get notes for a team project
 export async function GET(
   request: NextRequest,
-  { params }: { params: { teamId: string } }
+  { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -15,7 +15,7 @@ export async function GET(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { teamId } = params;
+    const { teamId } = await params;
 
     // Verify user has access to this team
     const { data: memberCheck, error: memberCheckError } = await supabase
@@ -65,7 +65,7 @@ export async function GET(
 // POST: Add a note to a team project
 export async function POST(
   request: NextRequest,
-  { params }: { params: { teamId: string } }
+  { params }: { params: Promise<{ teamId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -75,7 +75,7 @@ export async function POST(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { teamId } = params;
+    const { teamId } = await params;
     const body = await request.json();
     const { content, note_type = "comment" } = body;
 
