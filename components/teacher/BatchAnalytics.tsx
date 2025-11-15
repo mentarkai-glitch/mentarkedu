@@ -20,7 +20,7 @@ export function BatchAnalytics({ batch }: BatchAnalyticsProps) {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch(`/api/teacher/batch-analytics?batch=${batch}`);
+      const response = await fetch(`/api/teacher/batch-analytics?batch=${batch}&period=week`);
       const data = await response.json();
       if (data.success) {
         setAnalytics(data.data);
@@ -51,6 +51,26 @@ export function BatchAnalytics({ batch }: BatchAnalyticsProps) {
     { name: 'Stress', score: analytics.analytics.avg_stress },
     { name: 'Confidence', score: analytics.analytics.avg_confidence }
   ];
+
+  // Get practice data if available
+  const practiceData = analytics.analytics.practice || {
+    sessions: 0,
+    questions: 0,
+    avg_accuracy: 0,
+    engagement: 0,
+  };
+
+  // Get trends if available
+  const trends = analytics.analytics.trends || {
+    engagement: [],
+    arks: [],
+    practice: [],
+    risk: [],
+  };
+
+  // Get top performers and needs attention
+  const topPerformers = analytics.analytics.top_performers || [];
+  const needsAttention = analytics.analytics.needs_attention || [];
 
   return (
     <div className="space-y-6">
@@ -157,6 +177,147 @@ export function BatchAnalytics({ batch }: BatchAnalyticsProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Practice Questions Metrics */}
+      {practiceData.sessions > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-slate-800/50 border-yellow-500/30">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Practice Sessions</p>
+                  <p className="text-3xl font-bold text-white">{practiceData.sessions}</p>
+                </div>
+                <Target className="h-8 w-8 text-yellow-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-yellow-500/30">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Questions Attempted</p>
+                  <p className="text-3xl font-bold text-white">{practiceData.questions}</p>
+                </div>
+                <Target className="h-8 w-8 text-yellow-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-yellow-500/30">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Avg Accuracy</p>
+                  <p className="text-3xl font-bold text-white">{Math.round(practiceData.avg_accuracy)}%</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-yellow-500/30">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Engagement</p>
+                  <p className="text-3xl font-bold text-white">{practiceData.engagement.toFixed(1)}</p>
+                </div>
+                <Award className="h-8 w-8 text-blue-400" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Practice Trends */}
+      {trends.practice && trends.practice.length > 0 && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Practice Accuracy Trend
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trends.practice.slice(-14)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="date" stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" domain={[0, 100]} />
+                <Tooltip contentStyle={{ backgroundColor: "#1F2937", border: "1px solid #374151" }} />
+                <Legend />
+                <Line type="monotone" dataKey="accuracy" stroke="#EAB308" strokeWidth={2} name="Accuracy %" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Top Performers */}
+      {topPerformers.length > 0 && (
+        <Card className="bg-slate-800/50 border-green-500/30">
+          <CardHeader>
+            <CardTitle className="text-green-400 flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Top Performers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {topPerformers.map((performer: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Student #{performer.student_id.slice(0, 8)}</p>
+                    <div className="flex gap-4 mt-1 text-xs text-slate-400">
+                      <span>ARKs: {performer.metrics.ark_completion}</span>
+                      <span>Practice: {performer.metrics.practice_accuracy}%</span>
+                      <span>Engagement: {performer.metrics.engagement}</span>
+                    </div>
+                  </div>
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                    Top {idx + 1}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Needs Attention */}
+      {needsAttention.length > 0 && (
+        <Card className="bg-slate-800/50 border-red-500/30">
+          <CardHeader>
+            <CardTitle className="text-red-400 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Needs Attention
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {needsAttention.map((student: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Student #{student.student_id.slice(0, 8)}</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {student.issues.map((issue: string, i: number) => (
+                        <Badge key={i} variant="outline" className="text-xs border-red-500/50 text-red-300">
+                          {issue}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/50">
+                    Needs Help
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Students Needing Attention */}
       {analytics.students_needing_attention && analytics.students_needing_attention.length > 0 && (

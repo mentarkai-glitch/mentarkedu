@@ -18,6 +18,8 @@ import { CareerDNAChart } from '@/components/career-dna/CareerDNAChart';
 import { PeerMatches } from '@/components/peer-matching/PeerMatches';
 import { RiskPredictorCard } from '@/components/ml/RiskPredictorCard';
 import { SentimentTimeline } from '@/components/ml/SentimentTimeline';
+import { UnifiedAnalytics } from '@/components/student/UnifiedAnalytics';
+import { PracticeQuestionsWidget } from '@/components/student/PracticeQuestionsWidget';
 import { 
   Brain,
   Target,
@@ -435,6 +437,15 @@ export default function StudentDashboard() {
           </Card>
         </motion.div>
 
+        {/* Unified Analytics */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-8"
+        >
+          <UnifiedAnalytics period="week" />
+        </motion.div>
 
         {/* Tabbed Content */}
         <Tabs defaultValue="overview" className="mb-8 w-full">
@@ -534,6 +545,9 @@ export default function StudentDashboard() {
             transition={{ delay: 0.4 }}
             className="space-y-6"
           >
+            {/* Practice Questions Widget */}
+            <PracticeQuestionsWidget />
+
             {/* Daily Check-in */}
             <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
               <CardHeader>

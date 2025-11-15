@@ -3,7 +3,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { User, Target, AlertTriangle, TrendingUp, Eye } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { User, Target, AlertTriangle, TrendingUp, Eye, Activity, Clock } from "lucide-react";
 
 interface StudentCardProps {
   student: {
@@ -17,6 +18,8 @@ interface StudentCardProps {
     risk_level: 'high' | 'medium' | 'low';
     active_arks: number;
     completed_arks: number;
+    engagement_score?: number;
+    last_activity?: string;
     subject?: string;
   };
   onViewDetails: () => void;
@@ -85,6 +88,28 @@ export function StudentCard({ student, onViewDetails }: StudentCardProps) {
             <p className="text-xl font-bold text-white">{student.completed_arks}</p>
           </div>
         </div>
+
+        {/* Engagement Score */}
+        {student.engagement_score !== undefined && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Activity className="h-4 w-4 text-cyan-400" />
+                <span className="text-xs text-gray-400">Engagement</span>
+              </div>
+              <span className="text-xs font-semibold text-white">{student.engagement_score}%</span>
+            </div>
+            <Progress value={student.engagement_score} className="h-2 bg-slate-700" />
+          </div>
+        )}
+
+        {/* Last Activity */}
+        {student.last_activity && (
+          <div className="mb-4 flex items-center space-x-2 text-xs text-gray-400">
+            <Clock className="h-3 w-3" />
+            <span>Last active: {new Date(student.last_activity).toLocaleDateString()}</span>
+          </div>
+        )}
 
         {student.subject && (
           <div className="mb-4">
