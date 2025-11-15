@@ -4,8 +4,8 @@
 
 ✅ **API Key**: `AIzaSyDqmnk4J1aLat6XJswb_qM1DyFP-O1yZ7Y`
 ✅ **OAuth Client Credentials**:
-   - Client ID: `139807892857-q6c2kgl6a81v1e1e387f36pbqhcq4jdd.apps.googleusercontent.com`
-   - Client Secret: `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`
+   - Client ID: `YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com`
+   - Client Secret: `YOUR_GOOGLE_CLIENT_SECRET`
 ✅ **Processors**:
    - Form Parser: `60180463eba9ae5f`
    - Document OCR: `234ca2361069f6f2`

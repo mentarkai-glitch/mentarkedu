@@ -12,8 +12,8 @@ Add these to your `.env.local` file:
 
 ```env
 # Google Calendar OAuth (Required for Calendar Integration)
-GOOGLE_CALENDAR_CLIENT_ID=139807892857-q6c2kgl6a81v1e1e387f36pbqhcq4jdd.apps.googleusercontent.com
-GOOGLE_CALENDAR_CLIENT_SECRET=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
+GOOGLE_CALENDAR_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_CALENDAR_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET
 
 # Google API Key (Optional - for other Google services)
 GOOGLE_API_KEY=AIzaSyAZUlMTcAF1vBnZtK2Yip8sms7L-n6Hkxg

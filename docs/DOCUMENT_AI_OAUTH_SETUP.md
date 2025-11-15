@@ -8,8 +8,8 @@ You've provided OAuth client credentials. Here's how to configure them:
 
 ```env
 # Google OAuth Client Credentials (for Document AI)
-GOOGLE_CLIENT_ID=139807892857-q6c2kgl6a81v1e1e387f36pbqhcq4jdd.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET
 
 # Google Document AI Configuration
 GOOGLE_DOCUMENT_AI_PROJECT_ID=mentark-edu
@@ -51,8 +51,8 @@ The implementation tries authentication in this order:
 Add the OAuth credentials to your `.env.local`:
 
 ```env
-GOOGLE_CLIENT_ID=139807892857-q6c2kgl6a81v1e1e387f36pbqhcq4jdd.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET
 GOOGLE_DOCUMENT_AI_PROJECT_ID=mentark-edu
 GOOGLE_DOCUMENT_AI_LOCATION=us
 GOOGLE_DOCUMENT_AI_FORM_PARSER_ID=60180463eba9ae5f

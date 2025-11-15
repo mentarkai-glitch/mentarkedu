@@ -194,8 +194,8 @@ Content-Type: application/json
 
 ### Environment Variables for Production
 ```env
-GOOGLE_CALENDAR_CLIENT_ID=139807892857-q6c2kgl6a81v1e1e387f36pbqhcq4jdd.apps.googleusercontent.com
-GOOGLE_CALENDAR_CLIENT_SECRET=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
+GOOGLE_CALENDAR_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_CALENDAR_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET
 NEXT_PUBLIC_APP_URL=https://www.mentark.in
 ```
 
