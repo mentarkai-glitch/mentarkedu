@@ -22,19 +22,38 @@ export async function POST(request: NextRequest) {
       return errorResponse("Question is required", 400);
     }
 
+    // Map category to subject if subject is not provided
+    const resolvedSubject = subject || (category === 'math' ? 'mathematics' : category === 'science' ? 'science' : category === 'programming' ? 'programming' : undefined);
+
     // Solve the doubt
-    const solution = await doubtSolverService.solve({
-      question,
-      userId: user?.id,
-      subject,
-      difficulty,
-    });
+    let solution;
+    try {
+      solution = await doubtSolverService.solve({
+        question,
+        userId: user?.id,
+        subject: resolvedSubject,
+        difficulty,
+      });
+    } catch (solveError: any) {
+      console.error("Doubt solver service error:", solveError);
+      // Return a helpful error message
+      return errorResponse(
+        solveError.message || "Failed to solve doubt. Please ensure AI API keys are configured.",
+        500
+      );
+    }
+
+    // Validate solution
+    if (!solution || (!solution.answer && !solution.explanation)) {
+      console.error("Doubt solver returned empty solution");
+      return errorResponse("Could not generate an answer. Please try rephrasing your question.", 500);
+    }
 
     // Search for relevant YouTube videos based on question and category
     let videos: any[] = [];
     try {
       // Build search query based on question and category
-      const searchQuery = buildYouTubeSearchQuery(question, category, subject);
+      const searchQuery = buildYouTubeSearchQuery(question, category, resolvedSubject);
       
       const youtubeResult = await searchYouTubeVideos(searchQuery, {
         maxResults: 5,
@@ -65,8 +84,11 @@ export async function POST(request: NextRequest) {
       videos, // Include videos in response
     });
   } catch (error: any) {
-    console.error("Doubt solver error:", error);
-    return errorResponse(error.message || "Failed to solve doubt", 500);
+    console.error("Doubt solver API error:", error);
+    return errorResponse(
+      error.message || "An unexpected error occurred while solving your doubt",
+      500
+    );
   }
 }
 

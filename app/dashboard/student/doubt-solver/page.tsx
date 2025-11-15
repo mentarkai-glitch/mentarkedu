@@ -110,13 +110,25 @@ export default function DoubtSolverPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Solver returned ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || `Solver returned ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       const solution = data.data || data;
-      const resolvedAnswer = solution.answer || solution.explanation || solution.error || 'No answer generated';
+      
+      // Check if there's an error in the response
+      if (data.error || solution.error) {
+        throw new Error(data.error || solution.error || 'Failed to solve doubt');
+      }
+      
+      const resolvedAnswer = solution.answer || solution.explanation || 'No answer generated';
       const resolvedVideos = solution.videos || [];
+      
+      if (!resolvedAnswer || resolvedAnswer === 'No answer generated') {
+        throw new Error('The doubt solver could not generate an answer. Please try rephrasing your question.');
+      }
       
       setAnswer(resolvedAnswer);
       setVideos(resolvedVideos);
@@ -132,10 +144,11 @@ export default function DoubtSolverPage() {
         ...prev,
       ].slice(0, 10));
       setQuestion('');
-    } catch (error) {
-      console.error(error);
-      setError('Error solving your doubt. Please try again.');
-      setAnswer('Error solving your doubt. Please try again.');
+    } catch (error: any) {
+      console.error('Doubt solver error:', error);
+      const errorMessage = error?.message || 'Error solving your doubt. Please try again.';
+      setError(errorMessage);
+      setAnswer(`Error: ${errorMessage}`);
       setVideos([]);
     } finally {
       setLoading(false);
