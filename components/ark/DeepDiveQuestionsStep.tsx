@@ -9,7 +9,6 @@ import { MultiSelectChips } from './inputs/MultiSelectChips';
 import { AutocompleteInput } from './inputs/AutocompleteInput';
 import { ConditionalQuestion } from './inputs/ConditionalQuestion';
 import { useARKChatStore } from '@/lib/stores/ark-chat-store';
-import { getMergedSuggestions } from '@/lib/services/ark-suggestion-service';
 import { getAllSuggestions } from '@/lib/data/ark-suggestions';
 import { 
   getCategoryQuestions,

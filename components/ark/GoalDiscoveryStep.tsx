@@ -5,7 +5,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { SuggestionPanel } from './SuggestionPanel';
 import { getAllSuggestions } from '@/lib/data/ark-suggestions';
 import { getCategoryById } from '@/lib/data/student-categories';
-import { getSmartSuggestions } from '@/lib/services/ark-suggestion-service';
 import { Loader2, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -69,30 +68,9 @@ export function GoalDiscoveryStep({
             setGoalSuggestions(suggestions.commonGoals || []);
           }
         } catch (apiError) {
-          // Fallback: Use client-side smart suggestions
+          // Fallback to static suggestions if API fails
           const suggestions = getAllSuggestions(categoryId);
-          const staticGoals = suggestions.commonGoals || [];
-          
-          if (userId && (onboardingProfile || previousAnswers || goal)) {
-            try {
-              const smartSuggestions = await getSmartSuggestions(
-                categoryId,
-                'commonGoals',
-                {
-                  userInput: goal || undefined,
-                  previousAnswers,
-                  onboardingProfile,
-                  userId,
-                  limit: 12,
-                }
-              );
-              setGoalSuggestions(smartSuggestions.length > 0 ? smartSuggestions : staticGoals);
-            } catch (smartError) {
-              setGoalSuggestions(staticGoals);
-            }
-          } else {
-            setGoalSuggestions(staticGoals);
-          }
+          setGoalSuggestions(suggestions.commonGoals || []);
         }
       } catch (error) {
         console.error('Error loading smart suggestions:', error);

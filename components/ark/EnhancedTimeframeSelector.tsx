@@ -5,8 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2 } from "lucide-react";
 import type { TimeframeOption } from "@/lib/data/student-timeframes";
-import { aiOrchestrator } from "@/lib/ai/orchestrator";
-import type { AIContext } from "@/lib/types";
 
 interface EnhancedTimeframeSelectorProps {
   timeframes: TimeframeOption[];

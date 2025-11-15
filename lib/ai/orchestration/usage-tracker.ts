@@ -5,8 +5,13 @@
  * for intelligent optimization and cost management.
  */
 
-import { createClient } from '@/lib/supabase/server';
 import type { AITask, AIModel } from '@/lib/types';
+
+// Lazy import to avoid importing next/headers in client components
+async function getSupabaseClient() {
+  const { createClient } = await import('@/lib/supabase/server');
+  return createClient();
+}
 
 export interface UsageRecord {
   timestamp: Date;
@@ -51,7 +56,7 @@ export interface CostAnalytics {
  */
 export async function trackUsage(record: Omit<UsageRecord, 'timestamp' | 'cost'>): Promise<void> {
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     
     // Calculate cost based on model and tokens
     const cost = calculateCost(record.model, record.tokensUsed);
@@ -111,7 +116,7 @@ export async function getModelPerformanceStats(
   timeWindow: 'hour' | 'day' | 'week' | 'month' = 'day'
 ): Promise<ModelPerformanceStats | null> {
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabaseClient();
     
     // Calculate time window
     const timeWindowMs = {
