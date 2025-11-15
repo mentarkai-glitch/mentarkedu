@@ -308,15 +308,66 @@ export async function POST(request: NextRequest) {
 
     let orchestratedResponse;
     try {
+      console.log('🚀 Starting ARK orchestration...');
+      console.log('ARK Request:', {
+        category: arkRequest.category,
+        goal: arkRequest.goal?.substring(0, 100),
+        hasStudentProfile: !!arkRequest.studentProfile,
+        hasPsychologyProfile: !!arkRequest.psychologyProfile,
+        userTier: arkRequest.userTier,
+        timeframe: arkRequest.timeframe
+      });
+      
       orchestratedResponse = await generateARKWithNavigation(arkRequest, studentARKPrompt);
+      
+      console.log('✅ ARK orchestration completed');
+      console.log('Response:', {
+        hasArk: !!orchestratedResponse?.ark,
+        arkType: typeof orchestratedResponse?.ark,
+        arkLength: typeof orchestratedResponse?.ark === 'string' ? orchestratedResponse.ark.length : 'N/A',
+        model: orchestratedResponse?.model,
+        tokensUsed: orchestratedResponse?.tokens_used
+      });
     } catch (orchestrationError: any) {
-      console.error('ARK orchestration error:', orchestrationError);
-      return errorResponse(`Failed to generate ARK: ${orchestrationError?.message || 'Unknown error'}`, 500);
+      console.error('❌ ARK orchestration error:', {
+        message: orchestrationError?.message,
+        name: orchestrationError?.name,
+        stack: orchestrationError?.stack?.split('\n').slice(0, 5),
+        error: orchestrationError
+      });
+      
+      // Check for specific error types
+      if (orchestrationError?.message?.includes('Rate limit')) {
+        return errorResponse('Rate limit exceeded. Please try again in a few minutes.', 429, errorContext);
+      }
+      
+      if (orchestrationError?.message?.includes('timeout') || orchestrationError?.message?.includes('TIMEOUT')) {
+        return errorResponse('ARK generation timed out. Please try again with a simpler goal.', 504, errorContext);
+      }
+      
+      if (orchestrationError?.message?.includes('API key') || orchestrationError?.message?.includes('authentication')) {
+        return errorResponse('AI service authentication failed. Please contact support.', 503, errorContext);
+      }
+      
+      return errorResponse(
+        `Failed to generate ARK: ${orchestrationError?.message || 'Unknown error during orchestration'}`,
+        500,
+        errorContext
+      );
     }
 
     if (!orchestratedResponse || !orchestratedResponse.ark) {
-      console.error('Invalid orchestration response:', orchestratedResponse);
-      return errorResponse("Invalid response from AI orchestrator", 500);
+      console.error('❌ Invalid orchestration response:', {
+        hasResponse: !!orchestratedResponse,
+        responseKeys: orchestratedResponse ? Object.keys(orchestratedResponse) : [],
+        hasArk: !!orchestratedResponse?.ark,
+        fullResponse: JSON.stringify(orchestratedResponse, null, 2).substring(0, 1000)
+      });
+      return errorResponse(
+        "Invalid response from AI orchestrator. The AI service may be experiencing issues.",
+        500,
+        errorContext
+      );
     }
 
     // Parse ARK JSON from response
