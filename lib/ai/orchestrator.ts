@@ -147,9 +147,39 @@ async function executeWithModel(
         excludeModels: allExcluded
       });
       
-      if (fallbackSelection.model === model) {
-        // No alternative found, throw error
-        throw new Error(`Model ${model} refused request and no alternative available`);
+      // Check if fallback is actually different
+      if (fallbackSelection.model === model || allExcluded.includes(fallbackSelection.model)) {
+        // Try to find any other configured model
+        const { getAvailableModels } = await import('./orchestration/model-selector');
+        const availableModels = getAvailableModels();
+        const configuredModels = availableModels.filter(m => {
+          const keyMap: Record<string, string> = {
+            'gpt-4o': 'OPENAI_API_KEY',
+            'gpt-4o-mini': 'OPENAI_API_KEY',
+            'claude-opus': 'CLAUDE_API_KEY',
+            'claude-sonnet': 'CLAUDE_API_KEY',
+            'gemini-pro': 'GEMINI_API_KEY',
+            'gemini-2.5-flash': 'GEMINI_API_KEY',
+            'perplexity-pro': 'PERPLEXITY_API_KEY',
+            'cohere-command-r-plus': 'COHERE_API_KEY',
+            'cohere-command-r': 'COHERE_API_KEY',
+            'mistral-large': 'MISTRAL_API_KEY',
+            'llama-3.1': 'GROQ_API_KEY',
+          };
+          return !!process.env[keyMap[m] || ''];
+        }).filter(m => !allExcluded.includes(m));
+        
+        if (configuredModels.length === 0) {
+          throw new Error(
+            `Model ${model} refused request and no alternative available. ` +
+            `Please ensure multiple AI provider API keys are configured.`
+          );
+        }
+        
+        // Use first available model
+        const alternativeModel = configuredModels[0];
+        console.log(`🔄 Using alternative model: ${alternativeModel}`);
+        return await executeWithModel(alternativeModel, prompt, context, startTime, analysis, null, allExcluded);
       }
       
       console.log(`🔄 Retrying with fallback model: ${fallbackSelection.model}`);
@@ -215,9 +245,39 @@ async function executeWithModel(
       excludeModels: allExcluded
     });
     
-    if (fallbackSelection.model === model) {
-      // No alternative found
-      throw new Error(`All models failed or refused. Last error: ${error}`);
+    // Check if fallback is actually different and has API key configured
+    if (fallbackSelection.model === model || allExcluded.includes(fallbackSelection.model)) {
+      // No alternative found - check if we have any other configured models
+      const { getAvailableModels } = await import('./orchestration/model-selector');
+      const availableModels = getAvailableModels();
+      const configuredModels = availableModels.filter(m => {
+        const keyMap: Record<string, string> = {
+          'gpt-4o': 'OPENAI_API_KEY',
+          'gpt-4o-mini': 'OPENAI_API_KEY',
+          'claude-opus': 'CLAUDE_API_KEY',
+          'claude-sonnet': 'CLAUDE_API_KEY',
+          'gemini-pro': 'GEMINI_API_KEY',
+          'gemini-2.5-flash': 'GEMINI_API_KEY',
+          'perplexity-pro': 'PERPLEXITY_API_KEY',
+          'cohere-command-r-plus': 'COHERE_API_KEY',
+          'cohere-command-r': 'COHERE_API_KEY',
+          'mistral-large': 'MISTRAL_API_KEY',
+          'llama-3.1': 'GROQ_API_KEY',
+        };
+        return !!process.env[keyMap[m] || ''];
+      }).filter(m => !allExcluded.includes(m));
+      
+      if (configuredModels.length === 0) {
+        throw new Error(
+          `All configured models failed or refused. Last error: ${error?.message || error}. ` +
+          `Please ensure multiple AI provider API keys are configured for fallback support.`
+        );
+      }
+      
+      // Try the first available configured model that isn't excluded
+      const lastResortModel = configuredModels[0];
+      console.log(`🔄 Last resort: Trying ${lastResortModel} (from ${configuredModels.length} available)`);
+      return await executeWithModel(lastResortModel, prompt, context, startTime, analysis, null, allExcluded);
     }
     
     console.log(`🔄 Retrying with fallback model: ${fallbackSelection.model}`);

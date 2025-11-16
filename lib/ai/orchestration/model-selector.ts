@@ -353,9 +353,51 @@ export function selectOptimalModel(
     userTier: requirements.userTier || 'free'
   });
 
+  // Helper function to check if API key is configured for a model
+  const hasApiKey = (model: AIModel): boolean => {
+    const keyMap: Record<AIModel, string> = {
+      'gpt-4o': 'OPENAI_API_KEY',
+      'gpt-4o-mini': 'OPENAI_API_KEY',
+      'o1-preview': 'OPENAI_API_KEY',
+      'o1-mini': 'OPENAI_API_KEY',
+      'claude-opus': 'CLAUDE_API_KEY',
+      'claude-sonnet': 'CLAUDE_API_KEY',
+      'gemini-pro': 'GEMINI_API_KEY',
+      'gemini-2.5-flash': 'GEMINI_API_KEY',
+      'perplexity-pro': 'PERPLEXITY_API_KEY',
+      'cohere-command-r-plus': 'COHERE_API_KEY',
+      'cohere-command-r': 'COHERE_API_KEY',
+      'mistral-large': 'MISTRAL_API_KEY',
+      'llama-3.1': 'GROQ_API_KEY',
+      'hume-emotional-analysis': 'HUME_API_KEY',
+      'deepl-translation': 'DEEPL_API_KEY'
+    };
+    
+    const envKey = keyMap[model];
+    if (!envKey) return false; // Unknown model
+    
+    return !!process.env[envKey];
+  };
+
   // Score each model based on requirements
   const scores = Object.entries(MODEL_REGISTRY)
-    .filter(([_, caps]) => caps.isActive)
+    .filter(([modelName, caps]) => {
+      // Filter by active status
+      if (!caps.isActive) return false;
+      
+      // Filter by API key availability (critical!)
+      if (!hasApiKey(modelName as AIModel)) {
+        console.warn(`⚠️ Skipping model ${modelName}: API key not configured`);
+        return false;
+      }
+      
+      // Filter by exclusions
+      if (requirements.excludeModels?.includes(modelName as AIModel)) {
+        return false;
+      }
+      
+      return true;
+    })
     .map(([modelName, caps]) => {
       let score = 0;
       const reasons: string[] = [];
@@ -444,11 +486,6 @@ export function selectOptimalModel(
       // Reliability penalty
       score *= (caps.uptime / 100);
       reasons.push(`Reliability: ${caps.uptime}%`);
-      
-      // Exclude models if specified
-      if (requirements.excludeModels?.includes(modelName as AIModel)) {
-        return null;
-      }
       
       return { 
         model: modelName as AIModel, 
