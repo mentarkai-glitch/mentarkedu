@@ -2,13 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Search, UserPlus, MessageCircle, Sparkles, Star, Filter, Download, Wifi, WifiOff } from 'lucide-react';
+import { Users, Search, UserPlus, MessageCircle, Sparkles, Star, Filter, Download, Wifi, WifiOff, Plus, Calendar, FileText, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 
@@ -38,6 +43,12 @@ export default function PeerMatchesPage() {
   const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'study_buddy' | 'similar_interests' | 'complementary'>('all');
   const [isOnline, setIsOnline] = useState(true);
   const [history, setHistory] = useState<Array<{ timestamp: string; matches: number }>>([]);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [activeTab, setActiveTab] = useState<'matches' | 'groups'>('matches');
+  const [studyGroups, setStudyGroups] = useState<any[]>([]);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [newGroupSubject, setNewGroupSubject] = useState('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -281,6 +292,20 @@ export default function PeerMatchesPage() {
             </Card>
           )}
 
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'matches' | 'groups')} className="mb-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-900/50 border-yellow-500/30">
+              <TabsTrigger value="matches" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                <Users className="w-4 h-4 mr-2" />
+                Matches
+              </TabsTrigger>
+              <TabsTrigger value="groups" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+                <Users className="w-4 h-4 mr-2" />
+                Study Groups
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="matches" className="mt-6">
           {/* Action Button */}
           {!loading && matches.length === 0 && (
             <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
@@ -454,6 +479,20 @@ export default function PeerMatchesPage() {
                           <MessageCircle className="w-4 h-4 mr-2" />
                           Message
                         </Button>
+                        <Button
+                          variant="outline"
+                          className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                          onClick={() => {
+                            setShowCreateGroup(true);
+                            // Pre-fill subject if available from match interests
+                            if (match.interests && match.interests.length > 0) {
+                              setNewGroupSubject(match.interests[0]);
+                            }
+                          }}
+                          title="Create Study Group"
+                        >
+                          <Users className="w-4 h-4" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -466,6 +505,179 @@ export default function PeerMatchesPage() {
               )}
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="groups" className="mt-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Study Groups</h2>
+                <Button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Group
+                </Button>
+              </div>
+
+              {studyGroups.length > 0 ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {studyGroups.map((group) => (
+                    <Card key={group.id} className="bg-slate-900/50 border-yellow-500/30">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-white">{group.name}</CardTitle>
+                          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
+                            {group.members?.length || 0} members
+                          </Badge>
+                        </div>
+                        <CardDescription>{group.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-xs text-slate-500 mb-1 block">Subject</Label>
+                            <Badge variant="outline" className="bg-slate-800">{group.subject}</Badge>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="flex-1 border-yellow-500/30 text-yellow-400">
+                              <MessageCircle className="w-3 h-3 mr-1" />
+                              Chat
+                            </Button>
+                            <Button variant="outline" size="sm" className="flex-1 border-blue-500/30 text-blue-400">
+                              <Calendar className="w-3 h-3 mr-1" />
+                              Schedule
+                            </Button>
+                            <Button variant="outline" size="sm" className="border-slate-700 text-slate-400">
+                              <Settings className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <CardContent className="pt-12 pb-12">
+                    <div className="flex flex-col items-center justify-center text-center space-y-4">
+                      <Users className="w-16 h-16 text-yellow-400 opacity-50" />
+                      <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">No Study Groups Yet</h3>
+                        <p className="text-slate-400 text-sm mb-4">
+                          Create a study group to collaborate with your peers
+                        </p>
+                        <Button
+                          onClick={() => setShowCreateGroup(true)}
+                          className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Your First Group
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* Create Study Group Dialog */}
+          <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
+            <DialogContent className="bg-slate-900 border-slate-700">
+              <DialogHeader>
+                <DialogTitle className="text-yellow-400">Create Study Group</DialogTitle>
+                <DialogDescription>
+                  Start a new study group to collaborate with your peers
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="group-name" className="text-slate-300 mb-2 block">Group Name *</Label>
+                  <Input
+                    id="group-name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="e.g., Math Study Group"
+                    className="bg-slate-800 border-slate-700"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="group-subject" className="text-slate-300 mb-2 block">Subject *</Label>
+                  <Input
+                    id="group-subject"
+                    value={newGroupSubject}
+                    onChange={(e) => setNewGroupSubject(e.target.value)}
+                    placeholder="e.g., Mathematics, Physics"
+                    className="bg-slate-800 border-slate-700"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="group-description" className="text-slate-300 mb-2 block">Description</Label>
+                  <Textarea
+                    id="group-description"
+                    value={newGroupDescription}
+                    onChange={(e) => setNewGroupDescription(e.target.value)}
+                    placeholder="What will this group focus on?"
+                    rows={3}
+                    className="bg-slate-800 border-slate-700"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      if (!newGroupName || !newGroupSubject) {
+                        toast.error('Name and subject are required');
+                        return;
+                      }
+                      try {
+                        const response = await fetch('/api/study-groups/create', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({
+                            name: newGroupName,
+                            description: newGroupDescription,
+                            subject: newGroupSubject,
+                            settings: { isPublic: false, maxMembers: 10 }
+                          })
+                        });
+
+                        if (response.ok) {
+                          const data = await response.json();
+                          if (data.success) {
+                            setStudyGroups(prev => [data.data.group, ...prev]);
+                            setShowCreateGroup(false);
+                            setNewGroupName('');
+                            setNewGroupDescription('');
+                            setNewGroupSubject('');
+                            toast.success('Study group created!');
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Failed to create group:', error);
+                        toast.error('Failed to create study group');
+                      }
+                    }}
+                    className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                  >
+                    Create Group
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-slate-700 text-slate-400"
+                    onClick={() => {
+                      setShowCreateGroup(false);
+                      setNewGroupName('');
+                      setNewGroupDescription('');
+                      setNewGroupSubject('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </motion.div>
       </div>
     </div>

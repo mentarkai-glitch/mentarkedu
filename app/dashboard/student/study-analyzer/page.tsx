@@ -27,6 +27,12 @@ export default function StudyAnalyzerPage() {
   const [masterySummary, setMasterySummary] = useState<StudyPathProgressEntry[]>([]);
   const [sessionSaving, setSessionSaving] = useState(false);
   const [recommendationIndex, setRecommendationIndex] = useState(0);
+  const [adaptivePath, setAdaptivePath] = useState<any>(null);
+  const [pathLoading, setPathLoading] = useState(false);
+  const [flashcards, setFlashcards] = useState<any[]>([]);
+  const [flashcardLoading, setFlashcardLoading] = useState(false);
+  const [currentFlashcard, setCurrentFlashcard] = useState<any>(null);
+  const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [sessionForm, setSessionForm] = useState({
     sessionType: 'solo',
     materialType: 'notes',
@@ -57,7 +63,91 @@ export default function StudyAnalyzerPage() {
 
   useEffect(() => {
     fetchStudySignals();
+    fetchAdaptivePath();
+    fetchFlashcards();
   }, [fetchStudySignals]);
+
+  const fetchAdaptivePath = async () => {
+    try {
+      setPathLoading(true);
+      const response = await fetch('/api/study-analyzer/adaptive-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          goal: 'Master current subjects',
+          currentKnowledge: learningPath.map(node => node.topic_name || node.topic_id || ''),
+          learningStyle: undefined // Auto-detect
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setAdaptivePath(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch adaptive path:', error);
+    } finally {
+      setPathLoading(false);
+    }
+  };
+
+  const fetchFlashcards = async () => {
+    try {
+      setFlashcardLoading(true);
+      const response = await fetch('/api/study-analyzer/flashcards?dueOnly=true', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.cards.length > 0) {
+          setFlashcards(data.data.cards);
+          setCurrentFlashcard(data.data.cards[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch flashcards:', error);
+    } finally {
+      setFlashcardLoading(false);
+    }
+  };
+
+  const handleFlashcardReview = async (quality: number) => {
+    if (!currentFlashcard) return;
+    
+    try {
+      const response = await fetch('/api/study-analyzer/flashcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'review',
+          cardId: currentFlashcard.id,
+          quality
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Move to next card
+          const currentIndex = flashcards.findIndex(c => c.id === currentFlashcard.id);
+          if (currentIndex < flashcards.length - 1) {
+            setCurrentFlashcard(flashcards[currentIndex + 1]);
+          } else {
+            // All cards reviewed, fetch new ones
+            await fetchFlashcards();
+          }
+          setShowFlashcardAnswer(false);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to review flashcard:', error);
+    }
+  };
 
   const handleLogSession = async () => {
     if (!sessionForm.startedAt) return;
@@ -611,6 +701,152 @@ export default function StudyAnalyzerPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Adaptive Learning Path */}
+          {adaptivePath && (
+            <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Brain className="w-6 h-6 text-purple-400" />
+                  Adaptive Learning Path
+                </CardTitle>
+                <CardDescription>
+                  Personalized path based on your learning style: {adaptivePath.learningStyle || 'mixed'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pathLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                  </div>
+                ) : adaptivePath.path ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="p-3 rounded-lg bg-slate-900/50 border border-purple-500/30">
+                        <p className="text-slate-400 text-xs mb-1">Nodes</p>
+                        <p className="text-white font-semibold">{adaptivePath.path.nodes.length}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-slate-900/50 border border-purple-500/30">
+                        <p className="text-slate-400 text-xs mb-1">Est. Completion</p>
+                        <p className="text-white font-semibold text-xs">
+                          {new Date(adaptivePath.path.estimatedCompletion).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {adaptivePath.path.nodes.slice(0, 5).map((node: any, idx: number) => (
+                        <div key={node.id} className="p-3 rounded-lg bg-slate-900/50 border border-slate-700">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-white text-sm font-semibold">{node.topic}</span>
+                            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 capitalize">
+                              {node.difficulty}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-slate-400 mb-2">{node.description}</p>
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <Clock className="w-3 h-3" />
+                            <span>{node.estimatedTime} min</span>
+                            {node.prerequisites.length > 0 && (
+                              <>
+                                <span>•</span>
+                                <span>{node.prerequisites.length} prerequisites</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {adaptivePath.path.recommendedNext.length > 0 && (
+                      <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                        <p className="text-xs text-blue-400 font-semibold mb-2">Recommended Next</p>
+                        <div className="flex flex-wrap gap-2">
+                          {adaptivePath.path.recommendedNext.slice(0, 3).map((nodeId: string) => {
+                            const node = adaptivePath.path.nodes.find((n: any) => n.id === nodeId);
+                            return node ? (
+                              <Badge key={nodeId} className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                                {node.topic}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-sm text-center py-4">
+                    Generate an adaptive learning path to get started
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Flashcard Review */}
+          {currentFlashcard && (
+            <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/30">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <BookOpen className="w-6 h-6 text-cyan-400" />
+                  Flashcard Review
+                </CardTitle>
+                <CardDescription>
+                  {flashcards.length} cards due for review
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-6 rounded-lg bg-slate-900/50 border border-cyan-500/30 min-h-[200px] flex flex-col justify-center">
+                    <div className="text-center mb-4">
+                      <p className="text-slate-400 text-sm mb-2">Question</p>
+                      <p className="text-white text-lg font-semibold">{currentFlashcard.front}</p>
+                    </div>
+                    
+                    {showFlashcardAnswer && (
+                      <div className="mt-4 pt-4 border-t border-slate-700">
+                        <p className="text-slate-400 text-sm mb-2">Answer</p>
+                        <p className="text-cyan-300 text-base">{currentFlashcard.back}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {!showFlashcardAnswer ? (
+                    <Button
+                      onClick={() => setShowFlashcardAnswer(true)}
+                      className="w-full bg-cyan-500 hover:bg-cyan-600 text-white"
+                    >
+                      Show Answer
+                    </Button>
+                  ) : (
+                    <div className="grid grid-cols-5 gap-2">
+                      {[0, 1, 2, 3, 4, 5].map(quality => (
+                        <Button
+                          key={quality}
+                          onClick={() => handleFlashcardReview(quality)}
+                          variant="outline"
+                          size="sm"
+                          className={
+                            quality === 0 ? 'border-red-500/50 text-red-400 hover:bg-red-500/10' :
+                            quality <= 2 ? 'border-orange-500/50 text-orange-400 hover:bg-orange-500/10' :
+                            quality === 3 ? 'border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10' :
+                            quality === 4 ? 'border-green-500/50 text-green-400 hover:bg-green-500/10' :
+                            'border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10'
+                          }
+                        >
+                          {quality}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="text-center text-xs text-slate-500">
+                    <p>Quality: 0=Blackout, 1-2=Incorrect, 3=Hard, 4=Good, 5=Perfect</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

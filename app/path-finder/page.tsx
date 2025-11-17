@@ -40,7 +40,9 @@ import {
   FileCode,
   Briefcase,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { pathFinderQuestions, type Language } from '@/lib/data/path-finder-questions';
 import { calculateResult, type QuizAnswer, type QuizResult } from '@/lib/utils/path-finder-scoring';
@@ -48,6 +50,8 @@ import { trackEvent, initPostHog, trackPageView } from '@/lib/services/analytics
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { generatePDFReport } from '@/lib/utils/report-generator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible } from '@/components/ui/collapsible';
 
 type PageState = 'welcome' | 'name' | 'quiz' | 'results' | 'roadmap';
 

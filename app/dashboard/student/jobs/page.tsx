@@ -22,15 +22,23 @@ import {
   RefreshCw,
   Target,
   Search,
+  FileText,
+  MessageSquare,
+  AlertTriangle,
+  Brain,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/services/analytics';
@@ -108,6 +116,13 @@ export default function JobMatcherPage() {
   const [history, setHistory] = useState<Array<{ arkId: string; location: string; timestamp: string }>>([]);
   const [savedJobs, setSavedJobs] = useState<Record<string, Job>>({});
   const [clientFilter, setClientFilter] = useState('');
+  const [showResumeBuilder, setShowResumeBuilder] = useState(false);
+  const [showInterviewPrep, setShowInterviewPrep] = useState<string | null>(null);
+  const [showSkillGapAnalysis, setShowSkillGapAnalysis] = useState<string | null>(null);
+  const [interviewQuestions, setInterviewQuestions] = useState<any[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [skillGapAnalysis, setSkillGapAnalysis] = useState<any>(null);
+  const [loadingSkillGap, setLoadingSkillGap] = useState(false);
 
   useEffect(() => {
     loadUserArks();
@@ -374,6 +389,81 @@ export default function JobMatcherPage() {
     });
   };
 
+  const handleInterviewPrep = async (job: Job | JobRecommendation) => {
+    const jobId = 'job_id' in job ? job.job_id : (job as any).id || (job as any).job_id;
+    setShowInterviewPrep(jobId);
+    setLoadingQuestions(true);
+    try {
+      const response = await fetch('/api/interview-prep/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'generate',
+          jobTitle: job.job_title,
+          company: job.company_name,
+          jobDescription: job.job_description,
+          skills: (job as any).skills_matched || (job as Job).required_skills || []
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setInterviewQuestions(data.data.questions || []);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load interview questions:', error);
+      toast.error('Failed to load interview questions');
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const handleSkillGapAnalysis = async (job: Job | JobRecommendation) => {
+    const jobId = 'job_id' in job ? job.job_id : (job as any).id || (job as any).job_id;
+    setShowSkillGapAnalysis(jobId);
+    setLoadingSkillGap(true);
+    try {
+      // Get user's resume/skills data
+      const profileResponse = await fetch('/api/students/profile');
+      const profileData = await profileResponse.json();
+      
+      if (!profileData.success) {
+        toast.error('Please complete your profile first');
+        return;
+      }
+
+      const response = await fetch('/api/resume/analyze-gaps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          resumeData: {
+            skills: {
+              technical: profileData.data.skills || [],
+              soft: []
+            }
+          },
+          jobDescription: job.job_description
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSkillGapAnalysis(data.data.analysis);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to analyze skill gaps:', error);
+      toast.error('Failed to analyze skill gaps');
+    } finally {
+      setLoadingSkillGap(false);
+    }
+  };
+
   const savedJobsList = useMemo(() => Object.values(savedJobs), [savedJobs]);
   const filteredJobs = useMemo(() => {
     if (!clientFilter.trim()) return jobs;
@@ -609,6 +699,28 @@ export default function JobMatcherPage() {
                               Apply Now
                               <ExternalLink className="w-4 h-4" />
                             </a>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+                                onClick={() => handleInterviewPrep(rec)}
+                                title="Interview Prep"
+                              >
+                                <MessageSquare className="w-3 h-3 mr-1" />
+                                Prep
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-purple-500/40 text-purple-400 hover:bg-purple-500/10"
+                                onClick={() => handleSkillGapAnalysis(rec)}
+                                title="Skill Gap Analysis"
+                              >
+                                <Brain className="w-3 h-3 mr-1" />
+                                Skills
+                              </Button>
+                            </div>
                             <div className="flex gap-2">
                               {rec.status !== 'viewed' && (
                                 <Button

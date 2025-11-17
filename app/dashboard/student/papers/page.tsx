@@ -17,12 +17,24 @@ import {
   BookmarkCheck,
   Wifi,
   WifiOff,
+  FileEdit,
+  List,
+  CheckCircle2,
+  StickyNote,
+  Brain,
+  Link as LinkIcon,
+  Copy,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 
@@ -63,6 +75,14 @@ export default function AcademicPapersPage() {
   const [history, setHistory] = useState<Array<{ query: string; timestamp: string }>>([]);
   const [bookmarks, setBookmarks] = useState<Paper[]>([]);
   const [exporting, setExporting] = useState(false);
+  const [summarizing, setSummarizing] = useState<string | null>(null);
+  const [summaries, setSummaries] = useState<Record<string, any>>({});
+  const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
+  const [showBibliography, setShowBibliography] = useState(false);
+  const [bibliographyFormat, setBibliographyFormat] = useState<'apa' | 'mla' | 'ieee' | 'chicago'>('apa');
+  const [bibliography, setBibliography] = useState<string[]>([]);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [showNotes, setShowNotes] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -74,6 +94,10 @@ export default function AcademicPapersPage() {
       const storedBookmarks = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
       if (storedBookmarks) {
         setBookmarks(JSON.parse(storedBookmarks));
+      }
+      const storedNotes = localStorage.getItem('mentark-paper-notes');
+      if (storedNotes) {
+        setNotes(JSON.parse(storedNotes));
       }
     } catch (err) {
       console.warn('Failed to restore papers state', err);
@@ -207,6 +231,100 @@ export default function AcademicPapersPage() {
     }
   };
 
+  const handleSummarize = async (paper: Paper) => {
+    if (summaries[paper.paperId]) {
+      return; // Already summarized
+    }
+
+    setSummarizing(paper.paperId);
+    try {
+      const response = await fetch('/api/papers/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: paper.title,
+          abstract: paper.abstract
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSummaries(prev => ({ ...prev, [paper.paperId]: data.data.summary }));
+          toast.success('Paper summarized');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to summarize paper:', error);
+      toast.error('Failed to summarize paper');
+    } finally {
+      setSummarizing(null);
+    }
+  };
+
+  const handleGenerateBibliography = async () => {
+    if (selectedPapers.size === 0) {
+      toast('Select at least one paper to generate bibliography');
+      return;
+    }
+
+    const selectedPapersList = papers.filter(p => selectedPapers.has(p.paperId));
+    
+    try {
+      const response = await fetch('/api/papers/bibliography', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          papers: selectedPapersList.map(p => ({
+            title: p.title,
+            authors: p.authors.map(a => a.name),
+            year: p.year || new Date().getFullYear(),
+            venue: p.venue,
+            url: p.url
+          })),
+          format: bibliographyFormat
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setBibliography(data.data.bibliography);
+          setShowBibliography(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate bibliography:', error);
+      toast.error('Failed to generate bibliography');
+    }
+  };
+
+  const togglePaperSelection = (paperId: string) => {
+    setSelectedPapers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(paperId)) {
+        newSet.delete(paperId);
+      } else {
+        newSet.add(paperId);
+      }
+      return newSet;
+    });
+  };
+
+  const saveNote = (paperId: string, noteContent: string) => {
+    setNotes(prev => ({ ...prev, [paperId]: noteContent }));
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('mentark-paper-notes', JSON.stringify({ ...notes, [paperId]: noteContent }));
+      } catch (err) {
+        console.warn('Failed to save note', err);
+      }
+    }
+    toast.success('Note saved');
+  };
+
   return (
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-6xl">
@@ -320,8 +438,8 @@ export default function AcademicPapersPage() {
             </div>
           )}
 
-          {bookmarks.length > 0 && (
-            <div className="mb-6 flex items-center gap-2">
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {bookmarks.length > 0 && (
               <Button
                 type="button"
                 variant="outline"
@@ -341,8 +459,46 @@ export default function AcademicPapersPage() {
                   </>
                 )}
               </Button>
-            </div>
-          )}
+            )}
+            {selectedPapers.size > 0 && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-500/30 text-blue-300"
+                  onClick={handleGenerateBibliography}
+                >
+                  <List className="w-4 h-4 mr-2" />
+                  Generate Bibliography ({selectedPapers.size})
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-slate-400 hover:text-slate-300"
+                  onClick={() => setSelectedPapers(new Set())}
+                >
+                  Clear Selection
+                </Button>
+              </>
+            )}
+            {papers.length > 0 && (
+              <div className="ml-auto flex items-center gap-2">
+                <Select value={bibliographyFormat} onValueChange={(v: any) => setBibliographyFormat(v)}>
+                  <SelectTrigger className="w-32 h-8 border-slate-700 bg-slate-800 text-slate-300">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="apa">APA</SelectItem>
+                    <SelectItem value="mla">MLA</SelectItem>
+                    <SelectItem value="ieee">IEEE</SelectItem>
+                    <SelectItem value="chicago">Chicago</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
 
           {/* Loading State */}
           {loading && (
@@ -387,22 +543,69 @@ export default function AcademicPapersPage() {
               </Card>
 
               {papers.map((paper) => (
-                <Card key={paper.paperId} className="bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
+                <Card key={paper.paperId} className={`bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors ${selectedPapers.has(paper.paperId) ? 'ring-2 ring-blue-500/50' : ''}`}>
                   <CardContent className="pt-6">
                     <div className="space-y-4">
-                      {/* Title */}
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2 flex items-start gap-3">
-                          <BookOpen className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                          <a
-                            href={paper.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-yellow-400 transition-colors"
+                      {/* Header with selection and actions */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-start gap-3 mb-2">
+                            <button
+                              type="button"
+                              onClick={() => togglePaperSelection(paper.paperId)}
+                              className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                selectedPapers.has(paper.paperId)
+                                  ? 'bg-blue-500 border-blue-500'
+                                  : 'border-slate-600 hover:border-blue-500'
+                              }`}
+                            >
+                              {selectedPapers.has(paper.paperId) && (
+                                <CheckCircle2 className="w-3 h-3 text-white" />
+                              )}
+                            </button>
+                            <h3 className="text-xl font-bold text-white flex items-start gap-2 flex-1">
+                              <BookOpen className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                              <a
+                                href={paper.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-yellow-400 transition-colors"
+                              >
+                                {paper.title}
+                              </a>
+                            </h3>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-slate-400 hover:text-purple-300"
+                            onClick={() => setShowNotes(showNotes === paper.paperId ? null : paper.paperId)}
+                            title="Add research notes"
                           >
-                            {paper.title}
-                          </a>
-                        </h3>
+                            <StickyNote className="w-4 h-4" />
+                            {notes[paper.paperId] && <span className="ml-1 text-purple-400">•</span>}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-slate-400 hover:text-blue-300"
+                            onClick={() => handleSummarize(paper)}
+                            disabled={summarizing === paper.paperId || !!summaries[paper.paperId]}
+                            title="AI Summarize"
+                          >
+                            {summarizing === paper.paperId ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400" />
+                            ) : summaries[paper.paperId] ? (
+                              <Brain className="w-4 h-4 text-blue-400" />
+                            ) : (
+                              <Brain className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Meta Info */}
@@ -445,6 +648,74 @@ export default function AcademicPapersPage() {
                         </div>
                       )}
 
+                      {/* AI Summary */}
+                      {summaries[paper.paperId] && (
+                        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Brain className="w-4 h-4 text-blue-400" />
+                            <span className="text-sm font-semibold text-blue-300">AI Summary</span>
+                          </div>
+                          <div className="space-y-2 text-sm text-slate-300">
+                            {summaries[paper.paperId].keyFindings && summaries[paper.paperId].keyFindings.length > 0 && (
+                              <div>
+                                <p className="text-xs text-blue-400 font-semibold mb-1">Key Findings:</p>
+                                <ul className="list-disc list-inside space-y-1">
+                                  {summaries[paper.paperId].keyFindings.slice(0, 3).map((finding: string, idx: number) => (
+                                    <li key={idx} className="text-xs">{finding}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {summaries[paper.paperId].takeaway && (
+                              <div>
+                                <p className="text-xs text-blue-400 font-semibold mb-1">Takeaway:</p>
+                                <p className="text-xs">{summaries[paper.paperId].takeaway}</p>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs">
+                                Relevance: {summaries[paper.paperId].relevanceScore || 50}%
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Research Notes */}
+                      {showNotes === paper.paperId && (
+                        <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                          <Label className="text-sm font-semibold text-purple-300 mb-2 block">Research Notes</Label>
+                          <Textarea
+                            value={notes[paper.paperId] || ''}
+                            onChange={(e) => setNotes(prev => ({ ...prev, [paper.paperId]: e.target.value }))}
+                            placeholder="Add your research notes, quotes, insights..."
+                            rows={4}
+                            className="bg-slate-800 border-slate-700 text-slate-300 text-sm mb-2"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                              onClick={() => saveNote(paper.paperId, notes[paper.paperId] || '')}
+                            >
+                              <FileEdit className="w-3 h-3 mr-1" />
+                              Save Note
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="text-slate-400 hover:text-slate-300"
+                              onClick={() => setShowNotes(null)}
+                            >
+                              Close
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Actions */}
                        <div className="pt-2">
                         <div className="flex items-center gap-3">
@@ -475,6 +746,59 @@ export default function AcademicPapersPage() {
               ))}
             </div>
           )}
+
+          {/* Bibliography Dialog */}
+          <Dialog open={showBibliography} onOpenChange={setShowBibliography}>
+            <DialogContent className="max-w-3xl bg-slate-900 border-slate-700">
+              <DialogHeader>
+                <DialogTitle className="text-yellow-400">Generated Bibliography ({bibliographyFormat.toUpperCase()})</DialogTitle>
+                <DialogDescription>
+                  {selectedPapers.size} paper{selectedPapers.size !== 1 ? 's' : ''} selected
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 max-h-96 overflow-y-auto">
+                  <ol className="space-y-3">
+                    {bibliography.map((entry, idx) => (
+                      <li key={idx} className="text-sm text-slate-300 list-decimal list-inside">
+                        {entry}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="border-yellow-500/30 text-yellow-300"
+                    onClick={() => {
+                      const blob = new Blob([bibliography.join('\n\n')], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `bibliography-${bibliographyFormat}.txt`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success('Bibliography downloaded');
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="text-slate-400"
+                    onClick={() => {
+                      navigator.clipboard.writeText(bibliography.join('\n\n'));
+                      toast.success('Bibliography copied to clipboard');
+                    }}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {bookmarks.length > 0 && (
             <div className="mt-8 space-y-4">

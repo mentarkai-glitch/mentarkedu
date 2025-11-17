@@ -4,6 +4,11 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   Brain,
   Sparkles,
@@ -18,6 +23,10 @@ import {
   TrendingUp,
   Lightbulb,
   HelpCircle,
+  Mic,
+  Volume2,
+  VolumeX,
+  Settings,
 } from "lucide-react";
 
 const agents = [
@@ -101,6 +110,37 @@ const agents = [
 ];
 
 export default function AgentsHubPage() {
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceSettings, setVoiceSettings] = useState({
+    language: 'en',
+    autoTranscribe: true,
+    respondWithVoice: false
+  });
+
+  const handleToggleVoice = () => {
+    setVoiceMode(!voiceMode);
+    if (!voiceMode) {
+      toast.success('Voice mode enabled. Click the mic button to start speaking.');
+    } else {
+      setIsListening(false);
+    }
+  };
+
+  const handleStartListening = () => {
+    if (!voiceMode) {
+      toast.error('Enable voice mode first');
+      return;
+    }
+    setIsListening(true);
+    // In a real implementation, this would use Web Speech API
+    toast.info('Listening... (Voice recognition coming soon)');
+    setTimeout(() => {
+      setIsListening(false);
+      toast.success('Voice input received');
+    }, 3000);
+  };
+
   return (
     <div className="min-h-screen">
       {/* Page Header */}
@@ -115,6 +155,52 @@ export default function AgentsHubPage() {
                 <h1 className="text-4xl font-bold text-white mb-2">AI Agents Hub</h1>
                 <p className="text-slate-400 text-lg">Choose the right agent for your task</p>
               </div>
+            </div>
+            <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                <Switch
+                  checked={voiceMode}
+                  onCheckedChange={handleToggleVoice}
+                  id="voice-mode"
+                />
+                <Label htmlFor="voice-mode" className="text-slate-300 cursor-pointer">
+                  Voice Mode
+                </Label>
+                {voiceMode && (
+                  <Button
+                    size="sm"
+                    variant={isListening ? "destructive" : "outline"}
+                    className={isListening ? "bg-red-500 text-white" : "border-green-500/40 text-green-400"}
+                    onClick={handleStartListening}
+                  >
+                    {isListening ? (
+                      <>
+                        <VolumeX className="w-4 h-4 mr-2" />
+                        Stop
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4 mr-2" />
+                        Start Speaking
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+              {voiceMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-700 text-slate-400"
+                  onClick={() => {
+                    // Voice settings dialog would go here
+                    toast.info('Voice settings coming soon');
+                  }}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </Button>
+              )}
             </div>
           </motion.div>
         </div>

@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink, BookOpen, GraduationCap } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink, BookOpen, GraduationCap, ChevronDown, ChevronRight, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const HISTORY_KEY = 'mentark-doubt-history-v1';
 
@@ -43,6 +44,39 @@ interface SolvedDoubt {
   timestamp: string;
   videos?: YouTubeVideo[];
   khanAcademyResults?: KhanAcademyResult[];
+  stepByStepSolution?: {
+    steps: Array<{
+      stepNumber: number;
+      description: string;
+      explanation: string;
+      formula?: string;
+      intermediateResult?: string;
+    }>;
+    finalAnswer: string;
+    alternativeMethods?: Array<{
+      name: string;
+      description: string;
+      steps: Array<any>;
+      whenToUse: string;
+    }>;
+    verification?: string;
+    conceptTags: string[];
+  };
+  relatedConcepts?: Array<{
+    concept: string;
+    relation: string;
+    description: string;
+    resources?: {
+      videos?: string[];
+    };
+  }>;
+  relatedDoubts?: Array<{
+    question: string;
+    similarity: number;
+    category: string;
+    answer?: string;
+    tags: string[];
+  }>;
 }
 
 const EXAMPLE_DOUBTS: Array<{ prompt: string; category: DoubtCategory }> = [
@@ -63,6 +97,11 @@ export default function DoubtSolverPage() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<SolvedDoubt[]>([]);
   const [isOnline, setIsOnline] = useState(true);
+  const [stepByStepSolution, setStepByStepSolution] = useState<any>(null);
+  const [relatedConcepts, setRelatedConcepts] = useState<any[]>([]);
+  const [relatedDoubts, setRelatedDoubts] = useState<any[]>([]);
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set([0]));
+  const [showEnhancedView, setShowEnhancedView] = useState(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -114,8 +153,16 @@ export default function DoubtSolverPage() {
     setError(null);
 
     try {
-      // Fetch AI answer and YouTube videos
-      const [doubtResponse, khanAcademyResponse] = await Promise.allSettled([
+      // Fetch enhanced solution, basic answer, and Khan Academy results in parallel
+      const [enhancedResponse, doubtResponse, khanAcademyResponse] = await Promise.allSettled([
+        // Enhanced step-by-step solution
+        fetch('/api/doubt-solver/enhanced', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ question, category }),
+        }),
+        // Basic answer (fallback)
         fetch('/api/doubt-solver', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -126,17 +173,34 @@ export default function DoubtSolverPage() {
         fetch(`/api/resources/khan-academy?q=${encodeURIComponent(question)}`),
       ]);
 
-      // Process doubt solver response
+      // Process enhanced solution response
       let resolvedAnswer = '';
       let resolvedVideos: YouTubeVideo[] = [];
+      let resolvedStepByStep: any = null;
+      let resolvedRelatedConcepts: any[] = [];
+      let resolvedRelatedDoubts: any[] = [];
 
-      if (doubtResponse.status === 'fulfilled' && doubtResponse.value.ok) {
+      if (enhancedResponse.status === 'fulfilled' && enhancedResponse.value.ok) {
+        const enhancedData = await enhancedResponse.value.json();
+        if (enhancedData.success && enhancedData.data) {
+          resolvedStepByStep = enhancedData.data.solution;
+          resolvedAnswer = enhancedData.data.solution?.finalAnswer || '';
+          resolvedRelatedConcepts = enhancedData.data.relatedConcepts || [];
+          resolvedRelatedDoubts = enhancedData.data.relatedDoubts || [];
+          resolvedVideos = enhancedData.data.videos || [];
+        }
+      }
+
+      // Fallback to basic answer if enhanced solution failed
+      if (!resolvedAnswer && doubtResponse.status === 'fulfilled' && doubtResponse.value.ok) {
         const data = await doubtResponse.value.json();
         const solution = data.data || data;
         
         if (!data.error && !solution.error) {
           resolvedAnswer = solution.answer || solution.explanation || '';
-          resolvedVideos = solution.videos || [];
+          if (!resolvedVideos.length) {
+            resolvedVideos = solution.videos || [];
+          }
         }
       }
 
@@ -156,6 +220,14 @@ export default function DoubtSolverPage() {
       setAnswer(resolvedAnswer);
       setVideos(resolvedVideos);
       setKhanAcademyResults(resolvedKhanAcademyResults);
+      setStepByStepSolution(resolvedStepByStep);
+      setRelatedConcepts(resolvedRelatedConcepts);
+      setRelatedDoubts(resolvedRelatedDoubts);
+      
+      // Expand first step by default
+      if (resolvedStepByStep?.steps?.length > 0) {
+        setExpandedSteps(new Set([0]));
+      }
       
       setHistory((prev) => [
         {
@@ -165,6 +237,9 @@ export default function DoubtSolverPage() {
           timestamp: new Date().toISOString(),
           videos: resolvedVideos,
           khanAcademyResults: resolvedKhanAcademyResults,
+          stepByStepSolution: resolvedStepByStep,
+          relatedConcepts: resolvedRelatedConcepts,
+          relatedDoubts: resolvedRelatedDoubts,
         },
         ...prev,
       ].slice(0, 10));
@@ -292,22 +367,259 @@ export default function DoubtSolverPage() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-green-500/30"
+                  className="mt-6"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                    <span className="font-semibold text-green-400">Verified Answer</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={handleCopyAnswer}
-                      className="ml-auto text-xs text-slate-300 hover:text-white"
-                    >
-                      <Clipboard className="w-4 h-4 mr-1" /> Copy
-                    </Button>
-                  </div>
-                  <p className="text-slate-200 whitespace-pre-wrap">{answer}</p>
+                  <Tabs defaultValue={stepByStepSolution ? "step-by-step" : "answer"} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 bg-slate-900/50 border border-slate-700">
+                      <TabsTrigger value="answer" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+                        Answer
+                      </TabsTrigger>
+                      {stepByStepSolution && (
+                        <TabsTrigger value="step-by-step" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+                          Step-by-Step
+                        </TabsTrigger>
+                      )}
+                    </TabsList>
+                    
+                    <TabsContent value="answer" className="mt-4">
+                      <div className="p-4 bg-slate-900/50 rounded-lg border border-green-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="w-5 h-5 text-green-400" />
+                          <span className="font-semibold text-green-400">Verified Answer</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={handleCopyAnswer}
+                            className="ml-auto text-xs text-slate-300 hover:text-white"
+                          >
+                            <Clipboard className="w-4 h-4 mr-1" /> Copy
+                          </Button>
+                        </div>
+                        <p className="text-slate-200 whitespace-pre-wrap">{answer}</p>
+                      </div>
+                    </TabsContent>
+                    
+                    {stepByStepSolution && (
+                      <TabsContent value="step-by-step" className="mt-4 space-y-4">
+                        {/* Step-by-Step Solution */}
+                        <div className="p-4 bg-slate-900/50 rounded-lg border border-purple-500/30">
+                          <div className="flex items-center gap-2 mb-4">
+                            <BookOpen className="w-5 h-5 text-purple-400" />
+                            <span className="font-semibold text-purple-400">Step-by-Step Solution</span>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            {stepByStepSolution.steps?.map((step: any, idx: number) => {
+                              const isExpanded = expandedSteps.has(idx);
+                              return (
+                                <div key={idx} className="border border-slate-700 rounded-lg overflow-hidden">
+                                  <button
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedSteps);
+                                      if (isExpanded) {
+                                        newExpanded.delete(idx);
+                                      } else {
+                                        newExpanded.add(idx);
+                                      }
+                                      setExpandedSteps(newExpanded);
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 bg-slate-800/50 hover:bg-slate-800/70 transition-colors"
+                                  >
+                                    <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                                      {step.stepNumber || idx + 1}
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                      <p className="text-white font-medium">{step.description || `Step ${idx + 1}`}</p>
+                                      {step.formula && (
+                                        <p className="text-xs text-slate-400 mt-1 font-mono">{step.formula}</p>
+                                      )}
+                                    </div>
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                    )}
+                                  </button>
+                                  {isExpanded && (
+                                    <div className="p-4 bg-slate-800/30 border-t border-slate-700">
+                                      <p className="text-slate-300 text-sm whitespace-pre-wrap">{step.explanation}</p>
+                                      {step.intermediateResult && (
+                                        <div className="mt-3 p-2 rounded bg-purple-500/10 border border-purple-500/30">
+                                          <p className="text-xs text-purple-300 font-semibold mb-1">Intermediate Result:</p>
+                                          <p className="text-purple-200 text-sm font-mono">{step.intermediateResult}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          {/* Final Answer */}
+                          <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                            <p className="text-xs text-green-400 font-semibold mb-2">Final Answer:</p>
+                            <p className="text-green-300 font-semibold text-lg">{stepByStepSolution.finalAnswer || answer}</p>
+                          </div>
+                          
+                          {/* Verification */}
+                          {stepByStepSolution.verification && (
+                            <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                              <div className="flex items-center gap-2 mb-2">
+                                <AlertCircle className="w-4 h-4 text-blue-400" />
+                                <p className="text-xs text-blue-400 font-semibold">Verification</p>
+                              </div>
+                              <p className="text-blue-300 text-sm">{stepByStepSolution.verification}</p>
+                            </div>
+                          )}
+                          
+                          {/* Alternative Methods */}
+                          {stepByStepSolution.alternativeMethods && stepByStepSolution.alternativeMethods.length > 0 && (
+                            <div className="mt-4">
+                              <p className="text-sm font-semibold text-slate-300 mb-3">Alternative Methods</p>
+                              <div className="space-y-2">
+                                {stepByStepSolution.alternativeMethods.map((method: any, idx: number) => {
+                                  const methodId = `method-${idx}`;
+                                  const isOpen = expandedSteps.has(-idx - 100); // Use negative indices for methods
+                                  return (
+                                    <div key={idx} className="border border-slate-700 rounded-lg overflow-hidden">
+                                      <button
+                                        onClick={() => {
+                                          const newExpanded = new Set(expandedSteps);
+                                          if (isOpen) {
+                                            newExpanded.delete(-idx - 100);
+                                          } else {
+                                            newExpanded.add(-idx - 100);
+                                          }
+                                          setExpandedSteps(newExpanded);
+                                        }}
+                                        className="w-full p-3 bg-slate-800/50 hover:bg-slate-800/70 transition-colors text-left"
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <p className="text-white font-medium">{method.name}</p>
+                                            <p className="text-xs text-slate-400 mt-1">{method.whenToUse}</p>
+                                          </div>
+                                          {isOpen ? (
+                                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                                          ) : (
+                                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                                          )}
+                                        </div>
+                                      </button>
+                                      {isOpen && (
+                                        <div className="p-4 bg-slate-800/30 border-t border-slate-700">
+                                          <p className="text-slate-300 text-sm mb-3">{method.description}</p>
+                                          <div className="space-y-2">
+                                            {method.steps?.map((step: any, stepIdx: number) => (
+                                              <div key={stepIdx} className="p-2 rounded bg-slate-900/50">
+                                                <p className="text-xs text-slate-400 mb-1">Step {stepIdx + 1}</p>
+                                                <p className="text-slate-300 text-sm">{step.description || step.explanation}</p>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Concept Tags */}
+                          {stepByStepSolution.conceptTags && stepByStepSolution.conceptTags.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {stepByStepSolution.conceptTags.map((tag: string, idx: number) => (
+                                <Badge key={idx} className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Related Concepts */}
+                        {relatedConcepts.length > 0 && (
+                          <div className="p-4 bg-slate-900/50 rounded-lg border border-cyan-500/30">
+                            <div className="flex items-center gap-2 mb-3">
+                              <LinkIcon className="w-5 h-5 text-cyan-400" />
+                              <span className="font-semibold text-cyan-400">Related Concepts</span>
+                            </div>
+                            <div className="space-y-2">
+                              {relatedConcepts.slice(0, 5).map((concept: any, idx: number) => (
+                                <div key={idx} className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-white font-medium text-sm">{concept.concept}</span>
+                                    <Badge className={`${
+                                      concept.relation === 'prerequisite' ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
+                                      concept.relation === 'advanced' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
+                                      concept.relation === 'application' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                                      'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                    } capitalize`}>
+                                      {concept.relation}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-slate-400 text-xs">{concept.description}</p>
+                                  {concept.resources?.videos && concept.resources.videos.length > 0 && (
+                                    <div className="mt-2">
+                                      <a
+                                        href={concept.resources.videos[0]}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                                      >
+                                        <Play className="w-3 h-3" />
+                                        Watch video explanation
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Related Doubts */}
+                        {relatedDoubts.length > 0 && (
+                          <div className="p-4 bg-slate-900/50 rounded-lg border border-yellow-500/30">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Lightbulb className="w-5 h-5 text-yellow-400" />
+                              <span className="font-semibold text-yellow-400">Related Doubts</span>
+                            </div>
+                            <div className="space-y-2">
+                              {relatedDoubts.slice(0, 3).map((doubt: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    setQuestion(doubt.question);
+                                    setCategory(doubt.category as DoubtCategory);
+                                    handleSubmit(new Event('submit') as any);
+                                  }}
+                                  className="p-3 rounded-lg bg-slate-800/50 border border-slate-700 hover:border-yellow-500/50 transition-all cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-white text-sm font-medium">{doubt.question}</span>
+                                    <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
+                                      {(doubt.similarity * 100).toFixed(0)}% similar
+                                    </Badge>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {doubt.tags.slice(0, 3).map((tag: string, tagIdx: number) => (
+                                      <Badge key={tagIdx} variant="outline" className="text-xs border-slate-700 text-slate-400">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </TabsContent>
+                    )}
+                  </Tabs>
                 </motion.div>
 
                 {videos.length > 0 && (

@@ -119,7 +119,9 @@ export default function PracticeQuestionsPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
   const [pastResults, setPastResults] = useState<PracticeQuestion[]>([]);
-  const [recentSummary, setRecentSummary] = useState<{ correct: number; total: number; accuracy: number } | null>(null);
+  const [recentSummary, setRecentSummary] = useState<{ correct: number; total: number; accuracy: number; nextDifficulty?: DifficultyLevel } | null>(null);
+  const [mistakesDueForReview, setMistakesDueForReview] = useState<any[]>([]);
+  const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
 
   // Load analytics on mount
   useEffect(() => {
@@ -127,8 +129,38 @@ export default function PracticeQuestionsPage() {
       fetchAnalytics();
       fetchMistakePatterns();
       fetchAdaptiveDifficulties();
+      fetchMistakesDueForReview();
+      fetchPerformanceMetrics();
     }
   }, []);
+  
+  const fetchMistakesDueForReview = async () => {
+    try {
+      const response = await fetch('/api/practice/adaptive?action=due-review');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setMistakesDueForReview(data.data.mistakes || []);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch mistakes due for review:', error);
+    }
+  };
+  
+  const fetchPerformanceMetrics = async () => {
+    try {
+      const response = await fetch('/api/practice/adaptive?action=metrics');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPerformanceMetrics(data.data.metrics);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch performance metrics:', error);
+    }
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -211,10 +243,62 @@ export default function PracticeQuestionsPage() {
 
   const fetchAdaptiveDifficulties = async () => {
     try {
-      // This would need a new endpoint - for now, we'll get it from analytics
-      // We can extend analytics to include adaptive difficulties
+      const response = await fetch('/api/practice/adaptive?action=metrics');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.metrics) {
+          // Store metrics for adaptive difficulty calculation
+          // This will be used when generating new questions
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch adaptive difficulties:', error);
+    }
+  };
+  
+  const calculateNextDifficulty = async (recentAttempts: any[], currentDifficulty: DifficultyLevel) => {
+    try {
+      const response = await fetch('/api/practice/adaptive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'calculate-difficulty',
+          attempts: recentAttempts,
+          currentDifficulty
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return data.data.difficulty;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to calculate adaptive difficulty:', error);
+    }
+    return currentDifficulty;
+  };
+  
+  const trackMistakeForSpacedRepetition = async (question: PracticeQuestion, selectedAnswer: number) => {
+    if (selectedAnswer === question.correctAnswer) return;
+    
+    try {
+      await fetch('/api/practice/adaptive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'track-mistake',
+          questionId: question.id,
+          selectedAnswer,
+          correctAnswer: question.correctAnswer,
+          topic: question.topic
+        })
+      });
+    } catch (error) {
+      console.error('Failed to track mistake:', error);
     }
   };
 
@@ -362,6 +446,37 @@ export default function PracticeQuestionsPage() {
         }),
       });
 
+      // Track all mistakes for spaced repetition
+      questions.forEach((q, idx) => {
+        const selectedAnswer = selectedAnswers[idx];
+        if (selectedAnswer !== undefined && selectedAnswer !== q.correctAnswer) {
+          trackMistakeForSpacedRepetition(q, selectedAnswer);
+        }
+      });
+      
+      // Calculate adaptive difficulty for next session
+      const recentAttempts = questions.map((q, idx) => ({
+        questionId: q.id,
+        selectedAnswer: selectedAnswers[idx],
+        correctAnswer: q.correctAnswer,
+        timeSpent: timeSpent ? Math.round(timeSpent / questions.length) : 30,
+        timestamp: new Date(),
+        difficulty: q.difficulty,
+        wasCorrect: selectedAnswers[idx] === q.correctAnswer
+      }));
+      
+      // Calculate next difficulty
+      const avgDifficulty = questions.reduce((sum, q) => {
+        const difficultyValue = { easy: 1, medium: 2, hard: 3, advanced: 4 }[q.difficulty] || 2;
+        return sum + difficultyValue;
+      }, 0) / questions.length;
+      
+      const currentDifficulty = avgDifficulty < 1.5 ? 'easy' : 
+                                avgDifficulty < 2.5 ? 'medium' : 
+                                avgDifficulty < 3.5 ? 'hard' : 'advanced';
+      
+      const nextDifficulty = await calculateNextDifficulty(recentAttempts, currentDifficulty as DifficultyLevel);
+      
       // Refresh analytics
       await fetchAnalytics();
       await fetchMistakePatterns();
@@ -375,6 +490,7 @@ export default function PracticeQuestionsPage() {
         correct,
         total: questions.length,
         accuracy: Math.round((correct / questions.length) * 100),
+        nextDifficulty // Store for next session
       };
       setRecentSummary(summary);
       setGeneratedAt((prev) => prev ?? new Date().toISOString());
@@ -677,9 +793,13 @@ export default function PracticeQuestionsPage() {
                                 <button
                                   key={optIdx}
                                   type="button"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (!showResults) {
                                       setSelectedAnswers({ ...selectedAnswers, [idx]: optIdx });
+                                      // Track mistake for spaced repetition if wrong
+                                      if (optIdx !== q.correctAnswer) {
+                                        await trackMistakeForSpacedRepetition(q, optIdx);
+                                      }
                                     }
                                   }}
                                   className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${baseClasses} ${resultClasses}`}
@@ -792,6 +912,124 @@ export default function PracticeQuestionsPage() {
                 </div>
               ) : analytics ? (
                 <div className="space-y-6">
+                  {/* Adaptive Difficulty & Performance */}
+                  {performanceMetrics && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
+                        <CardHeader>
+                          <CardTitle className="text-purple-400 flex items-center gap-2">
+                            <Brain className="w-5 h-5" />
+                            Adaptive Difficulty
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="p-3 rounded-lg bg-slate-900/50 border border-purple-500/30">
+                              <p className="text-xs text-slate-400 mb-1">Current Performance</p>
+                              <p className="text-2xl font-bold text-purple-400">
+                                {Math.round(performanceMetrics.accuracy * 100)}%
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 text-xs">
+                              {(['easy', 'medium', 'hard', 'advanced'] as DifficultyLevel[]).map((diff) => (
+                                <div key={diff} className="p-2 rounded bg-slate-900/50 text-center">
+                                  <p className="text-slate-400 capitalize">{diff}</p>
+                                  <p className="text-white font-semibold">
+                                    {performanceMetrics.difficultyDistribution?.[diff] || 0}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            {recentSummary?.nextDifficulty && (
+                              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                <p className="text-xs text-blue-400 font-semibold mb-1">Recommended Next</p>
+                                <Badge className={getDifficultyColor(recentSummary.nextDifficulty)}>
+                                  {recentSummary.nextDifficulty}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/30">
+                        <CardHeader>
+                          <CardTitle className="text-cyan-400 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5" />
+                            Performance Insights
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
+                              <p className="text-xs text-slate-400 mb-1">Average Time per Question</p>
+                              <p className="text-2xl font-bold text-cyan-400">
+                                {performanceMetrics.averageTime ? Math.round(performanceMetrics.averageTime) : 0}s
+                              </p>
+                            </div>
+                            {performanceMetrics.topicPerformance && Object.keys(performanceMetrics.topicPerformance).length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-xs text-slate-400 font-semibold">Topic Performance</p>
+                                {Object.entries(performanceMetrics.topicPerformance).slice(0, 3).map(([topic, data]: [string, any]) => (
+                                  <div key={topic} className="p-2 rounded bg-slate-900/50">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-white text-sm">{topic}</span>
+                                      <span className="text-cyan-400 text-sm font-semibold">
+                                        {Math.round(data.accuracy * 100)}%
+                                      </span>
+                                    </div>
+                                    <Progress value={data.accuracy * 100} className="h-1.5" />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                  
+                  {/* Mistakes Due for Review (Spaced Repetition) */}
+                  {mistakesDueForReview.length > 0 && (
+                    <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/30">
+                      <CardHeader>
+                        <CardTitle className="text-orange-400 flex items-center gap-2">
+                          <Clock className="w-5 h-5" />
+                          Mistakes Due for Review
+                        </CardTitle>
+                        <CardDescription>
+                          {mistakesDueForReview.length} mistake{mistakesDueForReview.length !== 1 ? 's' : ''} ready for spaced repetition review
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {mistakesDueForReview.slice(0, 5).map((mistake: any, idx: number) => (
+                            <div key={idx} className="p-3 rounded-lg bg-slate-900/50 border border-slate-700">
+                              <div className="flex items-center justify-between mb-2">
+                                <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">
+                                  {mistake.topic}
+                                </Badge>
+                                <Badge className={`${
+                                  mistake.masteryLevel >= 80 ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                                  mistake.masteryLevel >= 50 ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' :
+                                  'bg-red-500/20 text-red-300 border-red-500/30'
+                                }`}>
+                                  {Math.round(mistake.masteryLevel)}% mastery
+                                </Badge>
+                              </div>
+                              <p className="text-white text-sm mb-1">{mistake.question || 'Review this concept'}</p>
+                              <div className="flex items-center gap-4 text-xs text-slate-400 mt-2">
+                                <span>Occurrences: {mistake.occurrences}</span>
+                                <span>•</span>
+                                <span>Next review: {new Date(mistake.nextReview).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
                   {/* Overall Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card className="bg-slate-900/60 border-slate-800">

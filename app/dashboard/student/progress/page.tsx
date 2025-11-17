@@ -15,6 +15,11 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  Plus,
+  CheckCircle2,
+  AlertCircle,
+  Edit,
+  Brain,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +28,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import type { SMARTGoal } from '@/lib/services/smart-goals';
 
 interface XPData {
   totalXp: number;
@@ -83,6 +93,12 @@ export default function ProgressPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isOnline, setIsOnline] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [smartGoals, setSmartGoals] = useState<SMARTGoal[]>([]);
+  const [showCreateGoal, setShowCreateGoal] = useState(false);
+  const [goalText, setGoalText] = useState('');
+  const [goalTitle, setGoalTitle] = useState('');
+  const [goalTargetDate, setGoalTargetDate] = useState('');
+  const [parsedGoal, setParsedGoal] = useState<Partial<SMARTGoal> | null>(null);
 
   useEffect(() => {
     loadAllData();
@@ -273,10 +289,11 @@ export default function ProgressPage() {
                 <AlertDescription className="text-red-300">{error}</AlertDescription>
               </Alert>
             )}
-            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-yellow-500/30">
+            <TabsList className="grid w-full grid-cols-4 bg-slate-900/50 border border-yellow-500/30">
               <TabsTrigger value="overview">📊 Overview</TabsTrigger>
               <TabsTrigger value="achievements">🏆 Achievements</TabsTrigger>
               <TabsTrigger value="leaderboard">🥇 Leaderboard</TabsTrigger>
+              <TabsTrigger value="goals">🎯 SMART Goals</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-6 space-y-6">
@@ -523,7 +540,258 @@ export default function ProgressPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent value="goals" className="mt-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">SMART Goals</h2>
+                <Button
+                  onClick={() => setShowCreateGoal(true)}
+                  className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Goal
+                </Button>
+              </div>
+
+              {smartGoals.length > 0 ? (
+                <div className="space-y-4">
+                  {smartGoals.map((goal) => (
+                    <Card key={goal.id} className="bg-slate-900/50 border-yellow-500/30">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-white">{goal.title}</CardTitle>
+                          <Badge className={`${
+                            goal.currentProgress >= 100 ? 'bg-green-500/20 text-green-400 border-green-500/50' :
+                            goal.currentProgress >= 50 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' :
+                            'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                          }`}>
+                            {goal.currentProgress}% Complete
+                          </Badge>
+                        </div>
+                        <CardDescription>{goal.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <Progress value={goal.currentProgress} className="h-2" />
+                          <div className="grid md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <Label className="text-slate-400 mb-1 block">Target Date</Label>
+                              <p className="text-white">{new Date(goal.targetDate).toLocaleDateString()}</p>
+                            </div>
+                            <div>
+                              <Label className="text-slate-400 mb-1 block">Milestones</Label>
+                              <p className="text-white">
+                                {goal.milestones.filter(m => m.completed).length} / {goal.milestones.length} completed
+                              </p>
+                            </div>
+                          </div>
+                          {goal.milestones.length > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-sm text-slate-400">Milestones</Label>
+                              {goal.milestones.map((milestone) => (
+                                <div key={milestone.id} className="flex items-center gap-2 p-2 bg-slate-800 rounded border border-slate-700">
+                                  {milestone.completed ? (
+                                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                  ) : (
+                                    <div className="w-4 h-4 rounded-full border-2 border-slate-600" />
+                                  )}
+                                  <span className={`text-sm flex-1 ${milestone.completed ? 'text-slate-400 line-through' : 'text-white'}`}>
+                                    {milestone.title}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    {new Date(milestone.targetDate).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <CardContent className="pt-12 pb-12">
+                    <div className="flex flex-col items-center justify-center text-center space-y-4">
+                      <Target className="w-16 h-16 text-yellow-400 opacity-50" />
+                      <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">No SMART Goals Yet</h3>
+                        <p className="text-slate-400 text-sm mb-4">
+                          Set specific, measurable goals to track your progress
+                        </p>
+                        <Button
+                          onClick={() => setShowCreateGoal(true)}
+                          className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Your First Goal
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
           </Tabs>
+
+          {/* Create SMART Goal Dialog */}
+          <Dialog open={showCreateGoal} onOpenChange={setShowCreateGoal}>
+            <DialogContent className="max-w-2xl bg-slate-900 border-slate-700 max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-yellow-400">Create SMART Goal</DialogTitle>
+                <DialogDescription>
+                  Set a Specific, Measurable, Achievable, Relevant, Time-bound goal
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="goal-title" className="text-slate-300 mb-2 block">Goal Title *</Label>
+                  <Input
+                    id="goal-title"
+                    value={goalTitle}
+                    onChange={(e) => setGoalTitle(e.target.value)}
+                    placeholder="e.g., Complete Data Science Course"
+                    className="bg-slate-800 border-slate-700"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="goal-text" className="text-slate-300 mb-2 block">Goal Description (Natural Language)</Label>
+                  <Textarea
+                    id="goal-text"
+                    value={goalText}
+                    onChange={(e) => setGoalText(e.target.value)}
+                    placeholder="Describe your goal in natural language. AI will help break it down into SMART components..."
+                    rows={4}
+                    className="bg-slate-800 border-slate-700"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+                    onClick={async () => {
+                      if (!goalText) {
+                        toast.error('Please enter a goal description');
+                        return;
+                      }
+                      try {
+                        const response = await fetch('/api/smart-goals/create', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ text: goalText })
+                        });
+
+                        if (response.ok) {
+                          const data = await response.json();
+                          if (data.success) {
+                            setParsedGoal(data.data.goal);
+                            toast.success('Goal parsed! Review the SMART components below.');
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Failed to parse goal:', error);
+                        toast.error('Failed to parse goal');
+                      }
+                    }}
+                  >
+                    <Brain className="w-3 h-3 mr-1" />
+                    Parse with AI
+                  </Button>
+                </div>
+                <div>
+                  <Label htmlFor="goal-date" className="text-slate-300 mb-2 block">Target Date *</Label>
+                  <Input
+                    id="goal-date"
+                    type="date"
+                    value={goalTargetDate}
+                    onChange={(e) => setGoalTargetDate(e.target.value)}
+                    className="bg-slate-800 border-slate-700"
+                  />
+                </div>
+                {parsedGoal && (
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg space-y-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Brain className="w-4 h-4 text-blue-400" />
+                      <Label className="text-blue-400 font-semibold">AI-Parsed SMART Components</Label>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <Label className="text-slate-400 mb-1 block">Specific</Label>
+                        <p className="text-slate-300">{parsedGoal.specific || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-400 mb-1 block">Measurable</Label>
+                        <p className="text-slate-300">{parsedGoal.measurable || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-400 mb-1 block">Achievable</Label>
+                        <p className="text-slate-300">{parsedGoal.achievable || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-slate-400 mb-1 block">Relevant</Label>
+                        <p className="text-slate-300">{parsedGoal.relevant || 'Not specified'}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-slate-400 mb-1 block">Time-bound</Label>
+                        <p className="text-slate-300">{parsedGoal.timebound || 'Not specified'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      if (!goalTitle || !goalTargetDate) {
+                        toast.error('Title and target date are required');
+                        return;
+                      }
+                      const newGoal: SMARTGoal = {
+                        id: `goal-${Date.now()}`,
+                        title: goalTitle,
+                        description: goalText,
+                        specific: parsedGoal?.specific || '',
+                        measurable: parsedGoal?.measurable || '',
+                        achievable: parsedGoal?.achievable || '',
+                        relevant: parsedGoal?.relevant || '',
+                        timebound: parsedGoal?.timebound || `By ${goalTargetDate}`,
+                        targetDate: new Date(goalTargetDate),
+                        currentProgress: 0,
+                        milestones: [],
+                        metrics: [],
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                      };
+                      setSmartGoals(prev => [newGoal, ...prev]);
+                      setShowCreateGoal(false);
+                      setGoalTitle('');
+                      setGoalText('');
+                      setGoalTargetDate('');
+                      setParsedGoal(null);
+                      toast.success('SMART goal created!');
+                    }}
+                    className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                  >
+                    Create Goal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-slate-700 text-slate-400"
+                    onClick={() => {
+                      setShowCreateGoal(false);
+                      setGoalTitle('');
+                      setGoalText('');
+                      setGoalTargetDate('');
+                      setParsedGoal(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </motion.div>
       </div>
     </div>

@@ -50,3 +50,6 @@ next-env.d.ts
 ml-serving/venv/
 test-results/
 **/__pycache__/
+
+# Document generation (work in progress - keep local until ready)
+/mentark-docgen/

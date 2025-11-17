@@ -128,11 +128,16 @@ export default function DailyAssistantPage() {
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [productivityInsights, setProductivityInsights] = useState<any>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [smartScheduleLoading, setSmartScheduleLoading] = useState(false);
+  const [smartScheduleResult, setSmartScheduleResult] = useState<any>(null);
   const hasTrackedLoad = useRef(false);
 
   useEffect(() => {
     fetchDailyData();
     checkCalendarStatus();
+    fetchProductivityInsights();
 
     // Check for OAuth callback parameters
     if (typeof window !== "undefined") {
@@ -210,6 +215,76 @@ export default function DailyAssistantPage() {
       console.error("Failed to initiate calendar connection:", error);
     } finally {
       setCalendarLoading(false);
+    }
+  };
+
+  const fetchProductivityInsights = async () => {
+    try {
+      setInsightsLoading(true);
+      const response = await fetch("/api/daily-assistant/productivity-insights?days=7");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setProductivityInsights(data.data);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch productivity insights:", error);
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
+
+  const handleSmartSchedule = async () => {
+    try {
+      setSmartScheduleLoading(true);
+      
+      // Convert agenda items to tasks format
+      const tasks = agendaItems
+        .filter(item => item.status !== 'completed')
+        .map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || undefined,
+          estimatedMinutes: item.start_at && item.end_at
+            ? Math.round((new Date(item.end_at).getTime() - new Date(item.start_at).getTime()) / (1000 * 60))
+            : 60,
+          priority: item.priority || 3,
+          energyRequired: (item.energy_target || 'medium') as 'low' | 'medium' | 'high',
+          category: item.category || 'general',
+          dependencies: dependencies
+            .filter(dep => dep.agenda_item_id === item.id)
+            .map(dep => dep.depends_on_item_id),
+          flexible: true
+        }));
+
+      const response = await fetch("/api/daily-assistant/smart-schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tasks,
+          date: today.toISOString(),
+          existingEvents: calendarEvents.map(evt => ({
+            start: evt.start?.dateTime || evt.start?.date,
+            end: evt.end?.dateTime || evt.end?.date
+          }))
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSmartScheduleResult(data.data);
+          trackEvent("smart_schedule_generated", {
+            tasks_scheduled: data.data.timeBlocks.length,
+            conflicts: data.data.conflicts.length
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to generate smart schedule:", error);
+    } finally {
+      setSmartScheduleLoading(false);
     }
   };
 
@@ -510,6 +585,181 @@ export default function DailyAssistantPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Smart Scheduling & Productivity Insights */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Smart Schedule */}
+          <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Brain className="w-6 h-6 text-purple-400" />
+                AI Smart Scheduling
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-slate-400 text-sm mb-4">
+                Let AI optimize your schedule based on your energy levels, task priorities, and dependencies.
+              </p>
+              <Button
+                onClick={handleSmartSchedule}
+                disabled={smartScheduleLoading || agendaItems.filter(i => i.status !== 'completed').length === 0}
+                className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+              >
+                {smartScheduleLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Optimizing Schedule...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Smart Schedule
+                  </>
+                )}
+              </Button>
+              
+              {smartScheduleResult && (
+                <div className="mt-4 space-y-3">
+                  <div className="p-3 rounded-lg bg-slate-900/50 border border-purple-500/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-slate-300">Scheduled Tasks</span>
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        {smartScheduleResult.timeBlocks.length}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span>Time Blocked: {Math.round(smartScheduleResult.totalScheduledMinutes / 60)}h</span>
+                      <span>Available: {Math.round(smartScheduleResult.totalAvailableMinutes / 60)}h</span>
+                    </div>
+                  </div>
+                  
+                  {smartScheduleResult.conflicts.length > 0 && (
+                    <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
+                      <p className="text-sm text-orange-400 font-semibold mb-2">⚠️ Conflicts</p>
+                      <ul className="text-xs text-orange-300 space-y-1">
+                        {smartScheduleResult.conflicts.slice(0, 3).map((conflict: string, idx: number) => (
+                          <li key={idx}>• {conflict}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {smartScheduleResult.recommendations.length > 0 && (
+                    <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                      <p className="text-sm text-blue-400 font-semibold mb-2">💡 Recommendations</p>
+                      <ul className="text-xs text-blue-300 space-y-1">
+                        {smartScheduleResult.recommendations.slice(0, 2).map((rec: string, idx: number) => (
+                          <li key={idx}>• {rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 rounded bg-slate-900/50">
+                      <p className="text-slate-400">Morning</p>
+                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.morningTasks} tasks</p>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900/50">
+                      <p className="text-slate-400">Afternoon</p>
+                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.afternoonTasks} tasks</p>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900/50">
+                      <p className="text-slate-400">Evening</p>
+                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.eveningTasks} tasks</p>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900/50">
+                      <p className="text-slate-400">Night</p>
+                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.nightTasks} tasks</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Productivity Insights */}
+          <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/30">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <TrendingUp className="w-6 h-6 text-cyan-400" />
+                Productivity Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {insightsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                </div>
+              ) : productivityInsights ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
+                      <p className="text-xs text-slate-400 mb-1">Completion Rate</p>
+                      <p className="text-2xl font-bold text-cyan-400">
+                        {(productivityInsights.insights.completionRate * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
+                      <p className="text-xs text-slate-400 mb-1">Efficiency</p>
+                      <p className="text-2xl font-bold text-cyan-400">
+                        {(productivityInsights.insights.efficiency * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
+                    <p className="text-xs text-slate-400 mb-2">Energy Trend</p>
+                    <div className="flex items-center gap-2">
+                      <Badge className={
+                        productivityInsights.insights.energyTrend === 'improving'
+                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                          : productivityInsights.insights.energyTrend === 'declining'
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                      }>
+                        {productivityInsights.insights.energyTrend === 'improving' ? '📈' : 
+                         productivityInsights.insights.energyTrend === 'declining' ? '📉' : '➡️'} 
+                        {productivityInsights.insights.energyTrend}
+                      </Badge>
+                      <span className="text-sm text-slate-300">
+                        Avg: {productivityInsights.insights.avgEnergy}/5
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {productivityInsights.aiRecommendations && productivityInsights.aiRecommendations.length > 0 && (
+                    <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
+                      <p className="text-xs text-cyan-400 font-semibold mb-2">AI Recommendations</p>
+                      <ul className="space-y-1">
+                        {productivityInsights.aiRecommendations.slice(0, 3).map((rec: string, idx: number) => (
+                          <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
+                            <span className="text-cyan-400 mt-0.5">•</span>
+                            <span>{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchProductivityInsights}
+                    className="w-full border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh Insights
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm text-center py-4">
+                  Complete tasks to see productivity insights
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
