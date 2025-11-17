@@ -41,10 +41,21 @@ const nextConfig: NextConfig = {
 };
 
 // Sentry Webpack Plugin Options
-const sentryWebpackPluginOptions = {
+// Note: Type assertion used because Sentry webpack plugin types may not be fully typed
+const sentryWebpackPluginOptions: any = {
   // Only upload source maps in production
   silent: process.env.NODE_ENV === "development",
   org: "mentark-tech",
+  
+  // Auth token for uploading source maps and creating releases
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  
+  // Project slug (can also be set via NEXT_PUBLIC_SENTRY_PROJECT env var)
+  // Make sure this matches your Sentry project slug exactly
+  project: process.env.NEXT_PUBLIC_SENTRY_PROJECT || 'mentark-quantum',
+  
+  // Disable source map upload if auth token is not provided
+  dryRun: !process.env.SENTRY_AUTH_TOKEN,
   
   // For all available options, see:
   // https://github.com/getsentry/sentry-webpack-plugin#options
