@@ -282,20 +282,49 @@ ${humeAnalysis ? `**Hume AI Analysis:**\n${JSON.stringify(humeAnalysis)}\n` : ''
 
 Return ONLY valid JSON.`;
 
-        const claudeResponse = await callClaude(psychologyPrompt, {
-          model: 'claude-opus',
-          max_tokens: 2000,
-          temperature: 0.3
-        });
-
-        // Parse JSON response
+        let claudeResponse;
         try {
-          const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]) as PsychologyAnalysis;
+          claudeResponse = await callClaude(psychologyPrompt, {
+            model: 'claude-opus',
+            max_tokens: 2000,
+            temperature: 0.3
+          });
+        } catch (claudeError: any) {
+          console.warn('Claude Opus not available, using fallback psychology analysis:', claudeError?.message);
+          throw claudeError; // Will be caught by outer catch and use fallback
+        }
+
+        // Parse JSON response using safeParseJSON
+        try {
+          const { safeParseJSON } = await import('@/lib/utils/json-repair');
+          
+          // Try multiple extraction methods
+          let psychologyData: any = null;
+          
+          // Method 1: Try code blocks
+          const codeBlockMatch = claudeResponse.content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+          if (codeBlockMatch) {
+            psychologyData = safeParseJSON(codeBlockMatch[1], null);
+          }
+          
+          // Method 2: Try direct JSON object
+          if (!psychologyData) {
+            const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              psychologyData = safeParseJSON(jsonMatch[0], null);
+            }
+          }
+          
+          // Method 3: Try entire response
+          if (!psychologyData) {
+            psychologyData = safeParseJSON(claudeResponse.content, null);
+          }
+          
+          if (psychologyData && psychologyData.strengths && Array.isArray(psychologyData.strengths)) {
+            return psychologyData as PsychologyAnalysis;
           }
         } catch (parseError) {
-          console.warn('Could not parse psychology analysis JSON');
+          console.warn('Could not parse psychology analysis JSON, using fallback');
         }
 
         // Fallback to basic analysis

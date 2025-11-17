@@ -2223,87 +2223,69 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
           </div>
         )}
 
-        {/* Resources Category */}
+        {/* Resources Category - Mobile Optimized with Collapsible Sections */}
         {activeCategory === 'resources' && (
-          <div className="space-y-6">
-            <Card className="border-slate-700/70 bg-slate-900/60">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-cyan-400" />
-                    <h4 className="text-lg font-bold">Recommended Resources</h4>
-                  </div>
-                  {allResources.length > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      {allResources.length} total
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="p-4">
-                {allResources.length > 0 ? (
-                <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                  {Object.entries(categorizedAllResources).map(([category, resources]) => {
-                    if (resources.length === 0) return null;
-                    
-                    return (
-                      <div key={category} className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          {getResourceIcon(category)}
-                          <h6 className="font-semibold text-slate-300 text-xs">
-                            {category === 'videos' ? 'Videos' : 
-                             category === 'papers' ? 'Papers' :
+          <div className="space-y-4">
+            {allResources.length > 0 ? (
+              <div className="space-y-3">
+                {Object.entries(categorizedAllResources).map(([category, resources]) => {
+                  if (resources.length === 0) return null;
+                  const isExpanded = expandedResources[category] || false;
+                  
+                  return (
+                    <Collapsible
+                      key={category}
+                      title={`${category === 'videos' ? 'Videos' : 
+                             category === 'papers' ? 'Academic Papers' :
                              category === 'projects' ? 'Projects' :
-                             category === 'news' ? 'News' : 'Other'}
-                          </h6>
-                          <Badge variant="outline" className="ml-auto text-xs">
-                            {resources.length}
-                          </Badge>
-                        </div>
-                        <div className="space-y-1.5">
-                          {resources.slice(0, 3).map((resource: any, resIdx: number) => (
-                            <a
-                              key={resIdx}
-                              href={resource.url || '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group block p-2 rounded border border-slate-700 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all"
-                            >
-                              <div className="flex items-start gap-2">
-                                <div className="mt-0.5">
-                                  {getResourceIcon(resource.type || category)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-medium text-white group-hover:text-cyan-300 line-clamp-1">
-                                    {resource.title}
-                                  </p>
-                                  {resource.source && (
-                                    <p className="text-xs text-slate-500 mt-0.5">{resource.source}</p>
-                                  )}
-                                </div>
-                                <ExternalLink className="h-3 w-3 text-slate-500 group-hover:text-cyan-400 flex-shrink-0 mt-0.5" />
+                             category === 'news' ? 'News' : 'Other'} (${resources.length})`}
+                      defaultOpen={isExpanded}
+                      icon={getResourceIcon(category)}
+                    >
+                      <div className="space-y-2">
+                        {resources.map((resource: any, resIdx: number) => (
+                          <a
+                            key={resIdx}
+                            href={resource.url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group block p-3 rounded-lg border border-slate-700 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5">
+                                {getResourceIcon(resource.type || category)}
                               </div>
-                            </a>
-                          ))}
-                          {resources.length > 3 && (
-                            <p className="text-xs text-slate-500 text-center pt-1">
-                              +{resources.length - 3} more
-                            </p>
-                          )}
-                        </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white group-hover:text-cyan-300 line-clamp-2">
+                                  {resource.title}
+                                </p>
+                                {resource.description && (
+                                  <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                                    {resource.description}
+                                  </p>
+                                )}
+                                {resource.source && (
+                                  <p className="text-xs text-slate-500 mt-1">{resource.source}</p>
+                                )}
+                              </div>
+                              <ExternalLink className="h-4 w-4 text-slate-500 group-hover:text-cyan-400 flex-shrink-0 mt-0.5" />
+                            </div>
+                          </a>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <BookOpen className="h-8 w-8 text-slate-600 mx-auto mb-2" />
-                    <p className="text-sm text-slate-500">Resources will be added here</p>
-                    <p className="text-xs text-slate-600 mt-2">Resources are being fetched from external APIs...</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    </Collapsible>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card className="border-slate-700/70 bg-slate-900/60">
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                  <p className="text-sm text-slate-500 mb-2">Resources will be added here</p>
+                  <p className="text-xs text-slate-600">Resources are being fetched from external APIs...</p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Career News */}
             {roadmap.career_news && roadmap.career_news.length > 0 && (
