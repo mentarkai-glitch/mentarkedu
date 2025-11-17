@@ -44,7 +44,9 @@ export async function getGoogleCalendarToken(userId: string): Promise<string | n
             google_calendar: {
               ...googleCalendar,
               access_token: newTokens.access_token,
-              expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
+              expires_at: newTokens.expires_in 
+                ? new Date(Date.now() + (newTokens.expires_in || 3600) * 1000).toISOString()
+                : googleCalendar.expires_at,
             },
           },
         })
@@ -132,7 +134,7 @@ export async function updateCalendarEventFromTask(
       eventUpdate.description = `${eventUpdate.description}\n\n✅ Status: Completed`;
     }
 
-    await updateEvent(accessToken, calendarEventId, eventUpdate, calendarId);
+    await updateEvent(accessToken, calendarId || 'primary', calendarEventId, eventUpdate);
     return true;
   } catch (error) {
     console.error("Failed to update calendar event:", error);

@@ -365,43 +365,73 @@ export async function gatherComprehensiveResources(
   console.log(`🔍 Gathering resources for: "${milestoneTitle}"`);
   console.log(`   Context:`, context);
 
-  // 1. YouTube videos (if video content is needed)
-  if (context.requiresVideo || context.domain === 'web-development') {
+  // 1. YouTube videos (ALWAYS search - videos are valuable for most learning goals)
+  // Only skip if explicitly not needed
+  if (context.requiresVideo !== false) {
     console.log(`   📹 Searching YouTube...`);
-    const youtubeResults = await searchYouTube(searchQuery, 3);
-    allResources.push(...youtubeResults);
-    console.log(`   ✅ Found ${youtubeResults.length} YouTube videos`);
+    try {
+      const youtubeResults = await searchYouTube(searchQuery, 5); // Increased from 3 to 5
+      allResources.push(...youtubeResults);
+      console.log(`   ✅ Found ${youtubeResults.length} YouTube videos`);
+    } catch (error: any) {
+      console.warn(`   ⚠️ YouTube search failed: ${error.message}`);
+    }
   }
 
-  // 2. GitHub repositories (if code is needed)
-  if (context.requiresCode || context.domain) {
+  // 2. GitHub repositories (ALWAYS search for technical/coding content)
+  // Search if domain exists OR keywords suggest programming OR category is academic/career
+  const shouldSearchGitHub = context.domain || 
+    context.keywords.some(k => 
+      ['programming', 'coding', 'code', 'developer', 'development', 'software', 'python', 'javascript', 'react', 'java', 'c++', 'web', 'app', 'api', 'backend', 'frontend'].includes(k.toLowerCase())
+    ) ||
+    ['academic', 'career', 'stem', 'engineering', 'technology'].some(cat => context.category.includes(cat));
+  
+  if (shouldSearchGitHub) {
     console.log(`   💻 Searching GitHub...`);
-    const githubResults = await searchGitHub(searchQuery, 3);
-    allResources.push(...githubResults);
-    console.log(`   ✅ Found ${githubResults.length} GitHub repos`);
+    try {
+      const githubResults = await searchGitHub(searchQuery, 5);
+      allResources.push(...githubResults);
+      console.log(`   ✅ Found ${githubResults.length} GitHub repos`);
+    } catch (error: any) {
+      console.warn(`   ⚠️ GitHub search failed: ${error.message}`);
+    }
+  } else {
+    console.log(`   ⏭️ Skipping GitHub (not technical/coding content)`);
   }
 
-  // 3. Perplexity for real-time research (if needed)
-  if (context.requiresRealTime || context.requiresResearch) {
-    console.log(`   🔬 Searching Perplexity...`);
-    const perplexityResults = await searchPerplexity(searchQuery, 3);
+  // 3. Perplexity for real-time research (ALWAYS search for comprehensive resources)
+  // Perplexity provides excellent learning resources regardless of context
+  console.log(`   🔬 Searching Perplexity for comprehensive resources...`);
+  try {
+    const perplexityResults = await searchPerplexity(searchQuery, 5); // Increased from 3 to 5
     allResources.push(...perplexityResults);
     console.log(`   ✅ Found ${perplexityResults.length} research resources`);
+  } catch (error: any) {
+    console.warn(`   ⚠️ Perplexity search failed: ${error.message}`);
   }
 
-  // 4. Reddit for community insights (optional, less priority)
-  if (context.keywords.length > 0 && context.keywords.some(k => ['programming', 'coding', 'learning'].includes(k))) {
-    console.log(`   💬 Searching Reddit...`);
-    const redditResults = await searchReddit(searchQuery, 2);
-    allResources.push(...redditResults);
-    console.log(`   ✅ Found ${redditResults.length} Reddit posts`);
+  // 4. Reddit for community insights (ALWAYS search for community recommendations)
+  // Reddit provides valuable community insights and real-world experiences
+  if (context.keywords.length > 0) {
+    console.log(`   💬 Searching Reddit for community insights...`);
+    try {
+      const redditResults = await searchReddit(searchQuery, 3); // Increased from 2 to 3
+      allResources.push(...redditResults);
+      console.log(`   ✅ Found ${redditResults.length} Reddit posts`);
+    } catch (error: any) {
+      console.warn(`   ⚠️ Reddit search failed: ${error.message}`);
+    }
   }
 
-  // 5. AI-generated resources (always include as fallback/enhancement)
+  // 5. AI-generated resources (ALWAYS include as fallback/enhancement)
   console.log(`   🤖 Generating AI resources...`);
-  const aiResults = await generateAIResources(context, milestoneTitle, milestoneDescription);
-  allResources.push(...aiResults);
-  console.log(`   ✅ Generated ${aiResults.length} AI resources`);
+  try {
+    const aiResults = await generateAIResources(context, milestoneTitle, milestoneDescription);
+    allResources.push(...aiResults);
+    console.log(`   ✅ Generated ${aiResults.length} AI resources`);
+  } catch (error: any) {
+    console.warn(`   ⚠️ AI resource generation failed: ${error.message}`);
+  }
 
   // Deduplicate by URL
   const uniqueResources = Array.from(
@@ -413,7 +443,11 @@ export async function gatherComprehensiveResources(
 
   console.log(`   🎯 Total unique resources: ${uniqueResources.length}`);
 
-  return uniqueResources.slice(0, 8); // Return top 8 resources
+  // Return top resources - aim for 8-12 per milestone for better variety
+  const topResources = uniqueResources.slice(0, 12);
+  console.log(`   📊 Returning top ${topResources.length} resources (from ${uniqueResources.length} total)`);
+  
+  return topResources;
 }
 
 

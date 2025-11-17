@@ -166,7 +166,8 @@ async function executeWithModel(
             'mistral-large': 'MISTRAL_API_KEY',
             'llama-3.1': 'GROQ_API_KEY',
           };
-          return !!process.env[keyMap[m] || ''];
+          const envKey = keyMap[m];
+          return envKey ? !!process.env[envKey as keyof typeof process.env] : false;
         }).filter(m => !allExcluded.includes(m));
         
         if (configuredModels.length === 0) {
@@ -264,12 +265,14 @@ async function executeWithModel(
           'mistral-large': 'MISTRAL_API_KEY',
           'llama-3.1': 'GROQ_API_KEY',
         };
-        return !!process.env[keyMap[m] || ''];
+        const envKey = keyMap[m];
+        return envKey ? !!process.env[envKey as keyof typeof process.env] : false;
       }).filter(m => !allExcluded.includes(m));
       
       if (configuredModels.length === 0) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         throw new Error(
-          `All configured models failed or refused. Last error: ${error?.message || error}. ` +
+          `All configured models failed or refused. Last error: ${errorMessage}. ` +
           `Please ensure multiple AI provider API keys are configured for fallback support.`
         );
       }

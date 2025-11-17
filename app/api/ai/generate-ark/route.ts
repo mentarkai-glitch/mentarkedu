@@ -12,6 +12,7 @@ import {
   generateTemplateCustomizationPrompt,
 } from "@/lib/ai/prompts/student-ark-generator";
 import { generateARKWithNavigation } from "@/lib/ai/ark-orchestrator";
+import { generateEnhancedARK } from "@/lib/ai/enhanced-ark-orchestrator";
 import { aiOrchestrator } from "@/lib/ai/orchestrator";
 import type { AIContext, ARKCategory, ARKDuration, StudentProfile } from "@/lib/types";
 import { safeParseJSON } from "@/lib/utils/json-repair";
@@ -295,7 +296,7 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Use enhanced ARK orchestration system
+    // Use ENHANCED multi-model ARK orchestration system
     const arkRequest = {
       category,
       goal,
@@ -303,22 +304,65 @@ export async function POST(request: NextRequest) {
       psychologyProfile,
       userTier: completeStudentProfile?.user_tier || 'free',
       specificFocus,
-      timeframe: timeframe || duration
+      timeframe: timeframe || duration,
+      deepDiveAnswers: deepDiveAnswers || {},
+      student_id: finalStudentId
     };
 
     let orchestratedResponse;
+    let enhancedResponse: any = null;
+    let useEnhancedOrchestrator = true; // Enable enhanced orchestrator by default
+
     try {
-      console.log('🚀 Starting ARK orchestration...');
+      console.log('🚀 Starting ENHANCED multi-model ARK orchestration...');
       console.log('ARK Request:', {
         category: arkRequest.category,
         goal: arkRequest.goal?.substring(0, 100),
         hasStudentProfile: !!arkRequest.studentProfile,
         hasPsychologyProfile: !!arkRequest.psychologyProfile,
         userTier: arkRequest.userTier,
-        timeframe: arkRequest.timeframe
+        timeframe: arkRequest.timeframe,
+        useEnhanced: useEnhancedOrchestrator
       });
       
-      orchestratedResponse = await generateARKWithNavigation(arkRequest, studentARKPrompt);
+      // Try enhanced orchestrator first (multi-model)
+      if (useEnhancedOrchestrator) {
+        try {
+          enhancedResponse = await generateEnhancedARK(arkRequest, studentARKPrompt);
+          console.log('✅ Enhanced ARK orchestration completed');
+          console.log('Enhanced Response:', {
+            hasArk: !!enhancedResponse?.ark,
+            hasPsychologyAnalysis: !!enhancedResponse?.psychologyAnalysis,
+            hasFutureVision: !!enhancedResponse?.futureVision,
+            hasSuccessPrediction: !!enhancedResponse?.successPrediction,
+            resourcesCount: enhancedResponse?.resources?.length || 0,
+            modelsUsed: enhancedResponse?.orchestration_metadata?.models_used || [],
+            totalTime: enhancedResponse?.orchestration_metadata?.total_time_ms || 0
+          });
+          
+          // Convert enhanced response to compatible format
+          orchestratedResponse = {
+            ark: enhancedResponse.ark,
+            model: 'multi-model-orchestration',
+            tokens_used: enhancedResponse.orchestration_metadata?.total_tokens || 0,
+            orchestration_metadata: enhancedResponse.orchestration_metadata,
+            // Add enhanced fields
+            psychology_analysis: enhancedResponse.psychologyAnalysis,
+            future_vision: enhancedResponse.futureVision,
+            success_prediction: enhancedResponse.successPrediction,
+            curated_resources: enhancedResponse.resources
+          };
+        } catch (enhancedError: any) {
+          console.warn('⚠️ Enhanced orchestrator failed, falling back to standard:', enhancedError?.message);
+          useEnhancedOrchestrator = false;
+          // Fall through to standard orchestrator
+        }
+      }
+      
+      // Fallback to standard orchestrator if enhanced failed
+      if (!useEnhancedOrchestrator || !orchestratedResponse) {
+        orchestratedResponse = await generateARKWithNavigation(arkRequest, studentARKPrompt);
+      }
       
       console.log('✅ ARK orchestration completed');
       console.log('Response:', {
@@ -827,7 +871,7 @@ export async function POST(request: NextRequest) {
           } else {
             console.log(`✅ Successfully saved ${timelineEntries.length} timeline tasks`);
             
-            // Schedule reminders for high-value tasks
+            // Schedule reminders for high-value tasks AND create calendar events
             if (insertedTimeline && insertedTimeline.length > 0) {
               try {
                 // Dynamically import reminder scheduler (optional - won't block if Firebase isn't available)
@@ -838,6 +882,37 @@ export async function POST(request: NextRequest) {
                 } catch (error) {
                   console.warn('⚠️ Reminder system not available (non-critical):', error);
                   scheduleTaskReminders = null;
+                }
+                
+                // Calendar integration (optional - requires OAuth tokens)
+                try {
+                  const { createARKCalendarEvents, convertTimelineToCalendarTasks } = await import('@/lib/services/google-calendar');
+                  
+                  // Check if user has Google Calendar credentials
+                  const { data: userCreds } = await supabase
+                    .from('user_integrations')
+                    .select('google_calendar_access_token, google_calendar_refresh_token, google_calendar_id')
+                    .eq('user_id', finalStudentId)
+                    .single();
+                  
+                  if (userCreds?.google_calendar_access_token && userCreds?.google_calendar_refresh_token) {
+                    console.log('📅 Creating Google Calendar events...');
+                    const calendarTasks = convertTimelineToCalendarTasks(insertedTimeline);
+                    const calendarResult = await createARKCalendarEvents(
+                      {
+                        access_token: userCreds.google_calendar_access_token,
+                        refresh_token: userCreds.google_calendar_refresh_token
+                      },
+                      userCreds.google_calendar_id || 'primary',
+                      calendarTasks
+                    );
+                    console.log(`✅ Created ${calendarResult.created} calendar events (${calendarResult.failed} failed)`);
+                  } else {
+                    console.log('ℹ️ Google Calendar not connected - skipping calendar events');
+                  }
+                } catch (calendarError) {
+                  console.warn('⚠️ Calendar integration failed (non-critical):', calendarError);
+                  // Continue without calendar integration
                 }
                 
                 // Fetch user details

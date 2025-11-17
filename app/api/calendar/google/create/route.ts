@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
               google_calendar: {
                 ...googleCalendar,
                 access_token: newTokens.access_token,
-                expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
+                expires_at: newTokens.expires_in 
+                  ? new Date(Date.now() + (newTokens.expires_in || 3600) * 1000).toISOString()
+                  : googleCalendar.expires_at,
               },
             },
           })

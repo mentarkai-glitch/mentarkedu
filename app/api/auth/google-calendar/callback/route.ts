@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
           expires_at: tokens.expires_in
-            ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+            ? new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString()
             : null,
           token_type: tokens.token_type,
           connected_at: new Date().toISOString(),
