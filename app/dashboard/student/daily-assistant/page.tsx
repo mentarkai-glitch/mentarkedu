@@ -449,7 +449,7 @@ export default function DailyAssistantPage() {
     <div className="min-h-screen">
       {/* Header */}
       <div className="border-b border-slate-700 bg-slate-900/50">
-        <div className="container mx-auto px-8 py-6">
+        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
           <h1 className="text-3xl font-bold text-white mb-2">Daily Assistant</h1>
           <p className="text-slate-400">
             {new Date(today).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -457,7 +457,7 @@ export default function DailyAssistantPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-8 py-8 space-y-6">
+      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
         {/* Calendar Connection Card */}
         <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30">
           <CardContent className="p-6">

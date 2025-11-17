@@ -145,7 +145,7 @@ export default function AgentsHubPage() {
     <div className="min-h-screen">
       {/* Page Header */}
       <div className="border-b border-slate-700 bg-slate-900/50">
-        <div className="container mx-auto px-8 py-8">
+        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center">
@@ -156,7 +156,7 @@ export default function AgentsHubPage() {
                 <p className="text-slate-400 text-lg">Choose the right agent for your task</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 mt-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
               <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
                 <Switch
                   checked={voiceMode}
@@ -207,7 +207,7 @@ export default function AgentsHubPage() {
       </div>
 
       {/* Agents Grid */}
-      <div className="container mx-auto px-8 py-8">
+      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

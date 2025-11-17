@@ -49,6 +49,9 @@ function SearchPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
   const [isOnline, setIsOnline] = useState(true);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -149,8 +152,46 @@ function SearchPageContent() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch();
+      setShowSuggestions(false);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
     }
   };
+
+  // Fetch search suggestions as user types
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!query.trim() || query.length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      setSuggestionsLoading(true);
+      try {
+        const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}&ctx=${context}`, {
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data && Array.isArray(data.data)) {
+            setSuggestions(data.data);
+            setShowSuggestions(true);
+          } else {
+            setSuggestions([]);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch suggestions:", error);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [query, context]);
 
   return (
     <div className="min-h-screen bg-black">
@@ -178,15 +219,45 @@ function SearchPageContent() {
           className="max-w-4xl mx-auto mb-6 sm:mb-8"
         >
           <div className="relative">
-            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 z-10" />
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
               onKeyPress={handleKeyPress}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowSuggestions(true);
+              }}
+              onBlur={() => {
+                // Delay to allow suggestion clicks
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
               placeholder="Ask anything..."
               className="w-full h-12 sm:h-16 pl-10 sm:pl-12 pr-3 sm:pr-4 bg-black/40 border-2 border-yellow-500/30 rounded-xl sm:rounded-2xl text-white text-base sm:text-lg placeholder-gray-400 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
             />
+            
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-yellow-500/30 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+                {suggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setQuery(suggestion);
+                      setShowSuggestions(false);
+                      handleSearch(suggestion, context);
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-yellow-500/10 text-white text-sm sm:text-base transition-colors border-b border-slate-700 last:border-b-0 flex items-center gap-2"
+                  >
+                    <Search className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+                    <span className="truncate">{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Context Selector */}

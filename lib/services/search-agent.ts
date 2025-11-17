@@ -8,6 +8,7 @@ import { callPerplexity } from "@/lib/ai/models/perplexity";
 import { retrieveMemories } from "@/lib/ai/memory";
 import { createClient } from "@/lib/supabase/server";
 import { redisService } from "@/lib/services/redis";
+import { safeParseJSON } from "@/lib/utils/json-repair";
 import type { AIContext } from "@/lib/types";
 
 export interface SearchQuery {
@@ -185,11 +186,54 @@ Please provide a comprehensive answer that:
 
   /**
    * Parse Perplexity result into structured format
+   * Handles both JSON and text responses
    */
   private async parsePerplexityResult(content: string, originalQuery: string): Promise<{
     answer: string;
     sources: Array<{ title: string; url: string; snippet: string }>;
   }> {
+    // Try to parse as JSON first (Perplexity sometimes returns JSON)
+    try {
+      // Check if content is JSON or contains JSON
+      let jsonContent = content.trim();
+      
+      // Try to extract JSON from code blocks
+      const jsonMatch = jsonContent.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1];
+      }
+      
+      // Use safe JSON parsing utility
+      const parsed = safeParseJSON(jsonContent);
+      if (parsed) {
+        
+        // Handle structured JSON response
+        if (parsed.answer || parsed.response || parsed.content) {
+          const answer = parsed.answer || parsed.response || parsed.content || '';
+          const jsonSources = parsed.sources || parsed.references || [];
+          
+          const sources = jsonSources.map((src: any) => ({
+            title: src.title || this.extractTitleFromUrl(src.url || ''),
+            url: src.url || '',
+            snippet: src.snippet || src.description || content.substring(0, 200),
+          }));
+
+          // Clean answer (remove citation markers)
+          const cleanAnswer = answer
+            .replace(/\[\d+\]/g, "")
+            .replace(/\*\*Source:\*\*/gi, "")
+            .replace(/\*\*Reference:\*\*/gi, "")
+            .trim();
+
+          return { answer: cleanAnswer, sources };
+        }
+      }
+    } catch (jsonError) {
+      // Not JSON, fall through to text parsing
+      console.log('Perplexity response is not JSON, parsing as text');
+    }
+
+    // Fallback to text parsing
     // Extract sources (Perplexity includes citations like [1], [2] or **Source** format)
     const sourceRegex = /\[?(\d+)\]?\s*(?:https?:\/\/[^\s)]+|(?:Source|Reference):\s*([^\n]+))/gi;
     const urlRegex = /https?:\/\/[^\s)]+/g;
@@ -278,7 +322,7 @@ Please provide a comprehensive answer that:
   }
 
   /**
-   * Generate related queries
+   * Generate related queries and suggestions
    */
   private async generateRelatedQueries(
     originalQuery: string,
@@ -287,19 +331,54 @@ Please provide a comprehensive answer that:
   ): Promise<string[]> {
     const relatedQueries: string[] = [];
 
-    // Basic related query extraction from answer
-    const capitalizedKeywords = answer.match(/\b[A-Z][a-z]+\b/g) || [];
-    const keywords = [...new Set(capitalizedKeywords)]
-      .filter((word) => word.length > 4)
-      .slice(0, 3);
+    // Use AI to generate intelligent suggestions if available
+    try {
+      const suggestionsPrompt = `Based on the user's query "${originalQuery}" and this answer summary: "${answer.substring(0, 300)}", generate 4 related search queries that would be helpful. Return ONLY a JSON array of strings, no other text. Example: ["query 1", "query 2", "query 3", "query 4"]`;
+      
+      const aiSuggestions = await aiOrchestrator({
+        user_id: context.goals[0] ? "user" : undefined,
+        task: "resource_recommendation",
+      }, suggestionsPrompt);
 
-    keywords.forEach((keyword) => {
-      relatedQueries.push(`${keyword} ${originalQuery}`);
-    });
+      if (aiSuggestions.content) {
+        try {
+          // Try to parse JSON array from AI response
+          const jsonMatch = aiSuggestions.content.match(/\[[\s\S]*?\]/);
+          if (jsonMatch) {
+          const parsed = safeParseJSON(jsonMatch[0]);
+          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+            relatedQueries.push(...parsed.slice(0, 4));
+          }
+          }
+        } catch (parseError) {
+          // Fall through to keyword-based extraction
+          console.log('Failed to parse AI suggestions, using keyword extraction');
+        }
+      }
+    } catch (error) {
+      console.log('AI suggestions failed, using keyword extraction', error);
+    }
+
+    // Fallback: Basic related query extraction from answer
+    if (relatedQueries.length < 2) {
+      const capitalizedKeywords = answer.match(/\b[A-Z][a-z]+\b/g) || [];
+      const keywords = [...new Set(capitalizedKeywords)]
+        .filter((word) => word.length > 4)
+        .slice(0, 3);
+
+      keywords.forEach((keyword) => {
+        if (!relatedQueries.includes(`${keyword} ${originalQuery}`)) {
+          relatedQueries.push(`${keyword} ${originalQuery}`);
+        }
+      });
+    }
 
     // Add context-specific queries
-    if (context.goals.length > 0) {
-      relatedQueries.push(`How ${context.goals[0]} relates to ${originalQuery}`);
+    if (context.goals.length > 0 && relatedQueries.length < 4) {
+      const goalQuery = `How ${context.goals[0]} relates to ${originalQuery}`;
+      if (!relatedQueries.includes(goalQuery)) {
+        relatedQueries.push(goalQuery);
+      }
     }
 
     return relatedQueries.slice(0, 4);
