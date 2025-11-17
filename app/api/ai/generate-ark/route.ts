@@ -325,10 +325,19 @@ export async function POST(request: NextRequest) {
         useEnhanced: useEnhancedOrchestrator
       });
       
-      // Try enhanced orchestrator first (multi-model)
+      // Try enhanced orchestrator first (multi-model) with timeout
       if (useEnhancedOrchestrator) {
         try {
-          enhancedResponse = await generateEnhancedARK(arkRequest, studentARKPrompt);
+          // Set a timeout for enhanced orchestrator (45 seconds to leave room for fallback)
+          const enhancedTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Enhanced orchestrator timeout after 45s')), 45000);
+          });
+          
+          enhancedResponse = await Promise.race([
+            generateEnhancedARK(arkRequest, studentARKPrompt),
+            enhancedTimeout
+          ]) as typeof enhancedResponse;
+          
           console.log('✅ Enhanced ARK orchestration completed');
           console.log('Enhanced Response:', {
             hasArk: !!enhancedResponse?.ark,

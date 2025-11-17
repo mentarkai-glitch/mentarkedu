@@ -282,16 +282,11 @@ ${humeAnalysis ? `**Hume AI Analysis:**\n${JSON.stringify(humeAnalysis)}\n` : ''
 
 Return ONLY valid JSON.`;
 
-        const claudeResponse = await Promise.race([
-          callClaude(psychologyPrompt, {
-            model: 'claude-opus',
-            max_tokens: 2000,
-            temperature: 0.3
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Claude psychology analysis timeout')), 15000)
-          )
-        ]) as any;
+        const claudeResponse = await callClaude(psychologyPrompt, {
+          model: 'claude-opus',
+          max_tokens: 2000,
+          temperature: 0.3
+        });
 
         // Parse JSON response
         try {
@@ -392,24 +387,31 @@ ${phase1Results.discoveredResources.map((r, i) => `${i + 1}. ${r.title} - ${r.ur
 Return top 30 resources ranked by relevance in JSON array format:
 [{ "index": 0, "rank": 1, "relevance_score": 0.95, "reason": "why this is relevant" }, ...]`;
 
-      // Use Gemini 2.5 Flash for fast curation (with timeout)
+      // Use Gemini 2.5 Flash for fast curation
+      let geminiResponse;
       try {
-        const geminiResponse = await Promise.race([
-          callGemini(curationPrompt, {
-            model: 'gemini-2.5-flash',
-            max_tokens: 3000,
-            temperature: 0.3
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Gemini timeout')), 10000)
-          )
-        ]) as any;
+        geminiResponse = await callGemini(curationPrompt, {
+          model: 'gemini-2.5-flash',
+          max_tokens: 3000,
+          temperature: 0.3
+        });
+      } catch (geminiError: any) {
+        console.warn('Gemini curation failed, using all resources:', geminiError?.message);
+        // Return all resources sorted by quality score if Gemini fails
+        return phase1Results.discoveredResources
+          .sort((a, b) => (b.quality_score || 0) - (a.quality_score || 0))
+          .slice(0, 30);
+      }
 
-        // Parse rankings
-        try {
-          const jsonMatch = geminiResponse.content.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            const rankings = JSON.parse(jsonMatch[0]);
+      // Parse rankings
+      try {
+        const { safeParseJSON } = await import('@/lib/utils/json-repair');
+        
+        // Try to extract JSON array from response
+        const jsonMatch = geminiResponse.content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const rankings = safeParseJSON(jsonMatch[0], null);
+          if (rankings && Array.isArray(rankings)) {
             return phase1Results.discoveredResources
               .map((resource, index) => ({
                 ...resource,
@@ -419,11 +421,9 @@ Return top 30 resources ranked by relevance in JSON array format:
               .sort((a, b) => a.rank - b.rank)
               .slice(0, 30);
           }
-        } catch (parseError) {
-          console.warn('Could not parse resource rankings from Gemini');
         }
-      } catch (geminiError) {
-        console.warn('Gemini curation failed, using fallback:', geminiError);
+      } catch (parseError) {
+        console.warn('Could not parse resource rankings from Gemini, using quality scores');
       }
 
       // Fallback: return top resources sorted by quality score
@@ -479,51 +479,29 @@ Use these resources in your roadmap. Return ONLY valid JSON.`;
                        request.goal.toLowerCase().includes('professional');
 
       let response;
-      // Add timeout to prevent hanging
-      const roadmapTimeout = 25000; // 25 seconds max for roadmap generation
-      
-      try {
-        if (isComplex) {
-          // Use O1-mini for complex reasoning
-          try {
-            response = await Promise.race([
-              callGPT4o(enhancedPrompt, {
-                model: 'o1-mini',
-                max_tokens: 8000
-              }),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('O1-mini timeout')), roadmapTimeout)
-              )
-            ]) as any;
-          } catch (error) {
-            console.warn('O1-mini not available or timed out, using GPT-4o:', error);
-            response = await Promise.race([
-              callGPT4o(enhancedPrompt, {
-                model: 'gpt-4o',
-                max_tokens: 8000
-              }),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('GPT-4o timeout')), roadmapTimeout)
-              )
-            ]) as any;
-          }
-        } else {
-          // Use GPT-4o for general roadmap
-          response = await Promise.race([
-            callGPT4o(enhancedPrompt, {
-              model: 'gpt-4o',
-              max_tokens: 8000
-            }),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('GPT-4o timeout')), roadmapTimeout)
-            )
-          ]) as any;
+      if (isComplex) {
+        // Use O1-mini for complex reasoning
+        try {
+          response = await callGPT4o(enhancedPrompt, {
+            model: 'o1-mini',
+            max_tokens: 8000
+          });
+        } catch (error) {
+          console.warn('O1-mini not available, using GPT-4o:', error);
+          response = await callGPT4o(enhancedPrompt, {
+            model: 'gpt-4o',
+            max_tokens: 8000
+          });
         }
-      } catch (timeoutError) {
-        throw new Error(`Roadmap generation timed out after ${roadmapTimeout}ms`);
+      } else {
+        // Use GPT-4o for general roadmap
+        response = await callGPT4o(enhancedPrompt, {
+          model: 'gpt-4o',
+          max_tokens: 8000
+        });
       }
 
-      // Parse JSON response using safeParseJSON for better error handling
+      // Parse JSON response using safeParseJSON for better error recovery
       try {
         const { safeParseJSON } = await import('@/lib/utils/json-repair');
         
@@ -544,40 +522,28 @@ Use these resources in your roadmap. Return ONLY valid JSON.`;
           }
         }
         
-        // Method 3: Try parsing the entire response
+        // Method 3: Try the entire response
         if (!parsed) {
           parsed = safeParseJSON(response.content, null);
         }
         
         if (parsed && parsed.milestones && Array.isArray(parsed.milestones)) {
+          console.log(`✅ Successfully parsed roadmap with ${parsed.milestones.length} milestones`);
           return parsed;
         }
         
-        // If we got partial JSON, try to extract milestones manually
-        if (parsed && !parsed.milestones) {
-          console.warn('Roadmap JSON missing milestones, attempting manual extraction...');
-          // Try to find milestones in the raw response
-          const milestonesMatch = response.content.match(/"milestones"\s*:\s*\[([\s\S]*?)\]/);
-          if (milestonesMatch) {
-            try {
-              const milestonesArray = JSON.parse(`[${milestonesMatch[1]}]`);
-              parsed.milestones = milestonesArray;
-            } catch (e) {
-              console.warn('Could not extract milestones from response');
-            }
-          }
+        // If we got something but it's incomplete, log it
+        if (parsed) {
+          console.warn('⚠️ Parsed JSON but missing milestones:', Object.keys(parsed));
+          throw new Error('Parsed JSON but missing required milestones array');
         }
-        
-        if (parsed && parsed.milestones && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
-          return parsed;
-        }
-        
-        throw new Error('No valid roadmap structure found in AI response');
-      } catch (parseError) {
+      } catch (parseError: any) {
         console.error('Error parsing roadmap JSON:', parseError);
         console.error('Response content preview:', response.content.substring(0, 500));
-        throw new Error('Invalid roadmap structure from AI');
+        throw new Error(`Invalid roadmap structure from AI: ${parseError?.message || 'Unknown parse error'}`);
       }
+
+      throw new Error('No valid JSON found in roadmap response');
     } catch (error) {
       console.error('Error building roadmap:', error);
       // Log to Sentry before throwing
@@ -628,16 +594,11 @@ Return JSON:
   "social_engagement": "suggestions"
 }`;
 
-      const claudeResponse = await Promise.race([
-        callClaude(engagementPrompt, {
-          model: 'claude-sonnet-4-5-20250929',
-          max_tokens: 2000,
-          temperature: 0.7
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Claude engagement design timeout')), 15000)
-        )
-      ]) as any;
+      const claudeResponse = await callClaude(engagementPrompt, {
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 2000,
+        temperature: 0.7
+      });
 
       try {
         const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
@@ -797,18 +758,12 @@ export async function generateEnhancedARK(
   const overallStartTime = Date.now();
   const modelsUsed: string[] = [];
   const phaseTimings: Record<string, number> = {};
-  
-  // Overall timeout: 50 seconds (leave 10 seconds buffer for Vercel's 60s limit)
-  const OVERALL_TIMEOUT = 50000;
 
   console.log('🌟 Starting Enhanced ARK Generation with Multi-Model Orchestration');
   console.log(`   Goal: ${request.goal}`);
   console.log(`   Category: ${request.category}`);
 
-  // Wrap entire generation in timeout
-  return await Promise.race([
-    (async (): Promise<EnhancedARKResponse> => {
-      try {
+  try {
     // Phase 1: Pre-Generation
     const phase1Start = Date.now();
     const phase1Results = await phase1PreGeneration(request);
@@ -922,36 +877,30 @@ export async function generateEnhancedARK(
         total_time_ms: totalTime
       }
     };
-      } catch (error) {
-        console.error('❌ Enhanced ARK generation failed:', error);
-        
-        // Enhanced error logging with Sentry
-        try {
-          const { logErrorToSentry, parseError, ErrorCategory, ErrorSeverity } = await import('@/lib/utils/enhanced-error-handler');
-          const parsedError = parseError(error, {
-            endpoint: '/api/ai/generate-ark',
-            method: 'POST',
-            userId: request.student_id,
-            additionalData: {
-              goal: request.goal?.substring(0, 100),
-              category: request.category,
-              userTier: request.userTier,
-              phaseTimings,
-              modelsUsed,
-              executionTime: Date.now() - overallStartTime
-            }
-          });
-          logErrorToSentry(parsedError);
-        } catch (sentryError) {
-          console.warn('Failed to log to Sentry:', sentryError);
+  } catch (error) {
+    console.error('❌ Enhanced ARK generation failed:', error);
+    
+    // Enhanced error logging with Sentry
+    try {
+      const { logErrorToSentry, parseError, ErrorCategory, ErrorSeverity } = await import('@/lib/utils/enhanced-error-handler');
+      const parsedError = parseError(error, {
+        endpoint: '/api/ai/generate-ark',
+        method: 'POST',
+        userId: request.student_id,
+        additionalData: {
+          goal: request.goal?.substring(0, 100),
+          category: request.category,
+          userTier: request.userTier,
+          phaseTimings,
+          modelsUsed
         }
-        
-        throw error;
-      }
-    })(),
-    new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error(`Enhanced ARK generation timed out after ${OVERALL_TIMEOUT}ms`)), OVERALL_TIMEOUT)
-    )
-  ]);
+      });
+      logErrorToSentry(parsedError);
+    } catch (sentryError) {
+      console.warn('Failed to log to Sentry:', sentryError);
+    }
+    
+    throw error;
+  }
 }
 

@@ -38,7 +38,9 @@ import {
   ExternalLink,
   PlayCircle,
   FileCode,
-  Briefcase
+  Briefcase,
+  AlertCircle,
+  ChevronRight
 } from 'lucide-react';
 import { pathFinderQuestions, type Language } from '@/lib/data/path-finder-questions';
 import { calculateResult, type QuizAnswer, type QuizResult } from '@/lib/utils/path-finder-scoring';
@@ -1755,10 +1757,51 @@ export default function PathFinderPage() {
   );
 }
 
+// Skeleton loader for roadmap
+function RoadmapSkeleton() {
+  return (
+    <Card className="border-slate-700/70 bg-slate-900/40 mb-8">
+      <CardHeader>
+        <Skeleton className="h-8 w-64 mb-2" />
+        <Skeleton className="h-4 w-full" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-10 w-24 flex-shrink-0" />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Language }) {
   const [activeCategory, setActiveCategory] = useState<string>('overview');
+  const [expandedMilestones, setExpandedMilestones] = useState<Set<number>>(new Set([0]));
+  const [expandedYear1, setExpandedYear1] = useState<boolean>(true);
+  const [expandedYear2, setExpandedYear2] = useState<boolean>(false);
+  const [expandedResources, setExpandedResources] = useState<Record<string, boolean>>({});
   
-  if (!roadmap) return null;
+  // Validate roadmap structure
+  if (!roadmap || typeof roadmap !== 'object') {
+    return (
+      <Card className="border-red-500/30 bg-red-500/5">
+        <CardContent className="p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-red-300 mb-2">Invalid Roadmap Data</h3>
+          <p className="text-sm text-slate-400">
+            The roadmap data could not be loaded. Please try generating it again.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Debug: Log roadmap structure
   React.useEffect(() => {
@@ -1828,18 +1871,26 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
     }
   };
 
-  // Parse monthly plan into Year 1 and Year 2
+  // Parse monthly plan into Year 1 and Year 2 - NO JSON.stringify
   const parseYearlyPlan = () => {
     if (!roadmap.monthly_plan) {
       // Generate fallback plan from milestones if available
       if (roadmap.milestones && Array.isArray(roadmap.milestones) && roadmap.milestones.length > 0) {
         const mid = Math.ceil(roadmap.milestones.length / 2);
-        const year1 = roadmap.milestones.slice(0, mid).map((m: any) => 
-          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
-        );
-        const year2 = roadmap.milestones.slice(mid).map((m: any) => 
-          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
-        );
+        const year1 = roadmap.milestones.slice(0, mid).map((m: any) => {
+          if (typeof m === 'string') return m;
+          if (typeof m === 'object' && m !== null) {
+            return m.title || m.description || m.name || 'Milestone';
+          }
+          return 'Milestone';
+        });
+        const year2 = roadmap.milestones.slice(mid).map((m: any) => {
+          if (typeof m === 'string') return m;
+          if (typeof m === 'object' && m !== null) {
+            return m.title || m.description || m.name || 'Milestone';
+          }
+          return 'Milestone';
+        });
         return { year1, year2 };
       }
       return { year1: [], year2: [] };
@@ -1852,9 +1903,9 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
       Object.entries(roadmap.monthly_plan).forEach(([period, items]: [string, any]) => {
         if (Array.isArray(items)) {
           if (period.includes('year_1') || period.includes('months_0_3') || period.includes('months_4_6') || period.includes('months_7_9') || period.includes('months_10_12')) {
-            year1.push(...items);
+            year1.push(...items.filter((item: any) => typeof item === 'string'));
           } else if (period.includes('year_2') || period.includes('months_13_15') || period.includes('months_16_18') || period.includes('months_19_21') || period.includes('months_22_24')) {
-            year2.push(...items);
+            year2.push(...items.filter((item: any) => typeof item === 'string'));
           }
         }
       });
@@ -1862,12 +1913,20 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
       // If still empty, try to generate from milestones
       if (year1.length === 0 && year2.length === 0 && roadmap.milestones && Array.isArray(roadmap.milestones)) {
         const mid = Math.ceil(roadmap.milestones.length / 2);
-        year1.push(...roadmap.milestones.slice(0, mid).map((m: any) => 
-          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
-        ));
-        year2.push(...roadmap.milestones.slice(mid).map((m: any) => 
-          typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
-        ));
+        year1.push(...roadmap.milestones.slice(0, mid).map((m: any) => {
+          if (typeof m === 'string') return m;
+          if (typeof m === 'object' && m !== null) {
+            return m.title || m.description || m.name || 'Milestone';
+          }
+          return 'Milestone';
+        }));
+        year2.push(...roadmap.milestones.slice(mid).map((m: any) => {
+          if (typeof m === 'string') return m;
+          if (typeof m === 'object' && m !== null) {
+            return m.title || m.description || m.name || 'Milestone';
+          }
+          return 'Milestone';
+        }));
       }
       
       return { year1, year2 };
@@ -1877,21 +1936,9 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
     if (Array.isArray(roadmap.monthly_plan)) {
       const mid = Math.ceil(roadmap.monthly_plan.length / 2);
       return {
-        year1: roadmap.monthly_plan.slice(0, mid),
-        year2: roadmap.monthly_plan.slice(mid)
+        year1: roadmap.monthly_plan.filter((item: any) => typeof item === 'string').slice(0, mid),
+        year2: roadmap.monthly_plan.filter((item: any) => typeof item === 'string').slice(mid)
       };
-    }
-    
-    // Final fallback: generate from milestones
-    if (roadmap.milestones && Array.isArray(roadmap.milestones) && roadmap.milestones.length > 0) {
-      const mid = Math.ceil(roadmap.milestones.length / 2);
-      const year1 = roadmap.milestones.slice(0, mid).map((m: any) => 
-        typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
-      );
-      const year2 = roadmap.milestones.slice(mid).map((m: any) => 
-        typeof m === 'string' ? m : (m.title || m.description || m.name || JSON.stringify(m))
-      );
-      return { year1, year2 };
     }
     
     return { year1: [], year2: [] };
@@ -1910,277 +1957,266 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      {roadmap.title && (
-        <div className="border-b border-slate-700 pb-4 mb-4">
-          <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">
-            {roadmap.title}
-          </h3>
-          {roadmap.description && (
-            <p className="text-slate-300 text-sm leading-relaxed">{roadmap.description}</p>
-          )}
-        </div>
-      )}
-
-      {/* Category Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4">
-        {categories.map((category) => {
-          const Icon = category.icon;
-          const isActive = activeCategory === category.id;
-          return (
-            <button
-              key={category.id}
-              onClick={() => setActiveCategory(category.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                  : 'bg-slate-800/50 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span className="text-sm font-medium">{category.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Category Content */}
-      <div className="min-h-[400px]">
-        {/* Overview */}
-        {activeCategory === 'overview' && (
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-6">
-              {/* Monthly Study Plan - Year 1 & Year 2 */}
-              <Card className="border-slate-700/70 bg-slate-900/60 h-full">
-                <CardHeader className="bg-gradient-to-r from-teal-500/10 to-teal-500/5 border-b border-teal-500/20 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-teal-300" />
-                    <h4 className="text-lg font-bold">Monthly Study Plan</h4>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Year 1 */}
-                    <div className="space-y-2">
-                      <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 1</h5>
-                      {year1.length > 0 ? (
-                        <ul className="space-y-1.5">
-                          {year1.slice(0, 6).map((item: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                              <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
-                              <span className="line-clamp-2">{item}</span>
-                            </li>
-                          ))}
-                          {year1.length > 6 && (
-                            <li className="text-xs text-slate-500 italic">
-                              +{year1.length - 6} more items
-                            </li>
-                          )}
-                        </ul>
-                      ) : (
-                        <div className="space-y-2 text-xs text-slate-400">
-                          <p className="italic">Generating personalized study plan...</p>
-                          {roadmap.milestones && roadmap.milestones.length > 0 && (
-                            <p className="text-slate-500">
-                              Check the Milestones tab for detailed roadmap
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Year 2 */}
-                    <div className="space-y-2">
-                      <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 2</h5>
-                      {year2.length > 0 ? (
-                        <ul className="space-y-1.5">
-                          {year2.slice(0, 6).map((item: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                              <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
-                              <span className="line-clamp-2">{item}</span>
-                            </li>
-                          ))}
-                          {year2.length > 6 && (
-                            <li className="text-xs text-slate-500 italic">
-                              +{year2.length - 6} more items
-                            </li>
-                          )}
-                        </ul>
-                      ) : (
-                        <div className="space-y-2 text-xs text-slate-400">
-                          <p className="italic">Generating personalized study plan...</p>
-                          {roadmap.milestones && roadmap.milestones.length > 0 && (
-                            <p className="text-slate-500">
-                              Check the Milestones tab for detailed roadmap
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-            {/* Career Paths to Explore */}
-            {roadmap.career_exposure && roadmap.career_exposure.length > 0 && (
-              <Card className="border-slate-700/70 bg-slate-900/60">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-pink-300" />
-                    <h4 className="text-lg font-bold">Career Paths to Explore</h4>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2">
-                  {roadmap.career_exposure.map((career: string, idx: number) => (
-                    <div key={idx} className="p-2 rounded-lg border border-pink-500/30 bg-pink-500/5">
-                      <p className="text-sm font-medium text-pink-300">{career}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Exam Timeline */}
-            {roadmap.exam_timeline && roadmap.exam_timeline.length > 0 && (
-              <Card className="border-slate-700/70 bg-slate-900/60">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-blue-300" />
-                    <h4 className="text-lg font-bold">Exam Timeline & Important Dates</h4>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2">
-                  {roadmap.exam_timeline.map((exam: string, idx: number) => (
-                    <div key={idx} className="p-2 rounded-lg border border-blue-500/30 bg-blue-500/5">
-                      <p className="text-xs font-medium text-blue-300">{exam}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+    <Card className="border-slate-700/70 bg-slate-900/40">
+      <CardHeader className="pb-4">
+        {/* Header Section - Mobile Optimized */}
+        {roadmap.title && (
+          <div className="mb-4">
+            <h3 className="text-xl sm:text-2xl font-bold mb-2 bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">
+              {roadmap.title}
+            </h3>
+            {roadmap.description && (
+              <p className="text-slate-300 text-sm sm:text-base leading-relaxed line-clamp-3">
+                {roadmap.description}
+              </p>
             )}
           </div>
-
-          {/* Right Column - Overview */}
-          <div className="space-y-6">
-            {/* Resources Summary */}
-            {roadmap.resource_summary && (
-              <Card className="border-slate-700/70 bg-slate-900/60">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-cyan-400" />
-                    <h4 className="text-lg font-bold">Resources Summary</h4>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="flex flex-wrap gap-2">
-                    {roadmap.resource_summary.total_videos > 0 && (
-                      <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
-                        {roadmap.resource_summary.total_videos} Videos
-                      </Badge>
-                    )}
-                    {roadmap.resource_summary.total_papers > 0 && (
-                      <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
-                        {roadmap.resource_summary.total_papers} Papers
-                      </Badge>
-                    )}
-                    {roadmap.resource_summary.total_projects > 0 && (
-                      <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
-                        {roadmap.resource_summary.total_projects} Projects
-                      </Badge>
-                    )}
-                    {roadmap.resource_summary.total_news > 0 && (
-                      <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
-                        {roadmap.resource_summary.total_news} News
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Career Paths Preview */}
-            {roadmap.career_exposure && roadmap.career_exposure.length > 0 && (
-              <Card className="border-slate-700/70 bg-slate-900/60">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-pink-300" />
-                    <h4 className="text-lg font-bold">Career Paths</h4>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2">
-                  {roadmap.career_exposure.slice(0, 3).map((career: string, idx: number) => (
-                    <div key={idx} className="p-2 rounded-lg border border-pink-500/30 bg-pink-500/5">
-                      <p className="text-sm font-medium text-pink-300">{career}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
         )}
 
-        {/* Study Plan Category */}
-        {activeCategory === 'study-plan' && (
-          <div className="space-y-6">
+        {/* Category Tabs - Horizontal Scroll on Mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {categories.map((category) => {
+            const Icon = category.icon;
+            const isActive = activeCategory === category.id;
+            return (
+              <button
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all whitespace-nowrap flex-shrink-0 ${
+                  isActive
+                    ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                    : 'bg-slate-800/50 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-xs sm:text-sm font-medium">{category.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </CardHeader>
+      
+      <CardContent className="px-4 sm:px-6">
+
+      {/* Category Content - Mobile First */}
+      <div className="min-h-[300px] space-y-4">
+        {/* Overview */}
+        {activeCategory === 'overview' && (
+          <div className="space-y-4">
+            {/* Monthly Study Plan - Collapsible Year 1 & Year 2 */}
             <Card className="border-slate-700/70 bg-slate-900/60">
               <CardHeader className="bg-gradient-to-r from-teal-500/10 to-teal-500/5 border-b border-teal-500/20 pb-3">
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-teal-300" />
-                  <h4 className="text-lg font-bold">Monthly Study Plan</h4>
+                  <h4 className="text-base sm:text-lg font-bold">Monthly Study Plan</h4>
                 </div>
               </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Year 1 */}
-                  <div className="space-y-2">
-                    <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 1</h5>
+              <CardContent className="p-3 sm:p-4">
+                <div className="space-y-4">
+                  {/* Year 1 - Collapsible */}
+                  <Collapsible
+                    title="Year 1"
+                    defaultOpen={expandedYear1}
+                    icon={<span className="text-teal-300 font-bold text-sm">Y1</span>}
+                    headerClassName="bg-teal-500/10"
+                  >
                     {year1.length > 0 ? (
-                      <ul className="space-y-1.5">
+                      <ul className="space-y-2">
                         {year1.map((item: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                            <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
-                            <span className="line-clamp-2">{item}</span>
+                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                            <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                            <span className="flex-1">{item}</span>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <div className="space-y-2 text-xs text-slate-400">
-                        <p className="italic">Generating personalized study plan...</p>
+                      <div className="text-sm text-slate-400 italic py-2">
+                        <p>Generating personalized study plan...</p>
                         {roadmap.milestones && roadmap.milestones.length > 0 && (
-                          <p className="text-slate-500">
+                          <p className="text-slate-500 mt-1">
                             Check the Milestones tab for detailed roadmap
                           </p>
                         )}
                       </div>
                     )}
-                  </div>
+                  </Collapsible>
 
-                  {/* Year 2 */}
-                  <div className="space-y-2">
-                    <h5 className="font-bold text-teal-300 text-sm mb-2">YEAR 2</h5>
+                  {/* Year 2 - Collapsible */}
+                  <Collapsible
+                    title="Year 2"
+                    defaultOpen={expandedYear2}
+                    icon={<span className="text-teal-300 font-bold text-sm">Y2</span>}
+                    headerClassName="bg-teal-500/10"
+                  >
                     {year2.length > 0 ? (
-                      <ul className="space-y-1.5">
+                      <ul className="space-y-2">
                         {year2.map((item: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                            <CheckCircle2 className="h-3 w-3 text-teal-400 mt-0.5 flex-shrink-0" />
-                            <span className="line-clamp-2">{item}</span>
+                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                            <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                            <span className="flex-1">{item}</span>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <div className="space-y-2 text-xs text-slate-400">
-                        <p className="italic">Generating personalized study plan...</p>
+                      <div className="text-sm text-slate-400 italic py-2">
+                        <p>Generating personalized study plan...</p>
                         {roadmap.milestones && roadmap.milestones.length > 0 && (
-                          <p className="text-slate-500">
+                          <p className="text-slate-500 mt-1">
                             Check the Milestones tab for detailed roadmap
                           </p>
                         )}
                       </div>
                     )}
-                  </div>
+                  </Collapsible>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Career Paths to Explore - Collapsible */}
+            {roadmap.career_exposure && roadmap.career_exposure.length > 0 && (
+              <Collapsible
+                title={`Career Paths to Explore (${roadmap.career_exposure.length})`}
+                defaultOpen={false}
+                icon={<Users className="h-4 w-4 text-pink-300" />}
+              >
+                <div className="space-y-2">
+                  {roadmap.career_exposure.map((career: string, idx: number) => (
+                    <div key={idx} className="p-3 rounded-lg border border-pink-500/30 bg-pink-500/5">
+                      <p className="text-sm font-medium text-pink-300">{career}</p>
+                    </div>
+                  ))}
+                </div>
+              </Collapsible>
+            )}
+
+            {/* Exam Timeline - Collapsible */}
+            {roadmap.exam_timeline && roadmap.exam_timeline.length > 0 && (
+              <Collapsible
+                title={`Exam Timeline & Important Dates (${roadmap.exam_timeline.length})`}
+                defaultOpen={false}
+                icon={<Calendar className="h-4 w-4 text-blue-300" />}
+              >
+                <div className="space-y-2">
+                  {roadmap.exam_timeline.map((exam: string, idx: number) => (
+                    <div key={idx} className="p-3 rounded-lg border border-blue-500/30 bg-blue-500/5">
+                      <p className="text-sm font-medium text-blue-300">{exam}</p>
+                    </div>
+                  ))}
+                </div>
+              </Collapsible>
+            )}
+
+            {/* Resources Summary - Collapsible */}
+            {roadmap.resource_summary && (
+              <Collapsible
+                title="Resources Summary"
+                defaultOpen={false}
+                icon={<BookOpen className="h-4 w-4 text-cyan-400" />}
+              >
+                <div className="flex flex-wrap gap-2">
+                  {roadmap.resource_summary.total_videos > 0 && (
+                    <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
+                      {roadmap.resource_summary.total_videos} Videos
+                    </Badge>
+                  )}
+                  {roadmap.resource_summary.total_papers > 0 && (
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                      {roadmap.resource_summary.total_papers} Papers
+                    </Badge>
+                  )}
+                  {roadmap.resource_summary.total_projects > 0 && (
+                    <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
+                      {roadmap.resource_summary.total_projects} Projects
+                    </Badge>
+                  )}
+                  {roadmap.resource_summary.total_news > 0 && (
+                    <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                      {roadmap.resource_summary.total_news} News
+                    </Badge>
+                  )}
+                  {roadmap.resource_summary.total_colleges > 0 && (
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                      {roadmap.resource_summary.total_colleges} Colleges
+                    </Badge>
+                  )}
+                  {roadmap.resource_summary.total_scholarships > 0 && (
+                    <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
+                      {roadmap.resource_summary.total_scholarships} Scholarships
+                    </Badge>
+                  )}
+                </div>
+              </Collapsible>
+            )}
+          </div>
+        )}
+
+        {/* Study Plan Category - Mobile Optimized */}
+        {activeCategory === 'study-plan' && (
+          <div className="space-y-4">
+            <Card className="border-slate-700/70 bg-slate-900/60">
+              <CardHeader className="bg-gradient-to-r from-teal-500/10 to-teal-500/5 border-b border-teal-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-teal-300" />
+                  <h4 className="text-base sm:text-lg font-bold">Monthly Study Plan</h4>
+                </div>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4">
+                <div className="space-y-4">
+                  {/* Year 1 - Collapsible */}
+                  <Collapsible
+                    title="Year 1 Study Plan"
+                    defaultOpen={expandedYear1}
+                    icon={<span className="text-teal-300 font-bold">Y1</span>}
+                    headerClassName="bg-teal-500/10"
+                  >
+                    {year1.length > 0 ? (
+                      <ul className="space-y-2">
+                        {year1.map((item: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                            <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                            <span className="flex-1">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-sm text-slate-400 italic py-2">
+                        <p>Generating personalized study plan...</p>
+                        {roadmap.milestones && roadmap.milestones.length > 0 && (
+                          <p className="text-slate-500 mt-1">
+                            Check the Milestones tab for detailed roadmap
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </Collapsible>
+
+                  {/* Year 2 - Collapsible */}
+                  <Collapsible
+                    title="Year 2 Study Plan"
+                    defaultOpen={expandedYear2}
+                    icon={<span className="text-teal-300 font-bold">Y2</span>}
+                    headerClassName="bg-teal-500/10"
+                  >
+                    {year2.length > 0 ? (
+                      <ul className="space-y-2">
+                        {year2.map((item: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                            <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                            <span className="flex-1">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-sm text-slate-400 italic py-2">
+                        <p>Generating personalized study plan...</p>
+                        {roadmap.milestones && roadmap.milestones.length > 0 && (
+                          <p className="text-slate-500 mt-1">
+                            Check the Milestones tab for detailed roadmap
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </Collapsible>
                 </div>
               </CardContent>
             </Card>
