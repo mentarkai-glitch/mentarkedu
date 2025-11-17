@@ -288,7 +288,7 @@ async function testARKGeneration() {
     console.log('  ❌ Fix resource gathering - this is critical for ARK generation');
   }
   
-  const criticalAPIs = ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'GEMINI_API_KEY', 'PERPLEXITY_API_KEY'];
+  const criticalAPIs: Array<keyof typeof apiKeys> = ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'GEMINI_API_KEY', 'PERPLEXITY_API_KEY'];
   const missingCritical = criticalAPIs.filter(key => !apiKeys[key]);
   
   if (missingCritical.length > 0) {
@@ -296,7 +296,7 @@ async function testARKGeneration() {
     console.log('     ARK generation will still work but with reduced functionality');
   }
   
-  const optionalAPIs = ['YOUTUBE_DATA_API_KEY', 'GITHUB_TOKEN', 'REDDIT_CLIENT_ID'];
+  const optionalAPIs: Array<keyof typeof apiKeys> = ['YOUTUBE_DATA_API_KEY', 'GITHUB_TOKEN', 'REDDIT_CLIENT_ID'];
   const missingOptional = optionalAPIs.filter(key => !apiKeys[key]);
   
   if (missingOptional.length > 0) {

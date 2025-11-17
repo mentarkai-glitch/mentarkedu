@@ -82,14 +82,22 @@ async function testFullARKFlow() {
     
     // Check exports
     const hasGenerateEnhancedARK = typeof orchestrator.generateEnhancedARK === 'function';
-    const hasPhase1 = typeof orchestrator.phase1PreGeneration === 'function';
-    const hasPhase2 = typeof orchestrator.phase2CoreGeneration === 'function';
+    
+    // Note: phase1PreGeneration and phase2CoreGeneration are private/internal functions
+    // They're called by generateEnhancedARK, so we only need to check that
 
     console.log(`  generateEnhancedARK: ${hasGenerateEnhancedARK ? '✅' : '❌'}`);
-    // Note: phase1PreGeneration and phase2CoreGeneration might be private - that's OK
     
     if (!hasGenerateEnhancedARK) {
       throw new Error('generateEnhancedARK function not exported');
+    }
+
+    // Check that the function has the expected signature
+    if (hasGenerateEnhancedARK) {
+      const funcParams = orchestrator.generateEnhancedARK.length;
+      if (funcParams < 2) {
+        throw new Error('generateEnhancedARK should accept at least 2 parameters');
+      }
     }
 
     console.log('\n✅ Enhanced orchestrator structure correct');
