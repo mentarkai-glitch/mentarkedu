@@ -1997,12 +1997,11 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
       </CardHeader>
       
       <CardContent className="px-4 sm:px-6">
-
-      {/* Category Content - Mobile First */}
-      <div className="min-h-[300px] space-y-4">
-        {/* Overview */}
-        {activeCategory === 'overview' && (
-          <div className="space-y-4">
+        {/* Category Content - Mobile First */}
+        <div className="min-h-[300px] space-y-4">
+          {/* Overview */}
+          {activeCategory === 'overview' && (
+            <div className="space-y-4">
             {/* Monthly Study Plan - Collapsible Year 1 & Year 2 */}
             <Card className="border-slate-700/70 bg-slate-900/60">
               <CardHeader className="bg-gradient-to-r from-teal-500/10 to-teal-500/5 border-b border-teal-500/20 pb-3">
@@ -2147,12 +2146,12 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                 </div>
               </Collapsible>
             )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Study Plan Category - Mobile Optimized */}
-        {activeCategory === 'study-plan' && (
-          <div className="space-y-4">
+          {/* Study Plan Category - Mobile Optimized */}
+          {activeCategory === 'study-plan' && (
+            <div className="space-y-4">
             <Card className="border-slate-700/70 bg-slate-900/60">
               <CardHeader className="bg-gradient-to-r from-teal-500/10 to-teal-500/5 border-b border-teal-500/20 pb-3">
                 <div className="flex items-center gap-2">
@@ -2221,11 +2220,11 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
               </CardContent>
             </Card>
           </div>
-        )}
+          )}
 
-        {/* Resources Category - Mobile Optimized with Collapsible Sections */}
-        {activeCategory === 'resources' && (
-          <div className="space-y-4">
+          {/* Resources Category - Mobile Optimized with Collapsible Sections */}
+          {activeCategory === 'resources' && (
+            <div className="space-y-4">
             {allResources.length > 0 ? (
               <div className="space-y-3">
                 {Object.entries(categorizedAllResources).map(([category, resources]) => {
@@ -2322,87 +2321,164 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
               </Card>
             )}
           </div>
-        )}
+          )}
 
-        {/* Milestones Category */}
-        {activeCategory === 'milestones' && (
-          <div className="space-y-6">
+          {/* Milestones Category - Mobile Optimized with Collapsible */}
+          {activeCategory === 'milestones' && (
+            <div className="space-y-4">
             {roadmap.milestones && roadmap.milestones.length > 0 ? (
-              roadmap.milestones.map((milestone: any, idx: number) => (
-                <Card key={idx} className="border-slate-700/70 bg-slate-900/60">
-                  <CardHeader className="bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border-b border-yellow-500/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs px-2 py-0.5">
-                        {milestone.month_range || `Milestone ${idx + 1}`}
-                      </Badge>
-                      {milestone.exam_prep && (
-                        <Badge variant="outline" className="border-blue-500/30 text-blue-300 text-xs">
-                          <GraduationCap className="h-3 w-3 mr-1" />
-                          Exam Prep
-                        </Badge>
-                      )}
-                    </div>
-                    <h5 className="text-lg font-bold text-slate-200">{milestone.title}</h5>
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-3">
-                    {milestone.description && (
-                      <p className="text-sm text-slate-300 leading-relaxed">{milestone.description}</p>
-                    )}
-                    {milestone.actions && milestone.actions.length > 0 && (
-                      <div>
-                        <h6 className="font-semibold text-teal-300 text-sm mb-2 flex items-center gap-2">
-                          <Target className="h-4 w-4" />
-                          Action Items
-                        </h6>
-                        <ul className="space-y-2">
-                          {milestone.actions.map((action: string, actionIdx: number) => (
-                            <li key={actionIdx} className="flex items-start gap-2 text-sm text-slate-300">
-                              <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
-                              <span>{action}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {milestone.skills_to_build && milestone.skills_to_build.length > 0 && (
-                      <div>
-                        <h6 className="font-semibold text-yellow-300 text-sm mb-2 flex items-center gap-2">
-                          <Award className="h-4 w-4" />
-                          Skills to Build
-                        </h6>
-                        <div className="flex flex-wrap gap-2">
-                          {milestone.skills_to_build.map((skill: string, skillIdx: number) => (
-                            <Badge key={skillIdx} className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
-                              {skill}
+              roadmap.milestones.map((milestone: any, idx: number) => {
+                const isExpanded = expandedMilestones.has(idx);
+                const toggleMilestone = () => {
+                  const newSet = new Set(expandedMilestones);
+                  if (isExpanded) {
+                    newSet.delete(idx);
+                  } else {
+                    newSet.add(idx);
+                  }
+                  setExpandedMilestones(newSet);
+                };
+
+                return (
+                  <Card key={idx} className="border-slate-700/70 bg-slate-900/60">
+                    <CardHeader 
+                      className="bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border-b border-yellow-500/20 cursor-pointer"
+                      onClick={toggleMilestone}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs px-2 py-0.5">
+                              {milestone.month_range || `Milestone ${idx + 1}`}
                             </Badge>
-                          ))}
+                            {milestone.exam_prep && (
+                              <Badge variant="outline" className="border-blue-500/30 text-blue-300 text-xs">
+                                <GraduationCap className="h-3 w-3 mr-1" />
+                                Exam Prep
+                              </Badge>
+                            )}
+                          </div>
+                          <h5 className="text-base sm:text-lg font-bold text-slate-200 pr-8">
+                            {milestone.title || `Milestone ${idx + 1}`}
+                          </h5>
                         </div>
+                        <button className="ml-2">
+                          {isExpanded ? (
+                            <ChevronUp className="h-5 w-5 text-slate-400" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-slate-400" />
+                          )}
+                        </button>
                       </div>
+                    </CardHeader>
+                    {isExpanded && (
+                      <CardContent className="p-4 space-y-4">
+                        {milestone.description && (
+                          <p className="text-sm text-slate-300 leading-relaxed">
+                            {milestone.description}
+                          </p>
+                        )}
+                        {milestone.actions && Array.isArray(milestone.actions) && milestone.actions.length > 0 && (
+                          <div>
+                            <h6 className="font-semibold text-teal-300 text-sm mb-2 flex items-center gap-2">
+                              <Target className="h-4 w-4" />
+                              Action Items
+                            </h6>
+                            <ul className="space-y-2">
+                              {milestone.actions.map((action: string, actionIdx: number) => (
+                                <li key={actionIdx} className="flex items-start gap-2 text-sm text-slate-300">
+                                  <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                                  <span className="flex-1">{action}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {milestone.skills_to_build && Array.isArray(milestone.skills_to_build) && milestone.skills_to_build.length > 0 && (
+                          <div>
+                            <h6 className="font-semibold text-yellow-300 text-sm mb-2 flex items-center gap-2">
+                              <Award className="h-4 w-4" />
+                              Skills to Build
+                            </h6>
+                            <div className="flex flex-wrap gap-2">
+                              {milestone.skills_to_build.map((skill: string, skillIdx: number) => (
+                                <Badge key={skillIdx} className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {milestone.resources && Array.isArray(milestone.resources) && milestone.resources.length > 0 && (
+                          <div>
+                            <h6 className="font-semibold text-cyan-300 text-sm mb-2 flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              Resources ({milestone.resources.length})
+                            </h6>
+                            <div className="space-y-2">
+                              {milestone.resources.slice(0, 3).map((resource: any, resIdx: number) => (
+                                <a
+                                  key={resIdx}
+                                  href={resource.url || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block p-2 rounded border border-slate-700 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all group"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    {getResourceIcon(resource.type || 'other')}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-white group-hover:text-cyan-300 line-clamp-1">
+                                        {resource.title || resource.name || 'Resource'}
+                                      </p>
+                                      {resource.source && (
+                                        <p className="text-xs text-slate-500 mt-0.5">{resource.source}</p>
+                                      )}
+                                    </div>
+                                    <ExternalLink className="h-3 w-3 text-slate-500 group-hover:text-cyan-400 flex-shrink-0 mt-0.5" />
+                                  </div>
+                                </a>
+                              ))}
+                              {milestone.resources.length > 3 && (
+                                <p className="text-xs text-slate-500 text-center pt-1">
+                                  +{milestone.resources.length - 3} more resources
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {milestone.career_connection && (
+                          <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                            <h6 className="font-semibold text-purple-300 text-sm mb-1">Career Connection</h6>
+                            <p className="text-xs text-slate-300">{milestone.career_connection}</p>
+                          </div>
+                        )}
+                      </CardContent>
                     )}
-                  </CardContent>
-                </Card>
-              ))
+                  </Card>
+                );
+              })
             ) : (
               <Card className="border-slate-700/70 bg-slate-900/60">
                 <CardContent className="p-8 text-center">
                   <Calendar className="h-12 w-12 text-slate-600 mx-auto mb-4" />
                   <p className="text-slate-500">No milestones available</p>
+                  <p className="text-xs text-slate-600 mt-2">Milestones will appear here once generated</p>
                 </CardContent>
               </Card>
             )}
           </div>
-        )}
+          )}
 
-        {/* Careers Category */}
-        {activeCategory === 'careers' && (
-          <div className="space-y-6">
+          {/* Careers Category - Mobile Optimized */}
+          {activeCategory === 'careers' && (
+            <div className="space-y-4">
             {roadmap.career_exposure && roadmap.career_exposure.length > 0 ? (
               roadmap.career_exposure.map((career: string, idx: number) => (
                 <Card key={idx} className="border-slate-700/70 bg-slate-900/60">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="h-5 w-5 text-pink-300" />
-                      <h5 className="font-bold text-pink-300">{career}</h5>
+                      <h5 className="font-bold text-pink-300 text-base sm:text-lg">{career}</h5>
                     </div>
                     <p className="text-sm text-slate-400">Explore this career path and its requirements</p>
                   </CardContent>
@@ -2413,22 +2489,23 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                 <CardContent className="p-8 text-center">
                   <Briefcase className="h-12 w-12 text-slate-600 mx-auto mb-4" />
                   <p className="text-slate-500">No career paths available</p>
+                  <p className="text-xs text-slate-600 mt-2">Career paths will appear here once generated</p>
                 </CardContent>
               </Card>
             )}
           </div>
-        )}
+          )}
 
-        {/* Exams Category */}
-        {activeCategory === 'exams' && (
-          <div className="space-y-6">
+          {/* Exams Category - Mobile Optimized */}
+          {activeCategory === 'exams' && (
+            <div className="space-y-4">
             {roadmap.exam_timeline && roadmap.exam_timeline.length > 0 ? (
               roadmap.exam_timeline.map((exam: string, idx: number) => (
                 <Card key={idx} className="border-slate-700/70 bg-slate-900/60">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar className="h-5 w-5 text-blue-300" />
-                      <h5 className="font-bold text-blue-300">Exam Timeline</h5>
+                      <h5 className="font-bold text-blue-300 text-base sm:text-lg">Exam Timeline</h5>
                     </div>
                     <p className="text-sm text-slate-300">{exam}</p>
                   </CardContent>
@@ -2439,13 +2516,15 @@ function DetailedRoadmap({ roadmap, language }: { roadmap: any; language: Langua
                 <CardContent className="p-8 text-center">
                   <GraduationCap className="h-12 w-12 text-slate-600 mx-auto mb-4" />
                   <p className="text-slate-500">No exam timeline available</p>
+                  <p className="text-xs text-slate-600 mt-2">Exam schedules will appear here once generated</p>
                 </CardContent>
               </Card>
             )}
           </div>
-        )}
-      </div>
-    </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
