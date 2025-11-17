@@ -152,6 +152,19 @@ async function phase1PreGeneration(
         return context + semanticContext;
       } catch (error) {
         console.error('Error retrieving memories:', error);
+        // Log to Sentry but don't fail the whole process
+        try {
+          const { logErrorToSentry, parseError } = await import('@/lib/utils/enhanced-error-handler');
+          const parsedError = parseError(error, {
+            endpoint: '/api/ai/generate-ark',
+            method: 'POST',
+            userId: studentId,
+            additionalData: { phase: 'memory_retrieval' }
+          });
+          logErrorToSentry(parsedError);
+        } catch (sentryError) {
+          // Ignore Sentry errors
+        }
         return "";
       }
     })(),
@@ -178,6 +191,19 @@ async function phase1PreGeneration(
         return resources;
       } catch (error) {
         console.error('Error discovering resources:', error);
+        // Log to Sentry but don't fail the whole process
+        try {
+          const { logErrorToSentry, parseError } = await import('@/lib/utils/enhanced-error-handler');
+          const parsedError = parseError(error, {
+            endpoint: '/api/ai/generate-ark',
+            method: 'POST',
+            userId: request.student_id,
+            additionalData: { phase: 'resource_discovery', goal: request.goal?.substring(0, 100) }
+          });
+          logErrorToSentry(parsedError);
+        } catch (sentryError) {
+          // Ignore Sentry errors
+        }
         return [];
       }
     })(),
@@ -285,6 +311,19 @@ Return ONLY valid JSON.`;
         } as PsychologyAnalysis;
       } catch (error) {
         console.error('Error in emotional analysis:', error);
+        // Log to Sentry but provide fallback
+        try {
+          const { logErrorToSentry, parseError } = await import('@/lib/utils/enhanced-error-handler');
+          const parsedError = parseError(error, {
+            endpoint: '/api/ai/generate-ark',
+            method: 'POST',
+            userId: request.student_id,
+            additionalData: { phase: 'emotional_analysis' }
+          });
+          logErrorToSentry(parsedError);
+        } catch (sentryError) {
+          // Ignore Sentry errors
+        }
         return {
           strengths: [],
           weaknesses: [],
@@ -377,6 +416,19 @@ Return top 30 resources ranked by relevance in JSON array format:
       return phase1Results.discoveredResources.slice(0, 30);
     } catch (error) {
       console.error('Error curating resources:', error);
+      // Log to Sentry but continue with fallback
+      try {
+        const { logErrorToSentry, parseError } = await import('@/lib/utils/enhanced-error-handler');
+        const parsedError = parseError(error, {
+          endpoint: '/api/ai/generate-ark',
+          method: 'POST',
+          userId: request.student_id,
+          additionalData: { phase: 'resource_curation' }
+        });
+        logErrorToSentry(parsedError);
+      } catch (sentryError) {
+        // Ignore Sentry errors
+      }
       return phase1Results.discoveredResources.slice(0, 30);
     }
   })();
@@ -447,6 +499,23 @@ Use these resources in your roadmap. Return ONLY valid JSON.`;
       throw new Error('No valid JSON found in roadmap response');
     } catch (error) {
       console.error('Error building roadmap:', error);
+      // Log to Sentry before throwing
+      try {
+        const { logErrorToSentry, parseError, ErrorCategory, ErrorSeverity } = await import('@/lib/utils/enhanced-error-handler');
+        const parsedError = parseError(error, {
+          endpoint: '/api/ai/generate-ark',
+          method: 'POST',
+          userId: request.student_id,
+          additionalData: { 
+            phase: 'roadmap_architecture',
+            goal: request.goal?.substring(0, 100),
+            category: request.category
+          }
+        });
+        logErrorToSentry(parsedError);
+      } catch (sentryError) {
+        console.warn('Failed to log roadmap error to Sentry:', sentryError);
+      }
       throw error;
     }
   })();
@@ -763,6 +832,27 @@ export async function generateEnhancedARK(
     };
   } catch (error) {
     console.error('❌ Enhanced ARK generation failed:', error);
+    
+    // Enhanced error logging with Sentry
+    try {
+      const { logErrorToSentry, parseError, ErrorCategory, ErrorSeverity } = await import('@/lib/utils/enhanced-error-handler');
+      const parsedError = parseError(error, {
+        endpoint: '/api/ai/generate-ark',
+        method: 'POST',
+        userId: request.student_id,
+        additionalData: {
+          goal: request.goal?.substring(0, 100),
+          category: request.category,
+          userTier: request.userTier,
+          phaseTimings,
+          modelsUsed
+        }
+      });
+      logErrorToSentry(parsedError);
+    } catch (sentryError) {
+      console.warn('Failed to log to Sentry:', sentryError);
+    }
+    
     throw error;
   }
 }

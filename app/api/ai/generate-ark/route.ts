@@ -353,7 +353,31 @@ export async function POST(request: NextRequest) {
             curated_resources: enhancedResponse.resources
           };
         } catch (enhancedError: any) {
-          console.warn('⚠️ Enhanced orchestrator failed, falling back to standard:', enhancedError?.message);
+          console.error('⚠️ Enhanced orchestrator failed, falling back to standard:', {
+            message: enhancedError?.message,
+            name: enhancedError?.name,
+            stack: enhancedError?.stack?.split('\n').slice(0, 10)
+          });
+          
+          // Log to Sentry with detailed context
+          try {
+            const { logErrorToSentry, parseError, ErrorCategory } = await import('@/lib/utils/enhanced-error-handler');
+            const parsedError = parseError(enhancedError, {
+              endpoint: '/api/ai/generate-ark',
+              method: 'POST',
+              userId: finalStudentId,
+              additionalData: {
+                goal: goal?.substring(0, 100),
+                category,
+                orchestrator: 'enhanced',
+                fallback: 'standard'
+              }
+            });
+            logErrorToSentry(parsedError);
+          } catch (sentryError) {
+            console.warn('Failed to log enhanced orchestrator error to Sentry:', sentryError);
+          }
+          
           useEnhancedOrchestrator = false;
           // Fall through to standard orchestrator
         }
@@ -1029,6 +1053,15 @@ export async function POST(request: NextRequest) {
       errorContext.errorType = 'ai_provider';
     }
 
+    // Enhanced Sentry logging before returning error
+    try {
+      const { logErrorToSentry, parseError } = await import('@/lib/utils/enhanced-error-handler');
+      const parsedError = parseError(error, errorContext);
+      logErrorToSentry(parsedError);
+    } catch (sentryError) {
+      console.warn('Failed to log to Sentry:', sentryError);
+    }
+    
     return handleApiError(error, errorContext);
   }
 }
