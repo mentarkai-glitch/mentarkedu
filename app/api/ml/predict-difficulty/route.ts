@@ -4,7 +4,17 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 import { fetchWithRetry } from "@/lib/utils/fetch-with-retry";
 import * as Sentry from "@sentry/nextjs";
 
+// ML_SERVING_URL should be a full URL (e.g., https://ml-service.example.com)
+// If not set or set to localhost, we'll use rule-based fallback
 const ML_SERVING_URL = process.env.ML_SERVING_URL;
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+const isMLServiceAvailable = ML_SERVING_URL && 
+  !ML_SERVING_URL.includes('localhost') && 
+  !ML_SERVING_URL.includes('127.0.0.1') &&
+  !ML_SERVING_URL.includes('0.0.0.0') &&
+  ML_SERVING_URL.startsWith('http') &&
+  // In production, never use localhost even if somehow set
+  (!isProduction || (!ML_SERVING_URL.includes('localhost') && !ML_SERVING_URL.includes('127.0.0.1')));
 
 type FeatureVector = {
   features: Record<string, any>;
@@ -160,23 +170,45 @@ export async function POST(request: NextRequest) {
       return errorResponse("No feature data available for difficulty prediction", 404);
     }
 
-    if (ML_SERVING_URL) {
-      try {
-        const response = await fetchWithRetry(
-          `${ML_SERVING_URL}/predict/difficulty`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ student_id }),
-          },
-          {
-            attempts: 2,
-            backoffMs: 400,
-            onRetry: (error, attempt) => {
-              console.warn(`Difficulty prediction retry #${attempt + 1} for student ${student_id}`, error);
+    // Only try ML service if it's properly configured (not localhost)
+    // Double-check we're not trying to connect to localhost (safety check)
+    // In production/Vercel, never try localhost even if somehow set
+    const shouldTryMLService = isMLServiceAvailable && 
+      ML_SERVING_URL && 
+      !ML_SERVING_URL.includes('localhost') && 
+      !ML_SERVING_URL.includes('127.0.0.1') &&
+      !ML_SERVING_URL.includes('0.0.0.0') &&
+      ML_SERVING_URL.startsWith('http') &&
+      // Final safety check: in production, absolutely no localhost
+      (!isProduction || (!ML_SERVING_URL.includes('localhost') && !ML_SERVING_URL.includes('127.0.0.1')));
+
+    if (!shouldTryMLService) {
+      // Skip ML service entirely if not properly configured
+      console.log("ML service not configured or pointing to localhost, using rule-based prediction");
+    } else {
+      // Final safety check before making request
+      const mlUrl = `${ML_SERVING_URL}/predict/difficulty`;
+      if (isProduction && (mlUrl.includes('localhost') || mlUrl.includes('127.0.0.1'))) {
+        console.log("Blocked localhost connection in production, using rule-based prediction");
+      } else {
+        try {
+          const response = await fetchWithRetry(
+            mlUrl,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ student_id }),
             },
-          }
-        );
+            {
+              attempts: 0, // No retries - fail immediately if ML service unavailable
+              backoffMs: 0,
+              timeout: 2000, // 2 second timeout - fail fast
+              onRetry: (error, attempt) => {
+                // Should not be called with attempts: 0
+                console.log(`ML service retry #${attempt + 1} (should not happen)`);
+              },
+            }
+          );
 
         if (response.ok) {
           const data = await response.json();
@@ -184,20 +216,34 @@ export async function POST(request: NextRequest) {
         }
 
         const message = await response.text();
-        if (typeof Sentry.captureMessage === "function") {
+        // Only log to Sentry if it's not a connection error (expected when ML service unavailable)
+        if (response.status !== 0 && typeof Sentry.captureMessage === "function") {
           Sentry.captureMessage("Difficulty prediction failed", {
             level: "warning",
             extra: { student_id, status: response.status, responseBody: message },
           });
         }
-      } catch (error) {
-        console.warn("Difficulty serving request failed; falling back to rule-based prediction", error);
-        if (typeof Sentry.captureException === "function") {
-          Sentry.captureException(error, {
-            tags: { ml_prediction: "difficulty_fallback" },
-            extra: { student_id },
-          });
+      } catch (error: any) {
+        // Don't log connection refused errors to Sentry - they're expected when ML service is unavailable
+        const isConnectionError = error?.message?.includes('ECONNREFUSED') || 
+                                  error?.message?.includes('fetch failed') ||
+                                  error?.message?.includes('ECONNREFUSED') ||
+                                  error?.code === 'ECONNREFUSED' ||
+                                  error?.cause?.code === 'ECONNREFUSED';
+        
+        if (!isConnectionError) {
+          console.warn("Difficulty serving request failed; falling back to rule-based prediction", error);
+          if (typeof Sentry.captureException === "function") {
+            Sentry.captureException(error, {
+              tags: { ml_prediction: "difficulty_fallback" },
+              extra: { student_id },
+            });
+          }
+        } else {
+          // Silently fall back for connection errors (expected in production)
+          console.log("ML service unavailable, using rule-based prediction");
         }
+      }
       }
     }
 
