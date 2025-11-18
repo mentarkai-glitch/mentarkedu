@@ -10,7 +10,7 @@ const DOCGEN_API_URL = process.env.DOCGEN_API_URL || "http://localhost:8000";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -20,7 +20,7 @@ export async function GET(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Verify document belongs to user
     const { data: document, error: docError } = await supabase
@@ -58,7 +58,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    return handleApiError(error, "Failed to download document");
+    return handleApiError(error);
   }
 }
 

@@ -48,8 +48,7 @@ import {
   Moon,
   RefreshCw,
   FileText,
-  Download,
-  Award
+  Download
 } from "lucide-react";
 import { ARKHeroSection } from "@/components/arks/ark-hero-section";
 import { TodayFocus } from "@/components/arks/today-focus";
