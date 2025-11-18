@@ -116,6 +116,8 @@ export function SidebarNav() {
         { title: "Cutoff Predictor", href: "/dashboard/student/cutoffs", icon: Calculator },
         { title: "Form Filler", href: "/dashboard/student/forms", icon: ClipboardCheck },
         { title: "Job Matcher", href: "/dashboard/student/jobs", icon: Briefcase },
+        { title: "Resume Builder", href: "/dashboard/student/resume-builder", icon: FileText, badge: "New" },
+        { title: "Document Generator", href: "/dashboard/student/documents/generate", icon: FileText },
         { title: "Career DNA", href: "/career-dna/analyze", icon: Brain },
       ],
     },

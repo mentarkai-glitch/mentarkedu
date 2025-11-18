@@ -46,7 +46,10 @@ import {
   HelpCircle,
   GripVertical,
   Moon,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  Download,
+  Award
 } from "lucide-react";
 import { ARKHeroSection } from "@/components/arks/ark-hero-section";
 import { TodayFocus } from "@/components/arks/today-focus";
@@ -71,6 +74,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { generateARKReport, downloadDocumentAsFile } from "@/lib/services/document-generation";
 
 interface Milestone {
   id: string;
@@ -283,6 +287,57 @@ export default function ARKDetailPage() {
       await fetchARKData();
     } catch (error) {
       console.error("Failed to update task:", error);
+    }
+  };
+
+  const handleGenerateARKReport = async () => {
+    if (!ark) {
+      toast.error("ARK data not loaded");
+      return;
+    }
+
+    try {
+      toast.loading("Generating ARK progress report...", { id: "ark-report" });
+      const result = await generateARKReport({
+        ark_id: ark.id,
+        format: "pdf",
+        report_type: "progress",
+      });
+      toast.success("ARK report generated! Downloading...", { id: "ark-report" });
+      await downloadDocumentAsFile(
+        result.id,
+        `ark-progress-report-${ark.title.replace(/\s+/g, "-")}.pdf`
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate ARK report", { id: "ark-report" });
+    }
+  };
+
+  const handleGenerateARKCertificate = async () => {
+    if (!ark) {
+      toast.error("ARK data not loaded");
+      return;
+    }
+
+    if (ark.status !== "completed") {
+      toast.error("ARK must be completed to generate certificate");
+      return;
+    }
+
+    try {
+      toast.loading("Generating ARK completion certificate...", { id: "ark-cert" });
+      const result = await generateARKReport({
+        ark_id: ark.id,
+        format: "pdf",
+        report_type: "completion",
+      });
+      toast.success("Certificate generated! Downloading...", { id: "ark-cert" });
+      await downloadDocumentAsFile(
+        result.id,
+        `ark-certificate-${ark.title.replace(/\s+/g, "-")}.pdf`
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate certificate", { id: "ark-cert" });
     }
   };
 
@@ -499,6 +554,26 @@ export default function ARKDetailPage() {
               </Button>
             </Link>
             <div className="flex gap-2 flex-shrink-0">
+              <Button 
+                variant="outline" 
+                className="border-green-500/50 text-green-400 hover:bg-green-500/10 text-xs sm:text-sm p-2 sm:px-3"
+                onClick={handleGenerateARKReport}
+                disabled={!ark}
+              >
+                <FileText className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Report</span>
+              </Button>
+              {ark?.status === 'completed' && (
+                <Button 
+                  variant="outline" 
+                  className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 text-xs sm:text-sm p-2 sm:px-3"
+                  onClick={handleGenerateARKCertificate}
+                  disabled={!ark}
+                >
+                  <Award className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Certificate</span>
+                </Button>
+              )}
               <Button variant="outline" className="border-slate-600 text-xs sm:text-sm p-2 sm:px-3">
                 <Share2 className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Share</span>

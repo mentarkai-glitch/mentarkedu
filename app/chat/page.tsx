@@ -51,10 +51,14 @@ import {
   Database,
   Network,
   Wifi,
-  WifiOff
+  WifiOff,
+  FileText,
+  Download
 } from "lucide-react";
 import type { MentorPersona } from "@/lib/types";
 import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
+import { toast } from "sonner";
+import { generateStudyNotes, downloadDocumentAsFile } from "@/lib/services/document-generation";
 
 interface Message {
   role: "user" | "assistant";
@@ -150,6 +154,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [historyReady, setHistoryReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
 
   // Get current user
   useEffect(() => {
@@ -243,6 +248,60 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleGenerateConversationSummary = async () => {
+    if (messages.length === 0) {
+      toast.error("No conversation to summarize");
+      return;
+    }
+
+    setGeneratingSummary(true);
+    try {
+      toast.loading("Generating conversation summary...", { id: "chat-summary" });
+
+      // Build summary content from conversation
+      let summaryContent = `# Conversation Summary with ${selectedPersona.name}\n\n`;
+      summaryContent += `**Date:** ${new Date().toLocaleDateString()}\n\n`;
+      summaryContent += `## Conversation\n\n`;
+
+      messages.forEach((message, idx) => {
+        const role = message.role === "user" ? "You" : selectedPersona.name;
+        summaryContent += `### ${role} (${message.timestamp.toLocaleTimeString()})\n`;
+        summaryContent += `${message.content}\n\n`;
+        
+        if (message.imageUrl && message.imageAnalysis) {
+          summaryContent += `**Image Analysis:**\n`;
+          if (message.imageAnalysis.extracted_text) {
+            summaryContent += `- Text: ${message.imageAnalysis.extracted_text}\n`;
+          }
+          if (message.imageAnalysis.labels) {
+            summaryContent += `- Labels: ${message.imageAnalysis.labels.join(', ')}\n`;
+          }
+          summaryContent += `\n`;
+        }
+      });
+
+      summaryContent += `\n## Key Takeaways\n`;
+      summaryContent += `*Summary generated from conversation with ${selectedPersona.name}*\n`;
+
+      const result = await generateStudyNotes({
+        topic: `Conversation with ${selectedPersona.name}`,
+        content: summaryContent,
+        source: "chat",
+        format: "pdf",
+      });
+
+      toast.success("Conversation summary generated! Downloading...", { id: "chat-summary" });
+      await downloadDocumentAsFile(
+        result.id,
+        `conversation-summary-${selectedPersona.name.replace(/\s+/g, "-")}-${new Date().toISOString().split('T')[0]}.pdf`
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate conversation summary", { id: "chat-summary" });
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
 
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
@@ -550,6 +609,29 @@ export default function ChatPage() {
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6">
         <div className="container mx-auto max-w-4xl space-y-4 sm:space-y-6">
+          {/* Generate Summary Button */}
+          {messages.length > 1 && (
+            <div className="flex justify-end mb-4">
+              <Button
+                onClick={handleGenerateConversationSummary}
+                disabled={generatingSummary}
+                className="bg-green-500 hover:bg-green-600 text-white"
+                size="sm"
+              >
+                {generatingSummary ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Generate Summary
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
           <AnimatePresence>
             {messages.map((message, index) => (
               <motion.div

@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink, BookOpen, GraduationCap, ChevronDown, ChevronRight, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink, BookOpen, GraduationCap, ChevronDown, ChevronRight, Link as LinkIcon, AlertCircle, FileText, Download } from 'lucide-react';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
+import { generateStudyNotes, downloadDocumentAsFile } from '@/lib/services/document-generation';
 
 const HISTORY_KEY = 'mentark-doubt-history-v1';
 
@@ -102,6 +104,7 @@ export default function DoubtSolverPage() {
   const [relatedDoubts, setRelatedDoubts] = useState<any[]>([]);
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set([0]));
   const [showEnhancedView, setShowEnhancedView] = useState(true);
+  const [generatingNotes, setGeneratingNotes] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -272,6 +275,70 @@ export default function DoubtSolverPage() {
     setCategory(example.category);
   };
 
+  const handleGenerateSolutionNotes = async () => {
+    if (!answer && !stepByStepSolution) {
+      toast.error("No solution to generate notes from");
+      return;
+    }
+
+    setGeneratingNotes(true);
+    try {
+      toast.loading("Generating solution notes...", { id: "doubt-notes" });
+
+      // Build notes content from solution
+      let notesContent = `# Solution Notes: ${question || 'Doubt Solution'}\n\n`;
+      
+      if (stepByStepSolution) {
+        notesContent += `## Step-by-Step Solution\n\n`;
+        stepByStepSolution.steps?.forEach((step: any, idx: number) => {
+          notesContent += `### Step ${step.stepNumber || idx + 1}\n`;
+          notesContent += `${step.description}\n\n`;
+          if (step.explanation) {
+            notesContent += `**Explanation:** ${step.explanation}\n\n`;
+          }
+          if (step.formula) {
+            notesContent += `**Formula:** ${step.formula}\n\n`;
+          }
+          if (step.intermediateResult) {
+            notesContent += `**Result:** ${step.intermediateResult}\n\n`;
+          }
+        });
+        notesContent += `## Final Answer\n${stepByStepSolution.finalAnswer || answer}\n\n`;
+      } else {
+        notesContent += `## Answer\n${answer}\n\n`;
+      }
+
+      if (relatedConcepts && relatedConcepts.length > 0) {
+        notesContent += `## Related Concepts\n`;
+        relatedConcepts.forEach((concept: any) => {
+          notesContent += `- **${concept.concept}**: ${concept.description}\n`;
+        });
+        notesContent += `\n`;
+      }
+
+      if (stepByStepSolution?.conceptTags && stepByStepSolution.conceptTags.length > 0) {
+        notesContent += `## Concept Tags\n${stepByStepSolution.conceptTags.join(', ')}\n\n`;
+      }
+
+      const result = await generateStudyNotes({
+        topic: question || 'Doubt Solution',
+        content: notesContent,
+        source: "doubt_solver",
+        format: "pdf",
+      });
+
+      toast.success("Solution notes generated! Downloading...", { id: "doubt-notes" });
+      await downloadDocumentAsFile(
+        result.id,
+        `solution-notes-${(question || 'doubt').replace(/\s+/g, "-").substring(0, 30)}.pdf`
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate solution notes", { id: "doubt-notes" });
+    } finally {
+      setGeneratingNotes(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="container mx-auto max-w-4xl">
@@ -369,6 +436,25 @@ export default function DoubtSolverPage() {
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-6"
                 >
+                  <div className="flex justify-end mb-4">
+                    <Button
+                      onClick={handleGenerateSolutionNotes}
+                      disabled={generatingNotes || (!answer && !stepByStepSolution)}
+                      className="bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      {generatingNotes ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Generate Solution Notes
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Tabs defaultValue={stepByStepSolution ? "step-by-step" : "answer"} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 bg-slate-900/50 border border-slate-700">
                       <TabsTrigger value="answer" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">

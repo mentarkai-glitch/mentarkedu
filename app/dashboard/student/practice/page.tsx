@@ -24,6 +24,8 @@ import {
   Clock,
   Brain,
   Loader2,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { generateFlashcards, downloadDocumentAsFile } from '@/lib/services/document-generation';
+import { toast } from 'sonner';
 import type {
   PracticeSession,
   PracticeQuestion as PracticeQuestionType,
@@ -299,6 +303,39 @@ export default function PracticeQuestionsPage() {
       });
     } catch (error) {
       console.error('Failed to track mistake:', error);
+    }
+  };
+
+  const handleGenerateFlashcards = async () => {
+    if (questions.length === 0) {
+      toast.error('No questions to export');
+      return;
+    }
+
+    try {
+      toast.loading('Generating flashcards...', { id: 'flashcards-gen' });
+      
+      // Convert practice questions to flashcard format
+      const flashcardQuestions = questions.map((q) => ({
+        question: q.question,
+        answer: q.options[q.correctAnswer] || q.explanation || 'See explanation',
+        topic: q.topic || 'Practice',
+        difficulty: q.difficulty,
+      }));
+
+      const result = await generateFlashcards({
+        source: 'custom',
+        questions: flashcardQuestions,
+        format: 'xlsx', // Excel format for flashcards
+      });
+
+      toast.success('Flashcards generated! Downloading...', { id: 'flashcards-gen' });
+      await downloadDocumentAsFile(
+        result.id,
+        `practice-flashcards-${new Date().toISOString().split('T')[0]}.xlsx`
+      );
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to generate flashcards', { id: 'flashcards-gen' });
     }
   };
 
@@ -852,6 +889,15 @@ export default function PracticeQuestionsPage() {
                           className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
                         >
                           Retake this set
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleGenerateFlashcards}
+                          disabled={questions.length === 0}
+                          className="border-green-400/50 text-green-200 hover:border-green-400"
+                        >
+                          <FileSpreadsheet className="w-4 h-4 mr-2" />
+                          Export Flashcards
                         </Button>
                         <Button
                           variant="outline"

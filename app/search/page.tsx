@@ -3,10 +3,12 @@
 import { useState, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search, Sparkles, ExternalLink, BookOpen, Target, TrendingUp, Lightbulb, ArrowRight } from "lucide-react";
+import { Search, Sparkles, ExternalLink, BookOpen, Target, TrendingUp, Lightbulb, ArrowRight, FileText, Download, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { generateStudyNotes, downloadDocumentAsFile } from "@/lib/services/document-generation";
 import Link from "next/link";
 
 interface SearchResult {
@@ -52,6 +54,7 @@ function SearchPageContent() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [generatingNotes, setGeneratingNotes] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -349,6 +352,26 @@ function SearchPageContent() {
             animate={{ opacity: 1, y: 0 }}
             className="max-w-4xl mx-auto space-y-6"
           >
+            {/* Generate Notes Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleGenerateNotes}
+                disabled={generatingNotes || !results}
+                className="bg-green-500 hover:bg-green-600 text-white"
+              >
+                {generatingNotes ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Generate Study Notes
+                  </>
+                )}
+              </Button>
+            </div>
             {/* Main Answer */}
             <Card className="bg-gradient-to-br from-yellow-500/10 to-purple-500/10 border-yellow-500/30">
               <CardContent className="p-8">

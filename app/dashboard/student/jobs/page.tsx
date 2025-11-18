@@ -26,6 +26,8 @@ import {
   MessageSquare,
   AlertTriangle,
   Brain,
+  Download,
+  Sparkles,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +45,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/services/analytics';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { generateResume, generateCoverLetter, downloadDocumentAsFile } from '@/lib/services/document-generation';
 
 interface Job {
   job_id: string;
@@ -464,6 +467,42 @@ export default function JobMatcherPage() {
     }
   };
 
+  const handleGenerateResume = async (job: Job | JobRecommendation) => {
+    try {
+      toast.loading('Generating resume...', { id: 'resume-gen' });
+      const result = await generateResume({
+        template: 'classic',
+        format: 'pdf',
+      });
+      toast.success('Resume generated! Downloading...', { id: 'resume-gen' });
+      await downloadDocumentAsFile(result.id, `resume-${job.job_title.replace(/\s+/g, '-')}.pdf`);
+      trackEvent('resume_generated', { source: 'job_matcher', job_id: 'job_id' in job ? job.job_id : (job as any).id });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to generate resume', { id: 'resume-gen' });
+    }
+  };
+
+  const handleGenerateCoverLetter = async (job: Job | JobRecommendation) => {
+    try {
+      toast.loading('Generating cover letter...', { id: 'cover-gen' });
+      const jobData = {
+        job_id: 'job_id' in job ? job.job_id : (job as any).id || (job as any).job_id,
+        job_title: job.job_title,
+        company_name: 'company_name' in job ? job.company_name : (job as any).company_name,
+        job_description: job.job_description,
+        required_skills: 'required_skills' in job ? job.required_skills : (job as any).skills_matched || [],
+      };
+      const result = await generateCoverLetter({
+        job: jobData,
+      });
+      toast.success('Cover letter generated! Downloading...', { id: 'cover-gen' });
+      await downloadDocumentAsFile(result.id, `cover-letter-${jobData.company_name.replace(/\s+/g, '-')}.pdf`);
+      trackEvent('cover_letter_generated', { source: 'job_matcher', job_id: jobData.job_id });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to generate cover letter', { id: 'cover-gen' });
+    }
+  };
+
   const savedJobsList = useMemo(() => Object.values(savedJobs), [savedJobs]);
   const filteredJobs = useMemo(() => {
     if (!clientFilter.trim()) return jobs;
@@ -719,6 +758,28 @@ export default function JobMatcherPage() {
                               >
                                 <Brain className="w-3 h-3 mr-1" />
                                 Skills
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-green-500/40 text-green-400 hover:bg-green-500/10"
+                                onClick={() => handleGenerateResume(rec)}
+                                title="Generate Resume"
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                Resume
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                                onClick={() => handleGenerateCoverLetter(rec)}
+                                title="Generate Cover Letter"
+                              >
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Cover
                               </Button>
                             </div>
                             <div className="flex gap-2">
@@ -1028,10 +1089,32 @@ export default function JobMatcherPage() {
                         Apply Now
                         <ExternalLink className="w-4 h-4" />
                       </a>
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-green-500/40 text-green-400 hover:bg-green-500/10"
+                          onClick={() => handleGenerateResume(job)}
+                          title="Generate Resume"
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Resume
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                          onClick={() => handleGenerateCoverLetter(job)}
+                          title="Generate Cover Letter"
+                        >
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          Cover
+                        </Button>
+                      </div>
                       <Button
                         variant={savedJobs[job.job_id] ? 'default' : 'outline'}
                         size="sm"
-                        className={`${savedJobs[job.job_id] ? 'bg-yellow-500 text-black hover:bg-yellow-600' : 'border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10'} mt-3`}
+                        className={`${savedJobs[job.job_id] ? 'bg-yellow-500 text-black hover:bg-yellow-600' : 'border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10'} mt-3 w-full`}
                         onClick={() => toggleSaveJob(job)}
                       >
                         <Save className="w-3 h-3 mr-2" />

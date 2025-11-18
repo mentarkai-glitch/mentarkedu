@@ -6,7 +6,7 @@ import {
   BookOpen, Sparkles, FileText, Calendar, CheckCircle2, 
   Lightbulb, ExternalLink, Clock, Target, BookMarked,
   HelpCircle, TrendingUp, Download, Share2, AlertCircle,
-  ListChecks, History
+  ListChecks, History, FileCode
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getAllSubjects, getSubjectById, type SubjectInfo } from '@/lib/data/project-subjects';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { generateProjectReport, downloadDocumentAsFile } from '@/lib/services/document-generation';
 
 interface ProjectHelp {
   overview: string;
@@ -184,6 +185,47 @@ export default function ProjectsPage() {
       toast.error('Failed to export project pack');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleGenerateProjectReport = async () => {
+    if (!projectHelp) {
+      toast.error('Please generate project help first');
+      return;
+    }
+
+    setGeneratingReport(true);
+    try {
+      toast.loading('Generating project report...', { id: 'project-report' });
+
+      const projectData = {
+        title: `${subjectInfo?.name || selectedSubject} - ${projectType}`,
+        description,
+        requirements,
+        status: 'in_progress',
+        start_date: new Date().toISOString(),
+        end_date: deadline ? new Date(deadline).toISOString() : null,
+        technologies: projectHelp.breakdown?.technologies || [],
+        deliverables: projectHelp.step_by_step_plan?.map((step: any) => step.title || step) || [],
+        metrics: {},
+        challenges: projectHelp.troubleshooting ? [projectHelp.troubleshooting] : [],
+        learnings: projectHelp.additional_tips || [],
+      };
+
+      const result = await generateProjectReport({
+        project_data: projectData,
+        format: 'pdf',
+      });
+
+      toast.success('Project report generated! Downloading...', { id: 'project-report' });
+      await downloadDocumentAsFile(
+        result.id,
+        `project-report-${(subjectInfo?.name || 'project').toLowerCase().replace(/\s+/g, '-')}.pdf`
+      );
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to generate project report', { id: 'project-report' });
+    } finally {
+      setGeneratingReport(false);
     }
   };
 
@@ -662,6 +704,23 @@ export default function ProjectsPage() {
                     ) : (
                       <>
                         <Download className="w-4 h-4 mr-2" /> Export Pack
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-green-500/30 text-green-400"
+                    onClick={handleGenerateProjectReport}
+                    disabled={generatingReport || !projectHelp}
+                  >
+                    {generatingReport ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400 mr-2" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileCode className="w-4 h-4 mr-2" /> Generate Report
                       </>
                     )}
                   </Button>

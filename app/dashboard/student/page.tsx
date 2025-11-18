@@ -20,6 +20,7 @@ import { RiskPredictorCard } from '@/components/ml/RiskPredictorCard';
 import { SentimentTimeline } from '@/components/ml/SentimentTimeline';
 import { UnifiedAnalytics } from '@/components/student/UnifiedAnalytics';
 import { PracticeQuestionsWidget } from '@/components/student/PracticeQuestionsWidget';
+import { listDocuments } from '@/lib/services/document-generation';
 import { 
   Brain,
   Target,
@@ -45,6 +46,8 @@ import {
   Sun,
   GraduationCap,
   IndianRupee,
+  FileText,
+  Download,
 } from 'lucide-react';
 
 interface StudentStats {
@@ -138,6 +141,8 @@ export default function StudentDashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [hasAIProfile, setHasAIProfile] = useState(false);
+  const [recentDocuments, setRecentDocuments] = useState<Document[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   // Get current user and fetch data
   useEffect(() => {
@@ -210,6 +215,22 @@ export default function StudentDashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    loadRecentDocuments();
+  }, []);
+
+  const loadRecentDocuments = async () => {
+    setLoadingDocuments(true);
+    try {
+      const result = await listDocuments({ limit: 5 });
+      setRecentDocuments(result.documents || []);
+    } catch (error) {
+      console.error('Failed to load recent documents:', error);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
 
   // No more forced redirect to train-ai-model
   // User can access dashboard and complete profile later
@@ -547,6 +568,71 @@ export default function StudentDashboard() {
           >
             {/* Practice Questions Widget */}
             <PracticeQuestionsWidget />
+
+            {/* Recent Documents */}
+            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-purple-400" />
+                    Recent Documents
+                  </CardTitle>
+                  <Link href="/dashboard/student/documents">
+                    <Button variant="ghost" size="sm" className="text-purple-400 hover:text-purple-300">
+                      View All
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                {loadingDocuments ? (
+                  <div className="text-center py-4 text-slate-400">Loading...</div>
+                ) : recentDocuments.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-slate-400 text-sm mb-3">No documents yet</p>
+                    <Link href="/dashboard/student/documents/generate">
+                      <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Generate Document
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentDocuments.map((doc) => (
+                      <Link key={doc.id} href={`/dashboard/student/documents`}>
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          className="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                              <FileText className="w-5 h-5 text-purple-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-white truncate">
+                                {doc.document_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {new Date(doc.generated_at).toLocaleDateString()} • {doc.format.toUpperCase()}
+                              </p>
+                            </div>
+                          </div>
+                          <Download className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        </motion.div>
+                      </Link>
+                    ))}
+                    <Link href="/dashboard/student/documents">
+                      <Button variant="outline" className="w-full mt-3 border-slate-600 text-slate-200 hover:bg-slate-700/50">
+                        <FileText className="w-4 h-4 mr-2" />
+                        View All Documents
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Daily Check-in */}
             <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">

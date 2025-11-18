@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { generateARKReport, downloadDocumentAsFile } from "@/lib/services/document-generation";
 import {
   BookOpen,
   Plus,
@@ -26,6 +27,8 @@ import {
   List,
   Calendar,
   AlertTriangle,
+  FileText,
+  Award,
 } from "lucide-react";
 
 interface ARK {
@@ -98,6 +101,24 @@ export default function MyARKsPage() {
   useEffect(() => {
     fetchARKs();
   }, [fetchARKs]);
+
+  const handleGenerateARKReport = async (arkId: string, arkTitle: string) => {
+    try {
+      toast.loading("Generating ARK progress report...", { id: `ark-report-${arkId}` });
+      const result = await generateARKReport({
+        ark_id: arkId,
+        format: "pdf",
+        report_type: "progress",
+      });
+      toast.success("ARK report generated! Downloading...", { id: `ark-report-${arkId}` });
+      await downloadDocumentAsFile(
+        result.id,
+        `ark-progress-report-${arkTitle.replace(/\s+/g, "-")}.pdf`
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate ARK report", { id: `ark-report-${arkId}` });
+    }
+  };
 
   const filteredARKs = arks.filter((ark) => {
     const matchesSearch = ark.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -309,9 +330,48 @@ export default function MyARKsPage() {
                           <span className="truncate">Continue</span> <ArrowRight className="w-4 h-4 ml-1 flex-shrink-0" />
                         </Button>
                       </Link>
-                      <Button variant="outline" size="sm" className="border-slate-600 flex-shrink-0">
-                        <Filter className="w-4 h-4" />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="border-green-500/50 text-green-400 hover:bg-green-500/10 flex-shrink-0"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleGenerateARKReport(ark.id, ark.title);
+                        }}
+                        title="Generate Progress Report"
+                      >
+                        <FileText className="w-4 h-4" />
                       </Button>
+                      {ark.status === 'completed' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 flex-shrink-0"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            try {
+                              toast.loading("Generating certificate...", { id: `ark-cert-${ark.id}` });
+                              const result = await generateARKReport({
+                                ark_id: ark.id,
+                                format: "pdf",
+                                report_type: "completion",
+                              });
+                              toast.success("Certificate generated! Downloading...", { id: `ark-cert-${ark.id}` });
+                              await downloadDocumentAsFile(
+                                result.id,
+                                `ark-certificate-${ark.title.replace(/\s+/g, "-")}.pdf`
+                              );
+                            } catch (error: any) {
+                              toast.error(error.message || "Failed to generate certificate", { id: `ark-cert-${ark.id}` });
+                            }
+                          }}
+                          title="Generate Certificate"
+                        >
+                          <Award className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
