@@ -119,3 +119,4 @@ COMMENT ON TABLE student_documents IS 'Stores metadata for all documents generat
 COMMENT ON TABLE resume_versions IS 'Tracks different versions of student resumes';
 COMMENT ON COLUMN student_documents.metadata IS 'JSONB field storing document-specific metadata like job_id, project_id, source feature, etc.';
 
+

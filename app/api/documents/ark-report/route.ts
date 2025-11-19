@@ -129,3 +129,4 @@ function extractSkillsFromARK(ark: any): string[] {
   return Array.from(skills);
 }
 
+

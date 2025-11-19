@@ -61,3 +61,4 @@
 - Error handling and user feedback implemented
 - Document metadata stored in Supabase
 
+
