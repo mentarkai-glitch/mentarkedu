@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       .limit(10);
 
     // Build resume profile from available data
-    const resumeProfile = profile || buildResumeFromStudentData(student, arks, achievements);
+    const resumeProfile = profile || buildResumeFromStudentData(student, arks || [], achievements || []);
 
     // Call mentark-docgen resume endpoint
     const response = await fetch(`${DOCGEN_API_URL}/generate/resume`, {
