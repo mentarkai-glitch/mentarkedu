@@ -112,7 +112,10 @@ export async function POST(request: NextRequest) {
 
     return successResponse(result);
   } catch (error) {
-    return handleApiError(error, "Failed to generate ARK report");
+    return handleApiError(error, {
+      endpoint: "/api/documents/ark-report",
+      method: "POST",
+    });
   }
 }
 
