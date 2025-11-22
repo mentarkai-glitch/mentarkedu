@@ -24,7 +24,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -34,7 +34,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { AnalyticsDashboard } from '@/components/progress/AnalyticsDashboard';
 import type { SMARTGoal } from '@/lib/services/smart-goals';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { TabNav } from '@/components/ui/tab-nav';
+import { StatCard } from '@/components/ui/card/card-variants';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface XPData {
   totalXp: number;
@@ -224,7 +230,7 @@ export default function ProgressPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black p-4 md:p-8">
+      <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="container mx-auto max-w-6xl">
           <div className="space-y-6">
             {[1, 2, 3].map((i) => (
@@ -236,30 +242,32 @@ export default function ProgressPage() {
     );
   }
 
+  // Tab navigation items
+  const tabItems = [
+    { value: 'overview', label: 'Overview', icon: '📊' },
+    { value: 'analytics', label: 'Analytics', icon: '📈' },
+    { value: 'achievements', label: 'Achievements', icon: '🏆' },
+    { value: 'leaderboard', label: 'Leaderboard', icon: '🥇' },
+    { value: 'goals', label: 'SMART Goals', icon: '🎯' },
+  ];
+
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Progress data is shown from your last sync."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <BarChart3 className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Progress Tracking
-                </h1>
-                <p className="text-slate-400">Your learning journey analytics</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Progress data is shown from your last sync."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Progress Tracking"
+          description="Your learning journey analytics"
+          icon={<BarChart3 className="w-8 h-8 text-yellow-400" />}
+          actions={
+            <div className="flex items-center gap-3 text-xs sm:text-sm">
               {isOnline ? (
-                <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> Online</span>
+                <span className="inline-flex items-center gap-1 text-muted-foreground"><Wifi className="h-4 w-4 text-green-400" /> Online</span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-red-300"><WifiOff className="h-4 w-4 text-red-400" /> Offline</span>
               )}
@@ -278,75 +286,68 @@ export default function ProgressPage() {
                 onClick={loadAllData}
                 disabled={loading}
               >
-                <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                {loading ? (
+                  <>
+                    <Spinner size="sm" color="gold" />
+                    <span>Refreshing...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refresh
+                  </>
+                )}
               </Button>
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
+          {error && (
+            <Alert className="bg-red-500/10 border-red-500/30">
+              <AlertDescription className="text-red-300">{error}</AlertDescription>
+            </Alert>
+          )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {error && (
-              <Alert className="mb-4 bg-red-500/10 border-red-500/30">
-                <AlertDescription className="text-red-300">{error}</AlertDescription>
-              </Alert>
-            )}
-            <TabsList className="grid w-full grid-cols-4 bg-slate-900/50 border border-yellow-500/30">
-              <TabsTrigger value="overview">📊 Overview</TabsTrigger>
-              <TabsTrigger value="achievements">🏆 Achievements</TabsTrigger>
-              <TabsTrigger value="leaderboard">🥇 Leaderboard</TabsTrigger>
-              <TabsTrigger value="goals">🎯 SMART Goals</TabsTrigger>
-            </TabsList>
+            <TabNav
+              items={tabItems}
+              value={activeTab}
+              onValueChange={setActiveTab}
+              fullWidth
+              variant="default"
+              size="md"
+            />
 
             <TabsContent value="overview" className="mt-6 space-y-6">
               {/* Stats Cards */}
-              <div className="grid md:grid-cols-3 gap-4">
-                <Card className="bg-slate-900/50 border-yellow-500/30">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg border border-yellow-500/30">
-                        <Zap className="w-6 h-6 text-yellow-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-400">Total XP</p>
-                        <p className="text-3xl font-bold text-white">{xpData?.totalXp || 0}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="grid md:grid-cols-3 gap-6">
+                <StatCard
+                  label="Total XP"
+                  value={xpData?.totalXp || 0}
+                  icon={<Zap className="w-6 h-6 text-gold" />}
+                  variant="highlight"
+                  description="Your total experience points"
+                />
 
-                <Card className="bg-slate-900/50 border-yellow-500/30">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
-                        <Target className="w-6 h-6 text-purple-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-400">Current Level</p>
-                        <p className="text-3xl font-bold text-white">Level {xpData?.level || 1}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatCard
+                  label="Current Level"
+                  value={`Level ${xpData?.level || 1}`}
+                  icon={<Target className="w-6 h-6 text-purple" />}
+                  description="Your current achievement level"
+                />
 
-                <Card className="bg-slate-900/50 border-yellow-500/30">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg border border-green-500/30">
-                        <Trophy className="w-6 h-6 text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-400">Badges Earned</p>
-                        <p className="text-3xl font-bold text-white">
-                          {badgeData?.totalEarned || 0}/{badgeData?.totalAvailable || 0}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatCard
+                  label="Badges Earned"
+                  value={`${badgeData?.totalEarned || 0}/${badgeData?.totalAvailable || 0}`}
+                  icon={<Trophy className="w-6 h-6 text-green" />}
+                  description="Achievements unlocked"
+                />
               </div>
 
               {/* Level Progress */}
               {xpData && (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardHeader>
                     <CardTitle className="text-yellow-400">Level Progress</CardTitle>
                     <CardDescription>
@@ -364,7 +365,7 @@ export default function ProgressPage() {
 
               {/* Recent Activity */}
               {xpData && xpData.transactions.length > 0 && (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardHeader>
                     <CardTitle className="text-yellow-400">Recent Activity</CardTitle>
                   </CardHeader>
@@ -373,17 +374,17 @@ export default function ProgressPage() {
                       {xpData.transactions.slice(0, 10).map((transaction) => (
                         <div
                           key={transaction.id}
-                          className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700"
+                          className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
                         >
                           <div className="flex items-center gap-3">
                             <div className={`${getSourceColor(transaction.source)}`}>
                               {getSourceIcon(transaction.source)}
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-white">
+                              <p className="text-sm font-medium text-foreground">
                                 {transaction.description || transaction.source}
                               </p>
-                              <p className="text-xs text-slate-400">
+                              <p className="text-xs text-muted-foreground">
                                 {new Date(transaction.created_at).toLocaleDateString()}
                               </p>
                             </div>
@@ -401,15 +402,15 @@ export default function ProgressPage() {
               )}
 
               {frequentSources.length > 0 && (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardHeader>
                     <CardTitle className="text-yellow-400">Top XP Sources</CardTitle>
                     <CardDescription>Where you earn the most XP</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {frequentSources.map((source) => (
-                      <div key={source.source} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700">
-                        <span className="text-sm text-slate-300 capitalize">{source.source.replace(/_/g, ' ')}</span>
+                      <div key={source.source} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border">
+                        <span className="text-sm text-muted-foreground capitalize">{source.source.replace(/_/g, ' ')}</span>
                         <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/40">+{source.total} XP</Badge>
                       </div>
                     ))}
@@ -418,22 +419,31 @@ export default function ProgressPage() {
               )}
             </TabsContent>
 
+            <TabsContent value="analytics" className="mt-6">
+              <AnalyticsDashboard 
+                period="month"
+                onPeriodChange={(p) => {
+                  // Period changed, data will refresh automatically
+                }}
+              />
+            </TabsContent>
+
             <TabsContent value="achievements" className="mt-6 space-y-6">
               {/* Earned Badges */}
               {badgeData && badgeData.earned.length > 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-4">Your Achievements</h3>
+                  <h3 className="text-xl font-bold text-foreground mb-4">Your Achievements</h3>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {badgeData.earned.map((badge) => (
-                      <Card key={badge.id} className="bg-slate-900/50 border-yellow-500/30">
+                      <Card key={badge.id} className="bg-card/50 border-yellow-500/30">
                         <CardContent className="pt-6">
                           <div className="flex flex-col items-center text-center space-y-3">
                             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
                               <Award className="w-10 h-10 text-yellow-400" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-white">{badge.achievements.title}</h4>
-                              <p className="text-xs text-slate-400 mt-1">{badge.achievements.description}</p>
+                              <h4 className="font-semibold text-foreground">{badge.achievements.title}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">{badge.achievements.description}</p>
                             </div>
                             <Badge variant="outline" className="text-xs">
                               Earned {new Date(badge.earned_at).toLocaleDateString()}
@@ -449,18 +459,18 @@ export default function ProgressPage() {
               {/* Available Badges */}
               {badgeData && badgeData.available.length > 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-4">Available to Unlock</h3>
+                  <h3 className="text-xl font-bold text-foreground mb-4">Available to Unlock</h3>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {badgeData.available.map((badge) => (
-                      <Card key={badge.id} className="bg-slate-900/50 border-slate-700 opacity-60">
+                      <Card key={badge.id} className="bg-card/50 border-border opacity-60">
                         <CardContent className="pt-6">
                           <div className="flex flex-col items-center text-center space-y-3">
-                            <div className="w-20 h-20 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
-                              <Award className="w-10 h-10 text-slate-600" />
+                            <div className="w-20 h-20 rounded-full bg-card border border-border flex items-center justify-center">
+                              <Award className="w-10 h-10 text-muted-foreground" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-slate-400">{badge.title}</h4>
-                              <p className="text-xs text-slate-500 mt-1">{badge.description}</p>
+                              <h4 className="font-semibold text-muted-foreground">{badge.title}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">{badge.description}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -478,10 +488,10 @@ export default function ProgressPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-amber-400 mb-1">Your Position</p>
-                        <p className="text-3xl font-bold text-white">
+                        <p className="text-3xl font-bold text-foreground">
                           {getMedalEmoji(userPosition.rank)}
                         </p>
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           {userPosition.xp_total} XP • Level {userPosition.level}
                         </p>
                       </div>
@@ -496,7 +506,7 @@ export default function ProgressPage() {
                 </Card>
               )}
 
-              <Card className="bg-slate-900/50 border-yellow-500/30">
+              <Card className="bg-card/50 border-yellow-500/30">
                 <CardHeader>
                   <CardTitle className="text-yellow-400">Institute Leaderboard</CardTitle>
                   <CardDescription>Top performers in your institute</CardDescription>
@@ -509,7 +519,7 @@ export default function ProgressPage() {
                         className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
                           userPosition && entry.students.user_id === userPosition.user_id
                             ? 'bg-yellow-500/20 border-yellow-500'
-                            : 'bg-slate-800 border-slate-700'
+                            : 'bg-card border-border'
                         }`}
                       >
                         <div className="flex items-center gap-4">
@@ -520,13 +530,13 @@ export default function ProgressPage() {
                             <Users className="w-6 h-6 text-yellow-400" />
                           </div>
                           <div>
-                            <p className="font-semibold text-white">
+                            <p className="font-semibold text-foreground">
                               {entry.students.users.full_name}
                               {userPosition && entry.students.user_id === userPosition.user_id && (
                                 <Badge className="ml-2 bg-yellow-500 text-black">You</Badge>
                               )}
                             </p>
-                            <p className="text-sm text-slate-400">
+                            <p className="text-sm text-muted-foreground">
                               Level {entry.level} • {entry.xp_total} XP
                             </p>
                           </div>
@@ -543,7 +553,7 @@ export default function ProgressPage() {
 
             <TabsContent value="goals" className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">SMART Goals</h2>
+                <h2 className="text-2xl font-bold text-foreground">SMART Goals</h2>
                 <Button
                   onClick={() => setShowCreateGoal(true)}
                   className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
@@ -556,10 +566,10 @@ export default function ProgressPage() {
               {smartGoals.length > 0 ? (
                 <div className="space-y-4">
                   {smartGoals.map((goal) => (
-                    <Card key={goal.id} className="bg-slate-900/50 border-yellow-500/30">
+                    <Card key={goal.id} className="bg-card/50 border-yellow-500/30">
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-white">{goal.title}</CardTitle>
+                          <CardTitle className="text-foreground">{goal.title}</CardTitle>
                           <Badge className={`${
                             goal.currentProgress >= 100 ? 'bg-green-500/20 text-green-400 border-green-500/50' :
                             goal.currentProgress >= 50 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' :
@@ -575,30 +585,30 @@ export default function ProgressPage() {
                           <Progress value={goal.currentProgress} className="h-2" />
                           <div className="grid md:grid-cols-2 gap-4 text-sm">
                             <div>
-                              <Label className="text-slate-400 mb-1 block">Target Date</Label>
-                              <p className="text-white">{new Date(goal.targetDate).toLocaleDateString()}</p>
+                              <Label className="text-muted-foreground mb-1 block">Target Date</Label>
+                              <p className="text-foreground">{new Date(goal.targetDate).toLocaleDateString()}</p>
                             </div>
                             <div>
-                              <Label className="text-slate-400 mb-1 block">Milestones</Label>
-                              <p className="text-white">
+                              <Label className="text-muted-foreground mb-1 block">Milestones</Label>
+                              <p className="text-foreground">
                                 {goal.milestones.filter(m => m.completed).length} / {goal.milestones.length} completed
                               </p>
                             </div>
                           </div>
                           {goal.milestones.length > 0 && (
                             <div className="space-y-2">
-                              <Label className="text-sm text-slate-400">Milestones</Label>
+                              <Label className="text-sm text-muted-foreground">Milestones</Label>
                               {goal.milestones.map((milestone) => (
-                                <div key={milestone.id} className="flex items-center gap-2 p-2 bg-slate-800 rounded border border-slate-700">
+                                <div key={milestone.id} className="flex items-center gap-2 p-2 bg-card rounded border border-border">
                                   {milestone.completed ? (
                                     <CheckCircle2 className="w-4 h-4 text-green-400" />
                                   ) : (
-                                    <div className="w-4 h-4 rounded-full border-2 border-slate-600" />
+                                    <div className="w-4 h-4 rounded-full border-2 border-border" />
                                   )}
-                                  <span className={`text-sm flex-1 ${milestone.completed ? 'text-slate-400 line-through' : 'text-white'}`}>
+                                  <span className={`text-sm flex-1 ${milestone.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                                     {milestone.title}
                                   </span>
-                                  <span className="text-xs text-slate-500">
+                                  <span className="text-xs text-muted-foreground">
                                     {new Date(milestone.targetDate).toLocaleDateString()}
                                   </span>
                                 </div>
@@ -611,13 +621,13 @@ export default function ProgressPage() {
                   ))}
                 </div>
               ) : (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardContent className="pt-12 pb-12">
                     <div className="flex flex-col items-center justify-center text-center space-y-4">
                       <Target className="w-16 h-16 text-yellow-400 opacity-50" />
                       <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">No SMART Goals Yet</h3>
-                        <p className="text-slate-400 text-sm mb-4">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">No SMART Goals Yet</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
                           Set specific, measurable goals to track your progress
                         </p>
                         <Button
@@ -637,7 +647,7 @@ export default function ProgressPage() {
 
           {/* Create SMART Goal Dialog */}
           <Dialog open={showCreateGoal} onOpenChange={setShowCreateGoal}>
-            <DialogContent className="max-w-2xl bg-slate-900 border-slate-700 max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-yellow-400">Create SMART Goal</DialogTitle>
                 <DialogDescription>
@@ -646,24 +656,24 @@ export default function ProgressPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="goal-title" className="text-slate-300 mb-2 block">Goal Title *</Label>
+                  <Label htmlFor="goal-title" className="text-muted-foreground mb-2 block">Goal Title *</Label>
                   <Input
                     id="goal-title"
                     value={goalTitle}
                     onChange={(e) => setGoalTitle(e.target.value)}
                     placeholder="e.g., Complete Data Science Course"
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="goal-text" className="text-slate-300 mb-2 block">Goal Description (Natural Language)</Label>
+                  <Label htmlFor="goal-text" className="text-muted-foreground mb-2 block">Goal Description (Natural Language)</Label>
                   <Textarea
                     id="goal-text"
                     value={goalText}
                     onChange={(e) => setGoalText(e.target.value)}
                     placeholder="Describe your goal in natural language. AI will help break it down into SMART components..."
                     rows={4}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                   <Button
                     type="button"
@@ -701,13 +711,13 @@ export default function ProgressPage() {
                   </Button>
                 </div>
                 <div>
-                  <Label htmlFor="goal-date" className="text-slate-300 mb-2 block">Target Date *</Label>
+                  <Label htmlFor="goal-date" className="text-muted-foreground mb-2 block">Target Date *</Label>
                   <Input
                     id="goal-date"
                     type="date"
                     value={goalTargetDate}
                     onChange={(e) => setGoalTargetDate(e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
                 {parsedGoal && (
@@ -718,24 +728,24 @@ export default function ProgressPage() {
                     </div>
                     <div className="grid md:grid-cols-2 gap-3 text-sm">
                       <div>
-                        <Label className="text-slate-400 mb-1 block">Specific</Label>
-                        <p className="text-slate-300">{parsedGoal.specific || 'Not specified'}</p>
+                        <Label className="text-muted-foreground mb-1 block">Specific</Label>
+                        <p className="text-muted-foreground">{parsedGoal.specific || 'Not specified'}</p>
                       </div>
                       <div>
-                        <Label className="text-slate-400 mb-1 block">Measurable</Label>
-                        <p className="text-slate-300">{parsedGoal.measurable || 'Not specified'}</p>
+                        <Label className="text-muted-foreground mb-1 block">Measurable</Label>
+                        <p className="text-muted-foreground">{parsedGoal.measurable || 'Not specified'}</p>
                       </div>
                       <div>
-                        <Label className="text-slate-400 mb-1 block">Achievable</Label>
-                        <p className="text-slate-300">{parsedGoal.achievable || 'Not specified'}</p>
+                        <Label className="text-muted-foreground mb-1 block">Achievable</Label>
+                        <p className="text-muted-foreground">{parsedGoal.achievable || 'Not specified'}</p>
                       </div>
                       <div>
-                        <Label className="text-slate-400 mb-1 block">Relevant</Label>
-                        <p className="text-slate-300">{parsedGoal.relevant || 'Not specified'}</p>
+                        <Label className="text-muted-foreground mb-1 block">Relevant</Label>
+                        <p className="text-muted-foreground">{parsedGoal.relevant || 'Not specified'}</p>
                       </div>
                       <div className="md:col-span-2">
-                        <Label className="text-slate-400 mb-1 block">Time-bound</Label>
-                        <p className="text-slate-300">{parsedGoal.timebound || 'Not specified'}</p>
+                        <Label className="text-muted-foreground mb-1 block">Time-bound</Label>
+                        <p className="text-muted-foreground">{parsedGoal.timebound || 'Not specified'}</p>
                       </div>
                     </div>
                   </div>
@@ -777,7 +787,7 @@ export default function ProgressPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="border-slate-700 text-slate-400"
+                    className="border-border text-muted-foreground"
                     onClick={() => {
                       setShowCreateGoal(false);
                       setGoalTitle('');
@@ -792,9 +802,9 @@ export default function ProgressPage() {
               </div>
             </DialogContent>
           </Dialog>
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

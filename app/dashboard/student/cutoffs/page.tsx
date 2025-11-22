@@ -24,6 +24,9 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface College {
   id: string;
@@ -238,7 +241,7 @@ export default function CutoffPredictorPage() {
       case 'increasing': return <TrendingUp className="w-5 h-5 text-red-400" />;
       case 'decreasing': return <TrendingDown className="w-5 h-5 text-green-400" />;
       case 'stable': return <Minus className="w-5 h-5 text-yellow-400" />;
-      default: return <TrendingUp className="w-5 h-5 text-slate-400" />;
+      default: return <TrendingUp className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
@@ -247,7 +250,7 @@ export default function CutoffPredictorPage() {
       case 'increasing': return 'bg-red-500/20 text-red-400 border-red-500/50';
       case 'decreasing': return 'bg-green-500/20 text-green-400 border-green-500/50';
       case 'stable': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
-      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+      default: return 'bg-card/20 text-muted-foreground border-border/50';
     }
   };
 
@@ -258,65 +261,63 @@ export default function CutoffPredictorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Cutoff history is available, but new predictions need a connection."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Cutoff history is available, but new predictions need a connection."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Cutoff Predictor"
+          description="AI-powered admission cutoff predictions"
+          icon={<Calculator className="w-8 h-8 text-gold" />}
+          actions={
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <Calculator className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Cutoff Predictor
-                </h1>
-                <p className="text-slate-400">AI-powered admission cutoff predictions</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+              <div className="flex items-center gap-2 text-xs sm:text-sm">
                 {isOnline ? (
                   <>
                     <Wifi className="h-4 w-4 text-green-400" />
-                    <span>Connected</span>
+                    <span className="text-muted-foreground">Connected</span>
                   </>
                 ) : (
                   <>
                     <WifiOff className="h-4 w-4 text-red-400" />
-                    <span className="text-red-300">Offline &mdash; using cached data</span>
+                    <span className="text-red-300">Offline</span>
                   </>
                 )}
               </div>
               <Button
                 variant="outline"
-                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                className="border-gold/40 text-gold hover:bg-gold/10"
                 onClick={handleExport}
                 disabled={exporting || predictions.length === 0}
               >
                 {exporting ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400" />
+                  <Spinner size="sm" color="gold" />
                 ) : (
-                  <Download className="h-4 w-4 mr-2" />
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </>
                 )}
-                Export
               </Button>
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {/* Filters */}
-          <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
+          <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg mb-6">
             <CardHeader>
               <CardTitle className="text-yellow-400">Select Your Target Colleges</CardTitle>
               <CardDescription>Choose colleges to predict cutoffs for the upcoming academic year</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {history.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                   <History className="h-3 w-3" />
                   <span>Recent runs:</span>
                   {history.map((item) => (
@@ -339,7 +340,7 @@ export default function CutoffPredictorPage() {
                 <div>
                   <Label htmlFor="state">Filter by State</Label>
                   <Select value={selectedState} onValueChange={setSelectedState}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue placeholder="All States" />
                     </SelectTrigger>
                     <SelectContent>
@@ -361,7 +362,7 @@ export default function CutoffPredictorPage() {
                     type="number"
                     value={targetYear}
                     onChange={(e) => setTargetYear(e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
               </div>
@@ -389,13 +390,13 @@ export default function CutoffPredictorPage() {
                       className={`p-4 rounded-lg border-2 transition-all text-left ${
                         selectedColleges.includes(college.id)
                           ? 'bg-yellow-500/20 border-yellow-500'
-                          : 'bg-slate-800 border-slate-700 hover:border-yellow-500/50'
+                          : 'bg-card border-border hover:border-yellow-500/50'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-white mb-1">{college.name}</h3>
-                          <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                          <h3 className="font-semibold text-foreground mb-1">{college.name}</h3>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                             <span>{college.city}, {college.state}</span>
                             <Badge variant="outline" className="text-xs">
                               {college.tier}
@@ -435,7 +436,7 @@ export default function CutoffPredictorPage() {
           {loading && (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="bg-slate-900/50 border-yellow-500/30">
+                <Card key={i} className="bg-card/50 border-yellow-500/30">
                   <CardContent className="pt-6">
                     <Skeleton className="h-40 w-full" />
                   </CardContent>
@@ -447,7 +448,7 @@ export default function CutoffPredictorPage() {
           {!loading && predictions.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-foreground">
                   Predictions for {targetYear}
                 </h2>
                 <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/50">
@@ -456,14 +457,14 @@ export default function CutoffPredictorPage() {
               </div>
 
               {predictions.map((pred, idx) => (
-                <Card key={idx} className="bg-slate-900/50 border-yellow-500/30">
+                <Card key={idx} className="bg-card/50 border-yellow-500/30">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-yellow-400">
                           {pred.colleges?.name || 'Unknown College'}
                         </CardTitle>
-                        <CardDescription className="text-slate-400">
+                        <CardDescription className="text-muted-foreground">
                           {pred.college_courses?.name || 'Course Information'}
                         </CardDescription>
                       </div>
@@ -485,33 +486,33 @@ export default function CutoffPredictorPage() {
 
                     {/* Cutoffs by Category */}
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <div className="p-3 bg-slate-800 rounded-lg border border-slate-700">
-                        <p className="text-xs text-slate-500 mb-1">General</p>
-                        <p className="text-lg font-bold text-white">
+                      <div className="p-3 bg-card rounded-lg border border-border">
+                        <p className="text-xs text-muted-foreground mb-1">General</p>
+                        <p className="text-lg font-bold text-foreground">
                           {Math.round(pred.predicted_cutoff_general)}
                         </p>
                       </div>
-                      <div className="p-3 bg-slate-800 rounded-lg border border-slate-700">
-                        <p className="text-xs text-slate-500 mb-1">OBC</p>
-                        <p className="text-lg font-bold text-white">
+                      <div className="p-3 bg-card rounded-lg border border-border">
+                        <p className="text-xs text-muted-foreground mb-1">OBC</p>
+                        <p className="text-lg font-bold text-foreground">
                           {Math.round(pred.predicted_cutoff_obc)}
                         </p>
                       </div>
-                      <div className="p-3 bg-slate-800 rounded-lg border border-slate-700">
-                        <p className="text-xs text-slate-500 mb-1">SC</p>
-                        <p className="text-lg font-bold text-white">
+                      <div className="p-3 bg-card rounded-lg border border-border">
+                        <p className="text-xs text-muted-foreground mb-1">SC</p>
+                        <p className="text-lg font-bold text-foreground">
                           {Math.round(pred.predicted_cutoff_sc)}
                         </p>
                       </div>
-                      <div className="p-3 bg-slate-800 rounded-lg border border-slate-700">
-                        <p className="text-xs text-slate-500 mb-1">ST</p>
-                        <p className="text-lg font-bold text-white">
+                      <div className="p-3 bg-card rounded-lg border border-border">
+                        <p className="text-xs text-muted-foreground mb-1">ST</p>
+                        <p className="text-lg font-bold text-foreground">
                           {Math.round(pred.predicted_cutoff_st)}
                         </p>
                       </div>
-                      <div className="p-3 bg-slate-800 rounded-lg border border-slate-700">
-                        <p className="text-xs text-slate-500 mb-1">EWS</p>
-                        <p className="text-lg font-bold text-white">
+                      <div className="p-3 bg-card rounded-lg border border-border">
+                        <p className="text-xs text-muted-foreground mb-1">EWS</p>
+                        <p className="text-lg font-bold text-foreground">
                           {Math.round(pred.predicted_cutoff_ews)}
                         </p>
                       </div>
@@ -539,15 +540,15 @@ export default function CutoffPredictorPage() {
           )}
 
           {!loading && predictions.length === 0 && selectedColleges.length === 0 && (
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-card/50 border-yellow-500/30">
               <CardContent className="pt-12 pb-12">
                 <div className="flex flex-col items-center justify-center text-center space-y-4">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
                     <Target className="w-12 h-12 text-yellow-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">Ready to Predict?</h3>
-                    <p className="text-slate-400 text-sm">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Ready to Predict?</h3>
+                    <p className="text-muted-foreground text-sm">
                       Select colleges above to get AI-powered cutoff predictions
                     </p>
                   </div>
@@ -555,9 +556,9 @@ export default function CutoffPredictorPage() {
               </CardContent>
             </Card>
           )}
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

@@ -10,9 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Sparkles, CheckCircle, Lightbulb, Clipboard, Clock, Play, ExternalLink, BookOpen, GraduationCap, ChevronDown, ChevronRight, Link as LinkIcon, AlertCircle, FileText, Download } from 'lucide-react';
 import { OfflineBanner } from '@/components/ui/offline-banner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { TabNav } from '@/components/ui/tab-nav';
+import { RelatedDoubts } from '@/components/doubt-solver/RelatedDoubts';
 import { toast } from 'sonner';
 import { generateStudyNotes, downloadDocumentAsFile } from '@/lib/services/document-generation';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const HISTORY_KEY = 'mentark-doubt-history-v1';
 
@@ -102,6 +107,7 @@ export default function DoubtSolverPage() {
   const [stepByStepSolution, setStepByStepSolution] = useState<any>(null);
   const [relatedConcepts, setRelatedConcepts] = useState<any[]>([]);
   const [relatedDoubts, setRelatedDoubts] = useState<any[]>([]);
+  const [solutionTab, setSolutionTab] = useState<string>('answer');
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set([0]));
   const [showEnhancedView, setShowEnhancedView] = useState(true);
   const [generatingNotes, setGeneratingNotes] = useState(false);
@@ -340,31 +346,32 @@ export default function DoubtSolverPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent mb-2">
-            Doubt Solver
-          </h1>
-          <p className="text-slate-400">Get verified answers powered by AI + Wolfram Alpha</p>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Draft your question now and send it once you reconnect."
-            className="mt-3"
-          />
-        </motion.div>
+    <PageLayout containerWidth="narrow" padding="desktop" maxWidth="4xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Draft your question now and send it once you reconnect."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Doubt Solver"
+          description="Get verified answers powered by AI + Wolfram Alpha"
+          icon={<Lightbulb className="w-8 h-8 text-yellow-400" />}
+        />
 
-        <Card className="bg-slate-800/50 border-yellow-500/30">
+        <PageContainer spacing="md">
+
+        <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-gold-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-400">
-              <Sparkles className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-3 text-gold text-2xl">
+              <Sparkles className="w-6 h-6" />
               Ask Anything
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-muted-foreground text-base">
               I combine AI reasoning with verified computational data to give you accurate answers
             </CardDescription>
           </CardHeader>
@@ -380,7 +387,7 @@ export default function DoubtSolverPage() {
                 <Badge
                   key={`${example.prompt}-${example.category}`}
                   onClick={() => handleExampleClick(example)}
-                  className="cursor-pointer border border-yellow-500/40 bg-slate-900/60 text-yellow-300 hover:bg-yellow-500/10"
+                  className="cursor-pointer border border-yellow-500/40 bg-card/60 text-yellow-300 hover:bg-yellow-500/10"
                 >
                   <Lightbulb className="mr-1 h-3 w-3" /> {example.prompt}
                 </Badge>
@@ -393,12 +400,12 @@ export default function DoubtSolverPage() {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 rows={5}
-                className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-card border-border text-foreground placeholder:text-muted-foreground"
               />
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <Select value={category} onValueChange={(value: DoubtCategory) => setCategory(value)}>
-                  <SelectTrigger className="sm:max-w-xs bg-slate-900 border-slate-700 text-slate-200">
+                  <SelectTrigger className="sm:max-w-xs bg-card border-border text-muted-foreground">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -416,10 +423,10 @@ export default function DoubtSolverPage() {
                   className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
                 >
                   {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Solving...
-                    </>
+                      <>
+                        <Spinner size="sm" color="default" />
+                        <span>Solving...</span>
+                      </>
                   ) : isOnline ? (
                     'Solve My Doubt'
                   ) : (
@@ -440,12 +447,12 @@ export default function DoubtSolverPage() {
                     <Button
                       onClick={handleGenerateSolutionNotes}
                       disabled={generatingNotes || (!answer && !stepByStepSolution)}
-                      className="bg-green-500 hover:bg-green-600 text-white"
+                      className="bg-green-500 hover:bg-green-600 text-foreground"
                     >
                       {generatingNotes ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Generating...
+                          <Spinner size="sm" color="default" />
+                          <span>Generating...</span>
                         </>
                       ) : (
                         <>
@@ -455,20 +462,21 @@ export default function DoubtSolverPage() {
                       )}
                     </Button>
                   </div>
-                  <Tabs defaultValue={stepByStepSolution ? "step-by-step" : "answer"} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-slate-900/50 border border-slate-700">
-                      <TabsTrigger value="answer" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
-                        Answer
-                      </TabsTrigger>
-                      {stepByStepSolution && (
-                        <TabsTrigger value="step-by-step" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
-                          Step-by-Step
-                        </TabsTrigger>
-                      )}
-                    </TabsList>
+                  <Tabs value={solutionTab || (stepByStepSolution ? "step-by-step" : "answer")} onValueChange={setSolutionTab} className="w-full">
+                    <TabNav
+                      items={[
+                        { value: 'answer', label: 'Answer' },
+                        ...(stepByStepSolution ? [{ value: 'step-by-step', label: 'Step-by-Step' }] : [])
+                      ]}
+                      value={solutionTab || (stepByStepSolution ? "step-by-step" : "answer")}
+                      onValueChange={setSolutionTab}
+                      fullWidth
+                      variant="default"
+                      size="md"
+                    />
                     
                     <TabsContent value="answer" className="mt-4">
-                      <div className="p-4 bg-slate-900/50 rounded-lg border border-green-500/30">
+                      <div className="p-4 bg-card/50 rounded-lg border border-green-500/30">
                         <div className="flex items-center gap-2 mb-2">
                           <CheckCircle className="w-5 h-5 text-green-400" />
                           <span className="font-semibold text-green-400">Verified Answer</span>
@@ -477,19 +485,19 @@ export default function DoubtSolverPage() {
                             size="sm"
                             type="button"
                             onClick={handleCopyAnswer}
-                            className="ml-auto text-xs text-slate-300 hover:text-white"
+                            className="ml-auto text-xs text-muted-foreground hover:text-foreground"
                           >
                             <Clipboard className="w-4 h-4 mr-1" /> Copy
                           </Button>
                         </div>
-                        <p className="text-slate-200 whitespace-pre-wrap">{answer}</p>
+                        <p className="text-muted-foreground whitespace-pre-wrap">{answer}</p>
                       </div>
                     </TabsContent>
                     
                     {stepByStepSolution && (
                       <TabsContent value="step-by-step" className="mt-4 space-y-4">
                         {/* Step-by-Step Solution */}
-                        <div className="p-4 bg-slate-900/50 rounded-lg border border-purple-500/30">
+                        <div className="p-4 bg-card/50 rounded-lg border border-purple-500/30">
                           <div className="flex items-center gap-2 mb-4">
                             <BookOpen className="w-5 h-5 text-purple-400" />
                             <span className="font-semibold text-purple-400">Step-by-Step Solution</span>
@@ -499,7 +507,7 @@ export default function DoubtSolverPage() {
                             {stepByStepSolution.steps?.map((step: any, idx: number) => {
                               const isExpanded = expandedSteps.has(idx);
                               return (
-                                <div key={idx} className="border border-slate-700 rounded-lg overflow-hidden">
+                                <div key={idx} className="border border-border rounded-lg overflow-hidden">
                                   <button
                                     onClick={() => {
                                       const newExpanded = new Set(expandedSteps);
@@ -510,26 +518,26 @@ export default function DoubtSolverPage() {
                                       }
                                       setExpandedSteps(newExpanded);
                                     }}
-                                    className="w-full flex items-center gap-3 p-3 bg-slate-800/50 hover:bg-slate-800/70 transition-colors"
+                                    className="w-full flex items-center gap-3 p-3 bg-card/50 hover:bg-card/70 transition-colors"
                                   >
                                     <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-semibold text-sm flex-shrink-0">
                                       {step.stepNumber || idx + 1}
                                     </div>
                                     <div className="flex-1 text-left">
-                                      <p className="text-white font-medium">{step.description || `Step ${idx + 1}`}</p>
+                                      <p className="text-foreground font-medium">{step.description || `Step ${idx + 1}`}</p>
                                       {step.formula && (
-                                        <p className="text-xs text-slate-400 mt-1 font-mono">{step.formula}</p>
+                                        <p className="text-xs text-muted-foreground mt-1 font-mono">{step.formula}</p>
                                       )}
                                     </div>
                                     {isExpanded ? (
-                                      <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                      <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                     ) : (
-                                      <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                     )}
                                   </button>
                                   {isExpanded && (
-                                    <div className="p-4 bg-slate-800/30 border-t border-slate-700">
-                                      <p className="text-slate-300 text-sm whitespace-pre-wrap">{step.explanation}</p>
+                                    <div className="p-4 bg-card/30 border-t border-border">
+                                      <p className="text-muted-foreground text-sm whitespace-pre-wrap">{step.explanation}</p>
                                       {step.intermediateResult && (
                                         <div className="mt-3 p-2 rounded bg-purple-500/10 border border-purple-500/30">
                                           <p className="text-xs text-purple-300 font-semibold mb-1">Intermediate Result:</p>
@@ -563,13 +571,13 @@ export default function DoubtSolverPage() {
                           {/* Alternative Methods */}
                           {stepByStepSolution.alternativeMethods && stepByStepSolution.alternativeMethods.length > 0 && (
                             <div className="mt-4">
-                              <p className="text-sm font-semibold text-slate-300 mb-3">Alternative Methods</p>
+                              <p className="text-sm font-semibold text-muted-foreground mb-3">Alternative Methods</p>
                               <div className="space-y-2">
                                 {stepByStepSolution.alternativeMethods.map((method: any, idx: number) => {
                                   const methodId = `method-${idx}`;
                                   const isOpen = expandedSteps.has(-idx - 100); // Use negative indices for methods
                                   return (
-                                    <div key={idx} className="border border-slate-700 rounded-lg overflow-hidden">
+                                    <div key={idx} className="border border-border rounded-lg overflow-hidden">
                                       <button
                                         onClick={() => {
                                           const newExpanded = new Set(expandedSteps);
@@ -580,28 +588,28 @@ export default function DoubtSolverPage() {
                                           }
                                           setExpandedSteps(newExpanded);
                                         }}
-                                        className="w-full p-3 bg-slate-800/50 hover:bg-slate-800/70 transition-colors text-left"
+                                        className="w-full p-3 bg-card/50 hover:bg-card/70 transition-colors text-left"
                                       >
                                         <div className="flex items-center justify-between">
                                           <div>
-                                            <p className="text-white font-medium">{method.name}</p>
-                                            <p className="text-xs text-slate-400 mt-1">{method.whenToUse}</p>
+                                            <p className="text-foreground font-medium">{method.name}</p>
+                                            <p className="text-xs text-muted-foreground mt-1">{method.whenToUse}</p>
                                           </div>
                                           {isOpen ? (
-                                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
                                           ) : (
-                                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                                           )}
                                         </div>
                                       </button>
                                       {isOpen && (
-                                        <div className="p-4 bg-slate-800/30 border-t border-slate-700">
-                                          <p className="text-slate-300 text-sm mb-3">{method.description}</p>
+                                        <div className="p-4 bg-card/30 border-t border-border">
+                                          <p className="text-muted-foreground text-sm mb-3">{method.description}</p>
                                           <div className="space-y-2">
                                             {method.steps?.map((step: any, stepIdx: number) => (
-                                              <div key={stepIdx} className="p-2 rounded bg-slate-900/50">
-                                                <p className="text-xs text-slate-400 mb-1">Step {stepIdx + 1}</p>
-                                                <p className="text-slate-300 text-sm">{step.description || step.explanation}</p>
+                                              <div key={stepIdx} className="p-2 rounded bg-card/50">
+                                                <p className="text-xs text-muted-foreground mb-1">Step {stepIdx + 1}</p>
+                                                <p className="text-muted-foreground text-sm">{step.description || step.explanation}</p>
                                               </div>
                                             ))}
                                           </div>
@@ -628,16 +636,16 @@ export default function DoubtSolverPage() {
                         
                         {/* Related Concepts */}
                         {relatedConcepts.length > 0 && (
-                          <div className="p-4 bg-slate-900/50 rounded-lg border border-cyan-500/30">
+                          <div className="p-4 bg-card/50 rounded-lg border border-cyan-500/30">
                             <div className="flex items-center gap-2 mb-3">
                               <LinkIcon className="w-5 h-5 text-cyan-400" />
                               <span className="font-semibold text-cyan-400">Related Concepts</span>
                             </div>
                             <div className="space-y-2">
                               {relatedConcepts.slice(0, 5).map((concept: any, idx: number) => (
-                                <div key={idx} className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                                <div key={idx} className="p-3 rounded-lg bg-card/50 border border-border">
                                   <div className="flex items-center justify-between mb-2">
-                                    <span className="text-white font-medium text-sm">{concept.concept}</span>
+                                    <span className="text-foreground font-medium text-sm">{concept.concept}</span>
                                     <Badge className={`${
                                       concept.relation === 'prerequisite' ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
                                       concept.relation === 'advanced' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
@@ -647,7 +655,7 @@ export default function DoubtSolverPage() {
                                       {concept.relation}
                                     </Badge>
                                   </div>
-                                  <p className="text-slate-400 text-xs">{concept.description}</p>
+                                  <p className="text-muted-foreground text-xs">{concept.description}</p>
                                   {concept.resources?.videos && concept.resources.videos.length > 0 && (
                                     <div className="mt-2">
                                       <a
@@ -669,7 +677,7 @@ export default function DoubtSolverPage() {
                         
                         {/* Related Doubts */}
                         {relatedDoubts.length > 0 && (
-                          <div className="p-4 bg-slate-900/50 rounded-lg border border-yellow-500/30">
+                          <div className="p-4 bg-card/50 rounded-lg border border-yellow-500/30">
                             <div className="flex items-center gap-2 mb-3">
                               <Lightbulb className="w-5 h-5 text-yellow-400" />
                               <span className="font-semibold text-yellow-400">Related Doubts</span>
@@ -683,17 +691,17 @@ export default function DoubtSolverPage() {
                                     setCategory(doubt.category as DoubtCategory);
                                     handleSubmit(new Event('submit') as any);
                                   }}
-                                  className="p-3 rounded-lg bg-slate-800/50 border border-slate-700 hover:border-yellow-500/50 transition-all cursor-pointer"
+                                  className="p-3 rounded-lg bg-card/50 border border-border hover:border-yellow-500/50 transition-all cursor-pointer"
                                 >
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className="text-white text-sm font-medium">{doubt.question}</span>
+                                    <span className="text-foreground text-sm font-medium">{doubt.question}</span>
                                     <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
                                       {(doubt.similarity * 100).toFixed(0)}% similar
                                     </Badge>
                                   </div>
                                   <div className="flex flex-wrap gap-1 mt-2">
                                     {doubt.tags.slice(0, 3).map((tag: string, tagIdx: number) => (
-                                      <Badge key={tagIdx} variant="outline" className="text-xs border-slate-700 text-slate-400">
+                                      <Badge key={tagIdx} variant="outline" className="text-xs border-border text-muted-foreground">
                                         {tag}
                                       </Badge>
                                     ))}
@@ -706,6 +714,23 @@ export default function DoubtSolverPage() {
                       </TabsContent>
                     )}
                   </Tabs>
+
+                  {/* Related Doubts */}
+                  {answer && (
+                    <div className="mt-6">
+                      <RelatedDoubts 
+                        question={question}
+                        topic={relatedConcepts[0]?.concept}
+                        autoLoad={true}
+                        limit={5}
+                        compact={true}
+                        onSelectDoubt={(doubt) => {
+                          setQuestion(doubt.question);
+                          handleSubmit(new Event('submit') as any);
+                        }}
+                      />
+                    </div>
+                  )}
                 </motion.div>
 
                 {videos.length > 0 && (
@@ -713,7 +738,7 @@ export default function DoubtSolverPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-yellow-500/30"
+                    className="mt-6 p-4 bg-card/50 rounded-lg border border-yellow-500/30"
                   >
                     <div className="flex items-center gap-2 mb-4">
                       <Play className="w-5 h-5 text-yellow-400" />
@@ -726,30 +751,30 @@ export default function DoubtSolverPage() {
                           href={video.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group relative rounded-lg overflow-hidden border border-slate-700 hover:border-yellow-500/50 transition-all bg-slate-800/50"
+                          className="group relative rounded-lg overflow-hidden border border-border hover:border-yellow-500/50 transition-all bg-card/50"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          <div className="relative aspect-video bg-slate-900">
+                          <div className="relative aspect-video bg-card">
                             <img
                               src={video.thumbnail_url}
                               alt={video.title}
                               className="w-full h-full object-cover"
                             />
-                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <div className="absolute inset-0 bg-background/40 group-hover:bg-background/20 transition-colors flex items-center justify-center">
                               <div className="w-12 h-12 rounded-full bg-red-600/90 flex items-center justify-center group-hover:bg-red-600 transition-colors">
-                                <Play className="w-6 h-6 text-white ml-1" />
+                                <Play className="w-6 h-6 text-foreground ml-1" />
                               </div>
                             </div>
-                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/80 rounded text-xs text-white">
+                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-background/80 rounded text-xs text-foreground">
                               {video.duration}
                             </div>
                           </div>
                           <div className="p-3">
-                            <h4 className="text-sm font-semibold text-white line-clamp-2 mb-1 group-hover:text-yellow-400 transition-colors">
+                            <h4 className="text-sm font-semibold text-foreground line-clamp-2 mb-1 group-hover:text-yellow-400 transition-colors">
                               {video.title}
                             </h4>
-                            <div className="flex items-center justify-between text-xs text-slate-400">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
                               <span className="line-clamp-1">{video.channel_title}</span>
                               <div className="flex items-center gap-2">
                                 <span>{video.view_count.toLocaleString()} views</span>
@@ -768,7 +793,7 @@ export default function DoubtSolverPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 }}
-                    className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-blue-500/30"
+                    className="mt-6 p-4 bg-card/50 rounded-lg border border-blue-500/30"
                   >
                     <div className="flex items-center gap-2 mb-4">
                       <GraduationCap className="w-5 h-5 text-blue-400" />
@@ -784,7 +809,7 @@ export default function DoubtSolverPage() {
                             href={result.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group rounded-lg border border-slate-700 hover:border-blue-500/50 transition-all bg-slate-800/50 p-4"
+                            className="group rounded-lg border border-border hover:border-blue-500/50 transition-all bg-card/50 p-4"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -793,11 +818,11 @@ export default function DoubtSolverPage() {
                                 <img
                                   src={result.thumbnail}
                                   alt={result.title}
-                                  className="w-16 h-16 rounded-lg object-cover border border-slate-700 flex-shrink-0"
+                                  className="w-16 h-16 rounded-lg object-cover border border-border flex-shrink-0"
                                 />
                               )}
                               {!result.thumbnail && (
-                                <div className={`w-16 h-16 rounded-lg border border-slate-700 flex-shrink-0 flex items-center justify-center bg-slate-900`}>
+                                <div className={`w-16 h-16 rounded-lg border border-border flex-shrink-0 flex items-center justify-center bg-card`}>
                                   <span className={`text-2xl`}>
                                     {result.type === 'video' ? '▶️' : result.type === 'course' ? '📚' : result.type === 'exercise' ? '✏️' : '📄'}
                                   </span>
@@ -810,15 +835,15 @@ export default function DoubtSolverPage() {
                                     {result.type}
                                   </Badge>
                                 </div>
-                                <h4 className="text-sm font-semibold text-white line-clamp-2 mb-1 group-hover:text-blue-400 transition-colors">
+                                <h4 className="text-sm font-semibold text-foreground line-clamp-2 mb-1 group-hover:text-blue-400 transition-colors">
                                   {result.title}
                                 </h4>
                                 {result.description && (
-                                  <p className="text-xs text-slate-400 line-clamp-2 mb-2">
+                                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                                     {result.description}
                                   </p>
                                 )}
-                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                   <span>Khan Academy</span>
                                   <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
@@ -836,30 +861,30 @@ export default function DoubtSolverPage() {
         </Card>
 
         {recentNotes.length > 0 && (
-          <Card className="mt-8 bg-slate-900/60 border-slate-700">
+          <Card className="mt-8 bg-card/60 border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-slate-100 text-lg">
+              <CardTitle className="flex items-center gap-2 text-muted-foreground text-lg">
                 <Clock className="w-4 h-4 text-yellow-400" /> Recent solutions
               </CardTitle>
               <CardDescription>Your last answered questions are stored locally so you can revisit them quickly.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {recentNotes.map((item, index) => (
-                <div key={index} className="rounded-lg border border-slate-700 bg-slate-900/70 p-4">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-2">
+                <div key={index} className="rounded-lg border border-border bg-card/70 p-4">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
                     <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 capitalize">
                       {item.category}
                     </Badge>
                     <span>{new Date(item.timestamp).toLocaleString()}</span>
                   </div>
-                  <p className="text-slate-200 font-semibold mb-2">{item.question}</p>
-                  <p className="text-sm text-slate-300 line-clamp-3">{item.answer}</p>
+                  <p className="text-muted-foreground font-semibold mb-2">{item.question}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{item.answer}</p>
                 </div>
               ))}
               {history.length > 3 && (
                 <Button
                   variant="outline"
-                  className="w-full border-slate-700 text-slate-300 hover:text-white"
+                  className="w-full border-border text-muted-foreground hover:text-foreground"
                   onClick={() => setHistory([])}
                 >
                   Clear history
@@ -868,8 +893,9 @@ export default function DoubtSolverPage() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

@@ -106,7 +106,7 @@ export default function PrivacyPolicyPage() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <div className="container mx-auto max-w-4xl px-4 py-16 space-y-12">
         <motion.header
           initial={{ opacity: 0, y: 20 }}
@@ -117,26 +117,26 @@ export default function PrivacyPolicyPage() {
           <Button
             asChild
             variant="outline"
-            className="border-slate-700 text-slate-200 hover:text-yellow-200 w-max"
+            className="border-border text-foreground hover:text-primary w-max"
           >
             <Link href="/">← Back to home</Link>
           </Button>
-          <p className="text-xs uppercase tracking-[0.4em] text-yellow-300">Privacy Policy</p>
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl">
+          <p className="text-xs uppercase tracking-[0.4em] text-primary">Privacy Policy</p>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-foreground">
             Protecting every learner&apos;s data, dignity, and direction.
           </h1>
-          <p className="text-slate-300 sm:text-lg">
+          <p className="text-muted-foreground sm:text-lg">
             Mentark operates as an Indian-first mentorship OS. This policy covers how we collect, use, and safeguard
             personal information across Mentark Neuro, Mentark Quantum, and related AI agents.
           </p>
-          <p className="text-sm text-slate-500">Last updated: {lastUpdated}</p>
+          <p className="text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
         </motion.header>
 
-        <Card className="bg-slate-900/40 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">At a glance</CardTitle>
+            <CardTitle className="text-card-foreground">At a glance</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm text-slate-300">
+          <CardContent className="space-y-4 text-sm text-muted-foreground">
             <p>
               Mentark complies with India&apos;s DPDP Act guidance, uses secure Supabase storage, and limits access to
               verified mentors and institute admins. Sensitive datasets—mental wellbeing, financial planning, exam prep—are
@@ -144,11 +144,11 @@ export default function PrivacyPolicyPage() {
             </p>
             <p>
               Queries or requests? Write to{" "}
-              <Link href="mailto:connect@mentark.com" className="text-yellow-300">
+              <Link href="mailto:connect@mentark.com" className="text-primary">
                 connect@mentark.com
               </Link>{" "}
               or, for partnerships,{" "}
-              <Link href="mailto:partnerships@mentark.com" className="text-yellow-300">
+              <Link href="mailto:partnerships@mentark.com" className="text-primary">
                 partnerships@mentark.com
               </Link>
               .
@@ -164,13 +164,13 @@ export default function PrivacyPolicyPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.5 }}
-              className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8 space-y-4"
+              className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4"
             >
-              <h2 className="text-2xl font-semibold text-white">{section.title}</h2>
-              <ul className="space-y-3 text-sm sm:text-base text-slate-300">
+              <h2 className="text-2xl font-semibold text-card-foreground">{section.title}</h2>
+              <ul className="space-y-3 text-sm sm:text-base text-muted-foreground">
                 {section.points.map((point) => (
                   <li key={point} className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-yellow-400" />
+                    <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
                     <span className="leading-relaxed">{point}</span>
                   </li>
                 ))}
@@ -181,15 +181,15 @@ export default function PrivacyPolicyPage() {
 
         <div className="space-y-6">
           {DETAIL_SECTIONS.map((section) => (
-            <Card key={section.title} className="bg-slate-900/40 border-slate-800">
+            <Card key={section.title} className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white text-2xl">{section.title}</CardTitle>
+                <CardTitle className="text-card-foreground text-2xl">{section.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3 text-slate-300 text-sm sm:text-base">
+                <ul className="space-y-3 text-muted-foreground text-sm sm:text-base">
                   {section.points.map((point) => (
                     <li key={point} className="flex gap-3">
-                      <span className="text-yellow-300">•</span>
+                      <span className="text-primary">•</span>
                       <span>{point}</span>
                     </li>
                   ))}
@@ -199,11 +199,11 @@ export default function PrivacyPolicyPage() {
           ))}
         </div>
 
-        <Card className="bg-slate-900/40 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white text-2xl">Third-party services</CardTitle>
+            <CardTitle className="text-card-foreground text-2xl">Third-party services</CardTitle>
           </CardHeader>
-          <CardContent className="text-slate-300 space-y-3 text-sm sm:text-base">
+          <CardContent className="text-muted-foreground space-y-3 text-sm sm:text-base">
             <p>
               Mentark uses Supabase for authentication and databases, RunPod for ML workloads, Razorpay for payments, and
               EmailJS or Resend for communications. Each provider is under contract to process data solely for Mentark
@@ -216,19 +216,19 @@ export default function PrivacyPolicyPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900/40 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white text-2xl">Contact & updates</CardTitle>
+            <CardTitle className="text-card-foreground text-2xl">Contact & updates</CardTitle>
           </CardHeader>
-          <CardContent className="text-slate-300 space-y-3 text-sm sm:text-base">
+          <CardContent className="text-muted-foreground space-y-3 text-sm sm:text-base">
             <p>
               For privacy requests, email{" "}
-              <Link href="mailto:dpo@mentark.com" className="text-yellow-300">
+              <Link href="mailto:dpo@mentark.com" className="text-primary">
                 dpo@mentark.com
               </Link>
               . We respond within seven working days.
             </p>
-            <Separator className="bg-slate-700" />
+            <Separator className="bg-border" />
             <p>
               We review this notice quarterly. Significant changes will be highlighted inside the product and via email to
               primary contacts.
@@ -241,10 +241,10 @@ export default function PrivacyPolicyPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5 }}
-          className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-6 sm:p-8 space-y-4"
+          className="rounded-2xl border border-primary/30 bg-primary/10 p-6 sm:p-8 space-y-4"
         >
-          <h2 className="text-2xl font-semibold text-white">Need a data processing agreement?</h2>
-          <p className="text-slate-200">
+          <h2 className="text-2xl font-semibold text-card-foreground">Need a data processing agreement?</h2>
+          <p className="text-foreground">
             Institutes, network partners, and investors can request a DPA or detailed security dossier by writing to
             partnerships@mentark.com. We respond with artefacts (RLS policies, penetration test summaries, observability
             diagrams) within five working days.

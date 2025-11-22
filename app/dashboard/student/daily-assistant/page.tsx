@@ -29,6 +29,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { trackEvent } from "@/lib/services/analytics";
+import { motion } from 'framer-motion';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { StatCard } from '@/components/ui/card/card-variants';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface AgendaItem {
   id: string;
@@ -420,7 +425,7 @@ export default function DailyAssistantPage() {
     if (priority === 3) {
       return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
     }
-    return "bg-slate-500/20 text-slate-400 border-slate-500/30";
+    return "bg-card/20 text-muted-foreground border-border/30";
   };
 
   const sortedAgenda = [...agendaItems].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
@@ -436,39 +441,38 @@ export default function DailyAssistantPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
-          <p className="text-white">Loading your daily tasks...</p>
+      <PageLayout containerWidth="wide" padding="desktop">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <Spinner size="xl" color="gold" />
+            <p className="text-foreground mt-4">Loading your daily tasks...</p>
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <div className="border-b border-slate-700 bg-slate-900/50">
-        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <h1 className="text-3xl font-bold text-white mb-2">Daily Assistant</h1>
-          <p className="text-slate-400">
-            {new Date(today).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
-        </div>
-      </div>
+    <PageLayout containerWidth="wide" padding="desktop">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <PageHeader
+          title="Daily Assistant"
+          description={new Date(today).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          icon={<Calendar className="w-8 h-8 text-yellow-400" />}
+        />
 
-      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        <PageContainer spacing="md">
         {/* Calendar Connection Card */}
-        <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30">
+        <Card className="bg-gradient-to-br from-blue-900/40 to-cyan-900/30 border-blue-500/40 shadow-lg hover:shadow-blue-500/20 transition-all">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/20 rounded-lg">
-                  <Calendar className="w-6 h-6 text-blue-400" />
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl border border-blue-500/50 shadow-blue-500/20">
+                  <Calendar className="w-7 h-7 text-blue-300" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Google Calendar</h3>
-                  <p className="text-slate-400 text-sm">
+                  <h3 className="text-foreground font-bold text-lg">Google Calendar</h3>
+                  <p className="text-muted-foreground text-sm">
                     {calendarConnected
                       ? "Connected - Your calendar events will sync here"
                       : "Connect your Google Calendar to sync events and tasks"}
@@ -487,7 +491,11 @@ export default function DailyAssistantPage() {
                     disabled={calendarLoading}
                     className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                   >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${calendarLoading ? "animate-spin" : ""}`} />
+                    {calendarLoading ? (
+                      <Spinner size="sm" color="default" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
                     Refresh
                   </Button>
                 </div>
@@ -495,12 +503,12 @@ export default function DailyAssistantPage() {
                 <Button
                   onClick={handleConnectCalendar}
                   disabled={calendarLoading}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="bg-blue-500 hover:bg-blue-600 text-foreground"
                 >
                   {calendarLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Connecting...
+                      <Spinner size="sm" color="default" />
+                      <span>Connecting...</span>
                     </>
                   ) : (
                     <>
@@ -516,9 +524,9 @@ export default function DailyAssistantPage() {
 
         {/* Calendar Events */}
         {calendarConnected && calendarEvents.length > 0 && (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-card/50 border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Calendar className="w-6 h-6 text-blue-400" />
                 Today&apos;s Calendar Events
               </CardTitle>
@@ -540,16 +548,16 @@ export default function DailyAssistantPage() {
                   return (
                     <div
                       key={event.id}
-                      className="flex items-start gap-3 p-4 rounded-lg bg-slate-900/50 border border-blue-500/30 hover:border-blue-500/50 transition-all"
+                      className="flex items-start gap-3 p-4 rounded-lg bg-card/50 border border-blue-500/30 hover:border-blue-500/50 transition-all"
                     >
                       <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-white font-semibold mb-1">{event.summary || "No title"}</h4>
+                        <h4 className="text-foreground font-semibold mb-1">{event.summary || "No title"}</h4>
                         {event.description && (
-                          <p className="text-slate-400 text-sm line-clamp-2 mb-2">{event.description}</p>
+                          <p className="text-muted-foreground text-sm line-clamp-2 mb-2">{event.description}</p>
                         )}
                         {start && (
-                          <div className="flex items-center gap-4 text-xs text-slate-400">
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               <span>
@@ -561,7 +569,7 @@ export default function DailyAssistantPage() {
                               </span>
                             </div>
                             {event.location && (
-                              <span className="text-slate-500">📍 {event.location}</span>
+                              <span className="text-muted-foreground">📍 {event.location}</span>
                             )}
                           </div>
                         )}
@@ -591,23 +599,23 @@ export default function DailyAssistantPage() {
           {/* Smart Schedule */}
           <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Brain className="w-6 h-6 text-purple-400" />
                 AI Smart Scheduling
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-400 text-sm mb-4">
+              <p className="text-muted-foreground text-sm mb-4">
                 Let AI optimize your schedule based on your energy levels, task priorities, and dependencies.
               </p>
               <Button
                 onClick={handleSmartSchedule}
                 disabled={smartScheduleLoading || agendaItems.filter(i => i.status !== 'completed').length === 0}
-                className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+                className="w-full bg-purple-500 hover:bg-purple-600 text-foreground"
               >
                 {smartScheduleLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Spinner size="sm" color="default" />
                     Optimizing Schedule...
                   </>
                 ) : (
@@ -620,14 +628,14 @@ export default function DailyAssistantPage() {
               
               {smartScheduleResult && (
                 <div className="mt-4 space-y-3">
-                  <div className="p-3 rounded-lg bg-slate-900/50 border border-purple-500/30">
+                  <div className="p-3 rounded-lg bg-card/50 border border-purple-500/30">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-slate-300">Scheduled Tasks</span>
+                      <span className="text-sm text-muted-foreground">Scheduled Tasks</span>
                       <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                         {smartScheduleResult.timeBlocks.length}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-slate-400">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Time Blocked: {Math.round(smartScheduleResult.totalScheduledMinutes / 60)}h</span>
                       <span>Available: {Math.round(smartScheduleResult.totalAvailableMinutes / 60)}h</span>
                     </div>
@@ -656,21 +664,21 @@ export default function DailyAssistantPage() {
                   )}
                   
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2 rounded bg-slate-900/50">
-                      <p className="text-slate-400">Morning</p>
-                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.morningTasks} tasks</p>
+                    <div className="p-2 rounded bg-card/50">
+                      <p className="text-muted-foreground">Morning</p>
+                      <p className="text-foreground font-semibold">{smartScheduleResult.energyOptimization.morningTasks} tasks</p>
                     </div>
-                    <div className="p-2 rounded bg-slate-900/50">
-                      <p className="text-slate-400">Afternoon</p>
-                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.afternoonTasks} tasks</p>
+                    <div className="p-2 rounded bg-card/50">
+                      <p className="text-muted-foreground">Afternoon</p>
+                      <p className="text-foreground font-semibold">{smartScheduleResult.energyOptimization.afternoonTasks} tasks</p>
                     </div>
-                    <div className="p-2 rounded bg-slate-900/50">
-                      <p className="text-slate-400">Evening</p>
-                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.eveningTasks} tasks</p>
+                    <div className="p-2 rounded bg-card/50">
+                      <p className="text-muted-foreground">Evening</p>
+                      <p className="text-foreground font-semibold">{smartScheduleResult.energyOptimization.eveningTasks} tasks</p>
                     </div>
-                    <div className="p-2 rounded bg-slate-900/50">
-                      <p className="text-slate-400">Night</p>
-                      <p className="text-white font-semibold">{smartScheduleResult.energyOptimization.nightTasks} tasks</p>
+                    <div className="p-2 rounded bg-card/50">
+                      <p className="text-muted-foreground">Night</p>
+                      <p className="text-foreground font-semibold">{smartScheduleResult.energyOptimization.nightTasks} tasks</p>
                     </div>
                   </div>
                 </div>
@@ -681,7 +689,7 @@ export default function DailyAssistantPage() {
           {/* Productivity Insights */}
           <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/30">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <TrendingUp className="w-6 h-6 text-cyan-400" />
                 Productivity Insights
               </CardTitle>
@@ -689,27 +697,27 @@ export default function DailyAssistantPage() {
             <CardContent>
               {insightsLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                  <Spinner size="lg" color="default" />
                 </div>
               ) : productivityInsights ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
-                      <p className="text-xs text-slate-400 mb-1">Completion Rate</p>
+                    <div className="p-3 rounded-lg bg-card/50 border border-cyan-500/30">
+                      <p className="text-xs text-muted-foreground mb-1">Completion Rate</p>
                       <p className="text-2xl font-bold text-cyan-400">
                         {(productivityInsights.insights.completionRate * 100).toFixed(0)}%
                       </p>
                     </div>
-                    <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
-                      <p className="text-xs text-slate-400 mb-1">Efficiency</p>
+                    <div className="p-3 rounded-lg bg-card/50 border border-cyan-500/30">
+                      <p className="text-xs text-muted-foreground mb-1">Efficiency</p>
                       <p className="text-2xl font-bold text-cyan-400">
                         {(productivityInsights.insights.efficiency * 100).toFixed(0)}%
                       </p>
                     </div>
                   </div>
                   
-                  <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
-                    <p className="text-xs text-slate-400 mb-2">Energy Trend</p>
+                  <div className="p-3 rounded-lg bg-card/50 border border-cyan-500/30">
+                    <p className="text-xs text-muted-foreground mb-2">Energy Trend</p>
                     <div className="flex items-center gap-2">
                       <Badge className={
                         productivityInsights.insights.energyTrend === 'improving'
@@ -722,18 +730,18 @@ export default function DailyAssistantPage() {
                          productivityInsights.insights.energyTrend === 'declining' ? '📉' : '➡️'} 
                         {productivityInsights.insights.energyTrend}
                       </Badge>
-                      <span className="text-sm text-slate-300">
+                      <span className="text-sm text-muted-foreground">
                         Avg: {productivityInsights.insights.avgEnergy}/5
                       </span>
                     </div>
                   </div>
                   
                   {productivityInsights.aiRecommendations && productivityInsights.aiRecommendations.length > 0 && (
-                    <div className="p-3 rounded-lg bg-slate-900/50 border border-cyan-500/30">
+                    <div className="p-3 rounded-lg bg-card/50 border border-cyan-500/30">
                       <p className="text-xs text-cyan-400 font-semibold mb-2">AI Recommendations</p>
                       <ul className="space-y-1">
                         {productivityInsights.aiRecommendations.slice(0, 3).map((rec: string, idx: number) => (
-                          <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
+                          <li key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
                             <span className="text-cyan-400 mt-0.5">•</span>
                             <span>{rec}</span>
                           </li>
@@ -753,7 +761,7 @@ export default function DailyAssistantPage() {
                   </Button>
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm text-center py-4">
+                <p className="text-muted-foreground text-sm text-center py-4">
                   Complete tasks to see productivity insights
                 </p>
               )}
@@ -767,9 +775,9 @@ export default function DailyAssistantPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
                 <Target className="w-8 h-8 text-blue-400" />
-                <span className="text-2xl font-bold text-white">{stats.tasksCompleted}/{stats.totalTasks}</span>
+                <span className="text-2xl font-bold text-foreground">{stats.tasksCompleted}/{stats.totalTasks}</span>
               </div>
-              <p className="text-slate-400 text-sm">Tasks Completed</p>
+              <p className="text-muted-foreground text-sm">Tasks Completed</p>
               <Progress value={completionRate} className="h-2 mt-2" />
             </CardContent>
           </Card>
@@ -778,10 +786,10 @@ export default function DailyAssistantPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
                 <Clock className="w-8 h-8 text-green-400" />
-                <span className="text-2xl font-bold text-white">{stats.hoursSpent.toFixed(1)}h</span>
+                <span className="text-2xl font-bold text-foreground">{stats.hoursSpent.toFixed(1)}h</span>
               </div>
-              <p className="text-slate-400 text-sm">Time Spent</p>
-              <p className="text-slate-500 text-xs mt-1">of {stats.hoursPlanned.toFixed(1)}h planned</p>
+              <p className="text-muted-foreground text-sm">Time Spent</p>
+              <p className="text-muted-foreground text-xs mt-1">of {stats.hoursPlanned.toFixed(1)}h planned</p>
             </CardContent>
           </Card>
 
@@ -789,10 +797,10 @@ export default function DailyAssistantPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
                 <Flame className="w-8 h-8 text-orange-400" />
-                <span className="text-2xl font-bold text-white">{stats.streaks}</span>
+                <span className="text-2xl font-bold text-foreground">{stats.streaks}</span>
               </div>
-              <p className="text-slate-400 text-sm">Day Streak</p>
-              <p className="text-slate-500 text-xs mt-1">Keep it up!</p>
+              <p className="text-muted-foreground text-sm">Day Streak</p>
+              <p className="text-muted-foreground text-xs mt-1">Keep it up!</p>
             </CardContent>
           </Card>
 
@@ -800,28 +808,28 @@ export default function DailyAssistantPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
                 <Trophy className="w-8 h-8 text-yellow-400" />
-                <span className="text-2xl font-bold text-white">{Math.round(completionRate)}%</span>
+                <span className="text-2xl font-bold text-foreground">{Math.round(completionRate)}%</span>
               </div>
-              <p className="text-slate-400 text-sm">Completion Rate</p>
-              <p className="text-slate-500 text-xs mt-1">Today&apos;s progress</p>
+              <p className="text-muted-foreground text-sm">Completion Rate</p>
+              <p className="text-muted-foreground text-xs mt-1">Today&apos;s progress</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Energy Insights */}
         {energyBandEntries.length > 0 && (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-card/50 border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Zap className="w-6 h-6 text-cyan-300" />
                 Energy Insights (last 7 days)
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {energyBandEntries.map(([band, score]) => (
-                <div key={band} className="p-4 rounded-lg bg-slate-900/60 border border-slate-700">
+                <div key={band} className="p-4 rounded-lg bg-card/60 border border-border">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-white font-semibold capitalize">{band}</h4>
+                    <h4 className="text-foreground font-semibold capitalize">{band}</h4>
                     <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
                       {Number(score).toFixed(1)}
                     </Badge>
@@ -834,9 +842,9 @@ export default function DailyAssistantPage() {
         )}
 
         {/* Today&apos;s Tasks */}
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="bg-card/50 border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Calendar className="w-6 h-6 text-yellow-400" />
               Today&apos;s Tasks
               {sortedAgenda.filter((item) => item.status !== "completed").length > 0 && (
@@ -849,9 +857,9 @@ export default function DailyAssistantPage() {
           <CardContent>
             {sortedAgenda.length === 0 ? (
               <div className="text-center py-12">
-                <CheckCircle2 className="w-16 h-16 text-slate-700 mx-auto mb-4" />
-                <p className="text-slate-400 mb-2">No tasks scheduled for today!</p>
-                <p className="text-slate-500 text-sm">Check back later or explore your ARKs</p>
+                <CheckCircle2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">No tasks scheduled for today!</p>
+                <p className="text-muted-foreground text-sm">Check back later or explore your ARKs</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -864,13 +872,13 @@ export default function DailyAssistantPage() {
                       className={`flex items-start gap-4 p-4 rounded-lg border transition-all ${
                         item.status === "completed"
                           ? 'bg-green-500/10 border-green-500/30'
-                          : 'bg-slate-900/50 border-slate-700 hover:border-yellow-500/30'
+                          : 'bg-card/50 border-border hover:border-yellow-500/30'
                       }`}
                     >
                       <div className={`p-2 rounded-lg ${
                         item.status === "completed"
                           ? 'bg-green-500/20 text-green-400'
-                          : 'bg-slate-700 text-slate-400'
+                          : 'bg-card text-muted-foreground'
                       }`}>
                         <Clock className="w-5 h-5" />
                       </div>
@@ -878,15 +886,15 @@ export default function DailyAssistantPage() {
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <h4 className={`font-semibold ${
-                              item.status === "completed" ? 'text-green-400 line-through' : 'text-white'
+                              item.status === "completed" ? 'text-green-400 line-through' : 'text-foreground'
                             }`}>
                               {item.title}
                             </h4>
                             {item.description && (
-                              <p className="text-slate-400 text-sm mt-1">{item.description}</p>
+                              <p className="text-muted-foreground text-sm mt-1">{item.description}</p>
                             )}
                             {dependencyMap[item.id] && dependencyMap[item.id].length > 0 && (
-                              <p className="text-xs text-slate-500 mt-2">
+                              <p className="text-xs text-muted-foreground mt-2">
                                 Depends on {dependencyMap[item.id].length} task
                                 {dependencyMap[item.id].length > 1 ? "s" : ""}
                               </p>
@@ -896,7 +904,7 @@ export default function DailyAssistantPage() {
                             Priority {item.priority ?? 0}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-400">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           {start && (
                             <div className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
@@ -909,7 +917,7 @@ export default function DailyAssistantPage() {
                           <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 capitalize">
                             {item.energy_target ?? "unspecified"}
                           </Badge>
-                          <Badge className="bg-slate-700 text-slate-300 border-slate-600 capitalize">
+                          <Badge className="bg-card text-muted-foreground border-border capitalize">
                             {item.source}
                           </Badge>
                         </div>
@@ -918,7 +926,7 @@ export default function DailyAssistantPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleToggleStatus(item)}
-                        className={item.status === "completed" ? 'text-green-400' : 'text-slate-400'}
+                        className={item.status === "completed" ? 'text-green-400' : 'text-muted-foreground'}
                       >
                         {item.status === "completed" ? (
                           <CheckCircle2 className="w-5 h-5" />
@@ -936,9 +944,9 @@ export default function DailyAssistantPage() {
 
         {/* Learning Path Progress */}
         {learningPath.length > 0 && (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-card/50 border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Rocket className="w-6 h-6 text-yellow-400" />
                 Learning Path Highlights
               </CardTitle>
@@ -946,16 +954,16 @@ export default function DailyAssistantPage() {
             <CardContent>
               <div className="space-y-4">
                 {learningPath.map((node) => (
-                  <div key={node.topicId} className="flex items-center gap-4 p-4 rounded-lg bg-slate-900/50 border border-slate-700 hover:border-yellow-500/30 transition-all">
+                  <div key={node.topicId} className="flex items-center gap-4 p-4 rounded-lg bg-card/50 border border-border hover:border-yellow-500/30 transition-all">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center">
                       <BookOpen className="w-6 h-6 text-black" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-white font-semibold mb-1">{node.topicName}</h4>
+                      <h4 className="text-foreground font-semibold mb-1">{node.topicName}</h4>
                       <Progress value={node.masteryLevel} className="h-2" />
-                      <p className="text-xs text-slate-400 mt-1">{Math.round(node.masteryLevel)}% mastery</p>
+                      <p className="text-xs text-muted-foreground mt-1">{Math.round(node.masteryLevel)}% mastery</p>
                       {node.recommendedNext?.nextResources && (
-                        <p className="text-xs text-slate-500 mt-2">
+                        <p className="text-xs text-muted-foreground mt-2">
                           Next: {node.recommendedNext.nextResources.join(", ")}
                         </p>
                       )}
@@ -974,14 +982,14 @@ export default function DailyAssistantPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-purple-400" />
                 AI Recommendations
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {recommendations.length === 0 ? (
-                <p className="text-slate-400 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Complete more study sessions to unlock tailored recommendations.
                 </p>
               ) : (
@@ -992,9 +1000,9 @@ export default function DailyAssistantPage() {
                     rec.feedback_notes || summaryText || "AI recommends reviewing this resource today.";
 
                   return (
-                    <div key={rec.id} className="p-4 rounded-lg bg-slate-900/50 border border-purple-500/30">
+                    <div key={rec.id} className="p-4 rounded-lg bg-card/50 border border-purple-500/30">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-white font-semibold capitalize">
+                        <h4 className="text-foreground font-semibold capitalize">
                           {rec.resource_type || "Resource"}
                         </h4>
                         {rec.score !== undefined && (
@@ -1003,7 +1011,7 @@ export default function DailyAssistantPage() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-slate-400">{recommendationCopy}</p>
+                      <p className="text-sm text-muted-foreground">{recommendationCopy}</p>
                     </div>
                   );
                 })
@@ -1013,22 +1021,22 @@ export default function DailyAssistantPage() {
 
           <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <TrendingUp className="w-6 h-6 text-blue-400" />
                 Spaced Repetition Queue
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {queueItems.length === 0 ? (
-                <p className="text-slate-400 text-sm">
+                <p className="text-muted-foreground text-sm">
                   You&apos;re all caught up. Reviewed cards will show up here when they are due again.
                 </p>
               ) : (
                 queueItems.slice(0, 4).map((card) => (
-                  <div key={card.id} className="flex items-center justify-between p-3 bg-slate-900/40 border border-blue-500/30 rounded-lg">
+                  <div key={card.id} className="flex items-center justify-between p-3 bg-card/40 border border-blue-500/30 rounded-lg">
                     <div>
-                      <p className="text-sm text-white font-medium">{card.card_identifier}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-sm text-foreground font-medium">{card.card_identifier}</p>
+                      <p className="text-xs text-muted-foreground">
                         Due {new Date(card.due_at).toLocaleString()} • Interval {card.interval_days}d
                       </p>
                     </div>
@@ -1044,9 +1052,9 @@ export default function DailyAssistantPage() {
 
         {/* Upcoming Tasks Preview */}
         {sortedAgenda.filter((item) => item.status !== "completed").length > 0 && (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-card/50 border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <ArrowRight className="w-6 h-6 text-yellow-400" />
                 Next Tasks
               </CardTitle>
@@ -1057,12 +1065,12 @@ export default function DailyAssistantPage() {
                   .filter((item) => item.status !== "completed")
                   .slice(0, 5)
                   .map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-700">
-                      <Circle className="w-4 h-4 text-slate-500" />
+                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border">
+                      <Circle className="w-4 h-4 text-muted-foreground" />
                       <div className="flex-1">
-                        <p className="text-white text-sm font-semibold">{item.title}</p>
+                        <p className="text-foreground text-sm font-semibold">{item.title}</p>
                         {item.description && (
-                          <p className="text-slate-400 text-xs">{item.description}</p>
+                          <p className="text-muted-foreground text-xs">{item.description}</p>
                         )}
                       </div>
                       <Badge className={getPriorityColor(item.priority ?? 0)}>
@@ -1074,7 +1082,8 @@ export default function DailyAssistantPage() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }

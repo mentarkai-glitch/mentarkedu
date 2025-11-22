@@ -25,6 +25,9 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface EmotionResult {
   sentiment_score: number;
@@ -76,7 +79,7 @@ export default function EmotionCheckPage() {
   }, [history]);
 
   const emotionIcon = useMemo(() => {
-    if (!result) return <Activity className="h-6 w-6 text-slate-400" />;
+    if (!result) return <Activity className="h-6 w-6 text-muted-foreground" />;
     if (result.sentiment_score >= 0.4) return <Smile className="h-6 w-6 text-green-400" />;
     if (result.sentiment_score <= -0.4) return <Frown className="h-6 w-6 text-red-400" />;
     return <Activity className="h-6 w-6 text-yellow-400" />;
@@ -160,46 +163,42 @@ export default function EmotionCheckPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-5xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Draft journal entries will be stored locally until you reconnect."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-xl border border-pink-500/30">
-                <HeartPulse className="w-8 h-8 text-pink-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-                  Emotion Check
-                </h1>
-                <p className="text-slate-400">Gauge your current emotional state and recommended next steps</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="5xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Draft journal entries will be stored locally until you reconnect."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Emotion Check"
+          description="Gauge your current emotional state and recommended next steps"
+          icon={<HeartPulse className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex items-center gap-3 text-xs sm:text-sm">
               {isOnline ? (
-                <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> Online</span>
+                <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> <span className="text-muted-foreground">Online</span></span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-red-300"><WifiOff className="h-4 w-4 text-red-400" /> Offline</span>
               )}
               <Button
                 variant="outline"
                 size="sm"
-                className="border-pink-500/40 text-pink-400 hover:bg-pink-500/10"
+                className="border-gold/40 text-gold hover:bg-gold/10"
                 onClick={exportResult}
                 disabled={!result}
               >
                 <Download className="h-3 w-3 mr-1" /> Export
               </Button>
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2 bg-slate-900/50 border-pink-500/30">
+            <Card className="lg:col-span-2 bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-pink-300 flex items-center gap-2">
                   <Brain className="h-5 w-5" /> Reflect & Analyze
@@ -221,7 +220,7 @@ export default function EmotionCheckPage() {
                     onChange={(event) => setJournalText(event.target.value)}
                     placeholder="I felt..."
                     rows={6}
-                    className="bg-slate-950 border-slate-800 text-slate-100"
+                    className="bg-card border-border text-muted-foreground"
                   />
                 </div>
 
@@ -234,7 +233,7 @@ export default function EmotionCheckPage() {
                       max={10}
                       min={0}
                     />
-                    <p className="text-xs text-slate-500 mt-1">{energy} / 10</p>
+                    <p className="text-xs text-muted-foreground mt-1">{energy} / 10</p>
                   </div>
                   <div>
                     <Label>Focus Level</Label>
@@ -244,7 +243,7 @@ export default function EmotionCheckPage() {
                       max={10}
                       min={0}
                     />
-                    <p className="text-xs text-slate-500 mt-1">{focus} / 10</p>
+                    <p className="text-xs text-muted-foreground mt-1">{focus} / 10</p>
                   </div>
                 </div>
 
@@ -258,7 +257,7 @@ export default function EmotionCheckPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/50 border-pink-500/30">
+            <Card className="bg-card/50 border-pink-500/30">
               <CardHeader>
                 <CardTitle className="text-pink-300 flex items-center gap-2">
                   {emotionIcon}
@@ -269,23 +268,23 @@ export default function EmotionCheckPage() {
                 {result ? (
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Primary Emotion</p>
-                      <p className="text-lg font-semibold text-white capitalize">{result.primary_emotion}</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Emotion</p>
+                      <p className="text-lg font-semibold text-foreground capitalize">{result.primary_emotion}</p>
                       <Badge className="mt-1 bg-pink-500/20 text-pink-200 border-pink-500/40">
                         {result.emotion_category}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-400">Sentiment Score</span>
-                      <span className="text-sm font-semibold text-white">{result.sentiment_score.toFixed(2)}</span>
+                      <span className="text-sm text-muted-foreground">Sentiment Score</span>
+                      <span className="text-sm font-semibold text-foreground">{result.sentiment_score.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-400">Intensity</span>
-                      <span className="text-sm font-semibold text-white">{(result.intensity * 100).toFixed(0)}%</span>
+                      <span className="text-sm text-muted-foreground">Intensity</span>
+                      <span className="text-sm font-semibold text-foreground">{(result.intensity * 100).toFixed(0)}%</span>
                     </div>
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">Recommended Response</p>
-                      <p className="text-sm text-slate-300">{result.recommended_response}</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Recommended Response</p>
+                      <p className="text-sm text-muted-foreground">{result.recommended_response}</p>
                     </div>
                     {result.risk_flags.length > 0 && (
                       <div>
@@ -303,7 +302,7 @@ export default function EmotionCheckPage() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-muted-foreground">
                     Share how you&apos;re feeling to see a quick emotional snapshot.
                   </p>
                 )}
@@ -312,7 +311,7 @@ export default function EmotionCheckPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-            <Card className="bg-slate-900/50 border-pink-500/20">
+            <Card className="bg-card/50 border-pink-500/20">
               <CardHeader>
                 <CardTitle className="text-pink-300 flex items-center gap-2">
                   <Sparkles className="h-5 w-5" /> Uplifts
@@ -327,12 +326,12 @@ export default function EmotionCheckPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-400">No positive highlights yet — share a win to capture it here.</p>
+                  <p className="text-sm text-muted-foreground">No positive highlights yet — share a win to capture it here.</p>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/50 border-pink-500/20">
+            <Card className="bg-card/50 border-pink-500/20">
               <CardHeader>
                 <CardTitle className="text-pink-300 flex items-center gap-2">
                   <CloudLightning className="h-5 w-5" /> Watch Outs
@@ -347,14 +346,14 @@ export default function EmotionCheckPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-400">No concerns flagged. Keep listening to how you feel.</p>
+                  <p className="text-sm text-muted-foreground">No concerns flagged. Keep listening to how you feel.</p>
                 )}
               </CardContent>
             </Card>
           </div>
 
           {history.length > 0 && (
-            <Card className="mt-8 bg-slate-900/60 border-pink-500/20">
+            <Card className="mt-8 bg-card/60 border-pink-500/20">
               <CardHeader>
                 <CardTitle className="text-pink-300 flex items-center gap-2">
                   <History className="h-5 w-5" /> Recent Snapshots
@@ -364,11 +363,11 @@ export default function EmotionCheckPage() {
                 {history.slice(0, MAX_HISTORY).map((entry) => (
                   <div
                     key={entry.timestamp}
-                    className="p-3 border border-slate-800 rounded-lg flex flex-wrap items-center justify-between gap-2"
+                    className="p-3 border border-border rounded-lg flex flex-wrap items-center justify-between gap-2"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white capitalize truncate">{entry.summary}</p>
-                      <p className="text-xs text-slate-500">{new Date(entry.timestamp).toLocaleString()}</p>
+                      <p className="text-sm font-semibold text-foreground capitalize truncate">{entry.summary}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(entry.timestamp).toLocaleString()}</p>
                     </div>
                     <Badge className="bg-pink-500/20 text-pink-200 border-pink-500/40">
                       {(entry.result.sentiment_score * 100).toFixed(0)} mood
@@ -378,9 +377,9 @@ export default function EmotionCheckPage() {
               </CardContent>
             </Card>
           )}
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

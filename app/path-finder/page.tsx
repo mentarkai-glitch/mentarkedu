@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -42,10 +43,33 @@ import {
   AlertCircle,
   ChevronRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Smartphone,
+  Building,
+  Palette,
+  Heart,
+  Wrench,
+  Zap,
+  Brain,
+  Calculator,
+  Microscope,
+  Stethoscope,
+  Laptop,
+  Paintbrush,
+  MapPin,
+  Home,
+  Plane,
+  Monitor,
+  Gamepad2,
+  TrendingDown,
+  Shield,
+  HelpCircle,
+  Star,
+  CheckCircle
 } from 'lucide-react';
 import { pathFinderQuestions, type Language } from '@/lib/data/path-finder-questions';
 import { calculateResult, type QuizAnswer, type QuizResult } from '@/lib/utils/path-finder-scoring';
+import { generateExpandedCareerOpportunities, type ExpandedCareerOpportunity } from '@/lib/utils/enhanced-results';
 import { trackEvent, initPostHog, trackPageView } from '@/lib/services/analytics';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -178,18 +202,229 @@ const translations = {
 const STORAGE_KEY = 'mentark-path-finder-progress';
 const STORAGE_EXPIRY = 30 * 60 * 1000; // 30 minutes
 
+// Lazy load chart components
+const RadarChart = dynamic(
+  () => import('recharts').then((mod) => mod.RadarChart),
+  { ssr: false }
+);
+const Radar = dynamic(
+  () => import('recharts').then((mod) => mod.Radar),
+  { ssr: false }
+);
+const PolarGrid = dynamic(
+  () => import('recharts').then((mod) => mod.PolarGrid),
+  { ssr: false }
+);
+const PolarAngleAxis = dynamic(
+  () => import('recharts').then((mod) => mod.PolarAngleAxis),
+  { ssr: false }
+);
+const PolarRadiusAxis = dynamic(
+  () => import('recharts').then((mod) => mod.PolarRadiusAxis),
+  { ssr: false }
+);
+const BarChart = dynamic(
+  () => import('recharts').then((mod) => mod.BarChart),
+  { ssr: false }
+);
+const Bar = dynamic(
+  () => import('recharts').then((mod) => mod.Bar),
+  { ssr: false }
+);
+const Cell = dynamic(
+  () => import('recharts').then((mod) => mod.Cell),
+  { ssr: false }
+);
+const XAxis = dynamic(
+  () => import('recharts').then((mod) => mod.XAxis),
+  { ssr: false }
+);
+const YAxis = dynamic(
+  () => import('recharts').then((mod) => mod.YAxis),
+  { ssr: false }
+);
+const Tooltip = dynamic(
+  () => import('recharts').then((mod) => mod.Tooltip),
+  { ssr: false }
+);
+const ResponsiveContainer = dynamic(
+  () => import('recharts').then((mod) => mod.ResponsiveContainer),
+  { ssr: false }
+);
+// html2canvas will be imported dynamically in the function
+
+// Calculate Aptitude DNA scores for Radar Chart
+const calculateAptitudeDNA = (answers: QuizAnswer[], traitScores: any) => {
+  try {
+  // Logic: Q3 (Broken Phone) + Q8 (Math)
+  const q3Answer = answers.find(a => a.question_id === 'q3')?.answer as string || '';
+  const q8Answer = answers.find(a => a.question_id === 'q8')?.answer as string || '';
+  let logicScore = traitScores.logical || 0;
+  if (q3Answer.includes('Google') || q3Answer.includes('repair')) logicScore += 20;
+  if (q8Answer === 'I love the challenge. I fight it until I get the answer') logicScore += 30;
+  else if (q8Answer === 'I can do it if I have the formula, but I don\'t love it') logicScore += 10;
+
+  // Creativity: Q1 (Feed) + Q2 (Fest Role)
+  const q1Answer = answers.find(a => a.question_id === 'q1')?.answer as string || '';
+  const q2Answer = answers.find(a => a.question_id === 'q2')?.answer as string || '';
+  let creativityScore = traitScores.creative || 0;
+  if (q1Answer.includes('Art') || q1Answer.includes('dance') || q1Answer.includes('music')) creativityScore += 20;
+  if (q2Answer.includes('Designing') || q2Answer.includes('poster')) creativityScore += 20;
+
+  // Social: Q15 (Interaction)
+  const q15Answer = answers.find(a => a.question_id === 'q15')?.answer as string || '';
+  let socialScore = traitScores.people || 0;
+  if (q15Answer === 'All day. I love meeting new people') socialScore += 30;
+  else if (q15Answer === 'Sometimes, but I need quiet time to focus') socialScore += 10;
+
+  // Resilience: Q16 (Study Tolerance)
+  const q16Answer = answers.find(a => a.question_id === 'q16')?.answer as string || '';
+  let resilienceScore = 0;
+  if (q16Answer === 'Yes, I am ready to grind for my goal') resilienceScore = 100;
+  else if (q16Answer === 'Maybe, but I might burn out') resilienceScore = 60;
+  else if (q16Answer === 'No, I prefer a balanced life with hobbies') resilienceScore = 30;
+  else if (q16Answer === 'Absolutely not') resilienceScore = 10;
+
+  // Financial: Q13 (₹1 Lakh) + Q18 (Budget)
+  const q13Answer = answers.find(a => a.question_id === 'q13')?.answer as string || '';
+  const q18Answer = answers.find(a => a.question_id === 'q18')?.answer as string || '';
+  let financialScore = 0;
+  if (q13Answer.includes('Buy and resell') || q13Answer.includes('profit')) financialScore += 30;
+  if (q18Answer.includes('₹15 Lakhs+')) financialScore += 20;
+  else if (q18Answer.includes('₹5 - ₹10')) financialScore += 15;
+  else if (q18Answer.includes('₹2 - ₹5')) financialScore += 10;
+
+  // Normalize scores to 0-100
+  const maxScore = Math.max(logicScore, creativityScore, socialScore, resilienceScore, financialScore, 1);
+  return [
+    { axis: 'Logic', value: Math.min(100, (logicScore / maxScore) * 100) },
+    { axis: 'Creativity', value: Math.min(100, (creativityScore / maxScore) * 100) },
+    { axis: 'Social', value: Math.min(100, (socialScore / maxScore) * 100) },
+    { axis: 'Resilience', value: resilienceScore },
+    { axis: 'Financial', value: Math.min(100, financialScore) }
+  ];
+  } catch (error) {
+    console.error('Error calculating Aptitude DNA:', error);
+    // Return default scores on error
+    return [
+      { axis: 'Logic', value: 50 },
+      { axis: 'Creativity', value: 50 },
+      { axis: 'Social', value: 50 },
+      { axis: 'Resilience', value: 50 },
+      { axis: 'Financial', value: 50 }
+    ];
+  }
+};
+
+// Calculate Stream Fit scores for Bar Chart
+const calculateStreamFit = (traitScores: any, answers: QuizAnswer[]) => {
+  try {
+    const q8Answer = answers.find(a => a.question_id === 'q8')?.answer as string || '';
+    const q6Answers = answers.find(a => a.question_id === 'q6')?.answer as string[] || [];
+    const q16Answer = answers.find(a => a.question_id === 'q16')?.answer as string || '';
+    
+    // Base scores from traits
+    let pcmScore = (traitScores.logical || 0) * 2 + (traitScores.handsOn || 0);
+    let pcbScore = (traitScores.logical || 0) + (traitScores.people || 0) * 2;
+    let commerceScore = (traitScores.leader || 0) * 2 + (traitScores.logical || 0);
+    let humanitiesScore = (traitScores.creative || 0) * 2 + (traitScores.people || 0);
+    let vocationalScore = (traitScores.handsOn || 0) * 2 + (traitScores.creative || 0);
+
+    // Boost PCM if high math
+    if (q8Answer === 'I love the challenge. I fight it until I get the answer') pcmScore += 30;
+
+    // Kill PCB if avoids medical
+    if (q6Answers.includes('Dealing with blood, needles, or sick people')) pcbScore = Math.max(0, pcbScore - 40);
+
+    // Adjust based on study tolerance
+    if (q16Answer === 'Yes, I am ready to grind for my goal') {
+      pcmScore += 20;
+      pcbScore += 20;
+    } else if (q16Answer === 'Absolutely not') {
+      pcmScore = Math.max(0, pcmScore - 30);
+      pcbScore = Math.max(0, pcbScore - 30);
+      vocationalScore += 20;
+    }
+
+    // Normalize to 0-100
+    const maxScore = Math.max(pcmScore, pcbScore, commerceScore, humanitiesScore, vocationalScore, 1);
+    return [
+      { stream: 'Science (PCM)', score: Math.min(100, (pcmScore / maxScore) * 100) },
+      { stream: 'Science (PCB)', score: Math.min(100, (pcbScore / maxScore) * 100) },
+      { stream: 'Commerce', score: Math.min(100, (commerceScore / maxScore) * 100) },
+      { stream: 'Humanities', score: Math.min(100, (humanitiesScore / maxScore) * 100) },
+      { stream: 'Vocational', score: Math.min(100, (vocationalScore / maxScore) * 100) }
+    ];
+  } catch (error) {
+    console.error('Error calculating Stream Fit:', error);
+    // Return default scores on error
+    return [
+      { stream: 'Science (PCM)', score: 50 },
+      { stream: 'Science (PCB)', score: 50 },
+      { stream: 'Commerce', score: 50 },
+      { stream: 'Humanities', score: 50 },
+      { stream: 'Vocational', score: 50 }
+    ];
+  }
+};
+
 export default function PathFinderPage() {
   const [language, setLanguage] = useState<Language>('en');
   const [pageState, setPageState] = useState<PageState>('welcome');
   const [studentName, setStudentName] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [currentLevel, setCurrentLevel] = useState(0); // 0: Q1-Q7, 1: Q8-Q15, 2: Q16-Q25
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [result, setResult] = useState<QuizResult | null>(null);
   const [roadmap, setRoadmap] = useState<any>(null);
   const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
   const [showRoadmap, setShowRoadmap] = useState(false);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const [levelCompleted, setLevelCompleted] = useState<number | null>(null);
+  const [expandedChart, setExpandedChart] = useState<'radar' | 'bar' | null>(null);
+  const [chartError, setChartError] = useState<string | null>(null);
 
   const t = translations[language];
+
+  // Level calculation: 0 (Q1-Q7), 1 (Q8-Q15), 2 (Q16-Q25)
+  const getCurrentLevel = (questionIndex: number): number => {
+    if (questionIndex < 7) return 0; // Level 1: The Vibe Check
+    if (questionIndex < 15) return 1; // Level 2: The Reality Check
+    return 2; // Level 3: The Future Vision
+  };
+
+  const getLevelInfo = (level: number) => {
+    const levels = [
+      { name: 'The Vibe Check', start: 0, end: 6, total: 7 },
+      { name: 'The Reality Check', start: 7, end: 14, total: 8 },
+      { name: 'The Future Vision', start: 15, end: 24, total: 10 }
+    ];
+    return levels[level] || levels[0];
+  };
+
+  const getQuestionsInLevel = (level: number): number => {
+    const info = getLevelInfo(level);
+    return info.total;
+  };
+
+  const getProgressInLevel = (questionIndex: number): { current: number; total: number } => {
+    const level = getCurrentLevel(questionIndex);
+    const info = getLevelInfo(level);
+    const current = questionIndex - info.start + 1;
+    return { current, total: info.total };
+  };
+
+  useEffect(() => {
+    // Update currentLevel when currentQuestion changes
+    setCurrentLevel(getCurrentLevel(currentQuestion));
+  }, [currentQuestion]);
+
+  useEffect(() => {
+    // Track chart views
+    if (expandedChart) {
+      trackEvent('chart_viewed', { chart_type: expandedChart, language });
+    }
+  }, [expandedChart, language]);
 
   useEffect(() => {
     initPostHog();
@@ -200,6 +435,12 @@ export default function PathFinderPage() {
       utm_medium: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_medium') : null
     });
 
+    // Load animations preference
+    const savedAnimations = localStorage.getItem('mentark-animations-enabled');
+    if (savedAnimations !== null) {
+      setAnimationsEnabled(savedAnimations === 'true');
+    }
+
     // Check for saved progress
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -207,13 +448,21 @@ export default function PathFinderPage() {
         const data = JSON.parse(saved);
         if (Date.now() - data.timestamp < STORAGE_EXPIRY) {
           setAnswers(data.answers);
-          setCurrentQuestion(data.currentQuestion);
+          setCurrentQuestion(data.currentQuestion || 0);
+          const savedLevel = data.currentLevel !== undefined ? data.currentLevel : getCurrentLevel(data.currentQuestion || 0);
+          setCurrentLevel(savedLevel);
           setStudentName(data.studentName || '');
           if (data.result) {
             setResult(data.result);
             setPageState('results');
           } else if (data.answers.length > 0) {
             setPageState('quiz');
+            // Show resume message
+            const levelInfo = getLevelInfo(savedLevel);
+            toast.info(`Resuming Level ${savedLevel + 1}: ${levelInfo.name}`, {
+              duration: 3000,
+              description: `You were on question ${data.currentQuestion + 1} of ${pathFinderQuestions.length}`
+            });
           }
         }
       } catch (e) {
@@ -226,10 +475,16 @@ export default function PathFinderPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       answers,
       currentQuestion,
+      currentLevel,
       studentName,
       result,
       timestamp: Date.now()
     }));
+  };
+
+  const handleAnimationsToggle = (enabled: boolean) => {
+    setAnimationsEnabled(enabled);
+    localStorage.setItem('mentark-animations-enabled', String(enabled));
   };
 
   const handleStart = () => {
@@ -265,7 +520,9 @@ export default function PathFinderPage() {
   const handleMultiSelect = (questionId: string, option: string) => {
     const currentAnswer = getCurrentAnswer(questionId);
     const selectedOptions = Array.isArray(currentAnswer) ? currentAnswer : [];
-    const maxSelections = (questionId === 'q8') ? 3 : 999; // q8 has max 3, others unlimited
+    const maxSelections = questionId === 'q6' ? 3 // Q6: Ick List - max 3
+      : questionId === 'q8' ? 3 // Q8: Subject Interest - max 3 (old question, but keeping for compatibility)
+      : 999; // Others unlimited
     
     if (selectedOptions.includes(option)) {
       // Remove if already selected
@@ -282,8 +539,26 @@ export default function PathFinderPage() {
   };
 
   const handleNext = () => {
-    if (currentQuestion < pathFinderQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+    const currentLevelBefore = getCurrentLevel(currentQuestion);
+    const nextQuestion = currentQuestion + 1;
+    
+    if (nextQuestion < pathFinderQuestions.length) {
+      const nextLevel = getCurrentLevel(nextQuestion);
+      
+      // Check if we're completing a level
+      if (nextLevel > currentLevelBefore) {
+        // Level completed!
+        setLevelCompleted(currentLevelBefore);
+        trackEvent('level_completed', { level: currentLevelBefore, language });
+        
+        // Clear the completion animation after 2 seconds
+        setTimeout(() => {
+          setLevelCompleted(null);
+          setCurrentQuestion(nextQuestion);
+        }, animationsEnabled ? 2000 : 0);
+      } else {
+        setCurrentQuestion(nextQuestion);
+      }
     } else {
       handleFinish();
     }
@@ -519,8 +794,106 @@ export default function PathFinderPage() {
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
+  const handleGenerateShareableCard = async () => {
+    try {
+      setChartError(null);
+      const cardElement = document.getElementById('shareable-card');
+      if (!cardElement) {
+        toast.error('Card element not found');
+        return;
+      }
+
+      // Show loading state
+      toast.loading('Generating your shareable card...', { id: 'generating-card' });
+
+      // Dynamically import html2canvas
+      const html2canvasModule = await import('html2canvas');
+      const canvas = await html2canvasModule.default(cardElement, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false
+      });
+
+      // Convert to image and download
+      const link = document.createElement('a');
+      link.download = `mentark-path-finder-${studentName || 'results'}-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      toast.success('Card downloaded! Share it on Instagram or social media.', { id: 'generating-card' });
+      trackEvent('share_card_generated', { 
+        stream: result?.stream,
+        hasName: !!studentName,
+        language 
+      });
+    } catch (error) {
+      console.error('Error generating shareable card:', error);
+      toast.error('Failed to generate card. Please try again.', { id: 'generating-card' });
+      setChartError('Failed to generate shareable card');
+    }
+  };
+
   const getCurrentAnswer = (questionId: string) => {
     return answers.find(a => a.question_id === questionId)?.answer;
+  };
+
+  // Icon mapping for card selectors
+  const getOptionIcon = (option: string, questionId: string): React.ReactNode => {
+    const lowerOption = option.toLowerCase();
+    
+    // Q1: Scroll Test
+    if (questionId === 'q1') {
+      if (lowerOption.includes('tech') || lowerOption.includes('coding') || lowerOption.includes('how things work')) return <Smartphone className="h-5 w-5" />;
+      if (lowerOption.includes('finance') || lowerOption.includes('stock') || lowerOption.includes('ceo') || lowerOption.includes('business')) return <TrendingUp className="h-5 w-5" />;
+      if (lowerOption.includes('art') || lowerOption.includes('dance') || lowerOption.includes('music') || lowerOption.includes('fashion') || lowerOption.includes('movie')) return <Palette className="h-5 w-5" />;
+      if (lowerOption.includes('psychology') || lowerOption.includes('history') || lowerOption.includes('social')) return <BookOpen className="h-5 w-5" />;
+      if (lowerOption.includes('gaming') || lowerOption.includes('memes') || lowerOption.includes('entertainment')) return <Gamepad2 className="h-5 w-5" />;
+      if (lowerOption.includes("don't use social")) return <Shield className="h-5 w-5" />;
+    }
+    
+    // Q2: School Fest
+    if (questionId === 'q2') {
+      if (lowerOption.includes('budget') || lowerOption.includes('ticket') || lowerOption.includes('sponsorship')) return <DollarSign className="h-5 w-5" />;
+      if (lowerOption.includes('design') || lowerOption.includes('poster') || lowerOption.includes('social media')) return <Paintbrush className="h-5 w-5" />;
+      if (lowerOption.includes('sound') || lowerOption.includes('lighting') || lowerOption.includes('electrical')) return <Zap className="h-5 w-5" />;
+      if (lowerOption.includes('host') || lowerOption.includes('emcee') || lowerOption.includes('guest')) return <Users className="h-5 w-5" />;
+    }
+    
+    // Q3: Broken Phone
+    if (questionId === 'q3') {
+      if (lowerOption.includes('google') || lowerOption.includes('repair') || lowerOption.includes('reboot')) return <Wrench className="h-5 w-5" />;
+      if (lowerOption.includes('calculate') || lowerOption.includes('money') || lowerOption.includes('save')) return <Calculator className="h-5 w-5" />;
+      if (lowerOption.includes('call') || lowerOption.includes('friend') || lowerOption.includes('parent') || lowerOption.includes('panic')) return <Heart className="h-5 w-5" />;
+      if (lowerOption.includes('universe') || lowerOption.includes('detox')) return <Sparkles className="h-5 w-5" />;
+    }
+    
+    // Q4: Group Project
+    if (questionId === 'q4') {
+      if (lowerOption.includes('research') || lowerOption.includes('write') || lowerOption.includes('factual')) return <FileText className="h-5 w-5" />;
+      if (lowerOption.includes('powerpoint') || lowerOption.includes('beautiful') || lowerOption.includes('present')) return <Palette className="h-5 w-5" />;
+      if (lowerOption.includes('organize') || lowerOption.includes('team') || lowerOption.includes('deadline')) return <Target className="h-5 w-5" />;
+      if (lowerOption.includes('analyze') || lowerOption.includes('data') || lowerOption.includes('chart') || lowerOption.includes('graph')) return <TrendingUp className="h-5 w-5" />;
+    }
+    
+    // Q5: Flow State
+    if (questionId === 'q5') {
+      if (lowerOption.includes('math') || lowerOption.includes('coding')) return <Calculator className="h-5 w-5" />;
+      if (lowerOption.includes('reading') || lowerOption.includes('story') || lowerOption.includes('history') || lowerOption.includes('social')) return <BookOpen className="h-5 w-5" />;
+      if (lowerOption.includes('drawing') || lowerOption.includes('editing') || lowerOption.includes('video') || lowerOption.includes('music')) return <Palette className="h-5 w-5" />;
+      if (lowerOption.includes('biological') || lowerOption.includes('diagram') || lowerOption.includes('chemical')) return <Microscope className="h-5 w-5" />;
+    }
+    
+    // Default icons based on keywords
+    if (lowerOption.includes('tech') || lowerOption.includes('code') || lowerOption.includes('computer')) return <Code className="h-5 w-5" />;
+    if (lowerOption.includes('business') || lowerOption.includes('money') || lowerOption.includes('profit')) return <DollarSign className="h-5 w-5" />;
+    if (lowerOption.includes('creative') || lowerOption.includes('art') || lowerOption.includes('design')) return <Palette className="h-5 w-5" />;
+    if (lowerOption.includes('people') || lowerOption.includes('help') || lowerOption.includes('social')) return <Users className="h-5 w-5" />;
+    if (lowerOption.includes('science') || lowerOption.includes('research') || lowerOption.includes('lab')) return <Microscope className="h-5 w-5" />;
+    if (lowerOption.includes('medical') || lowerOption.includes('doctor') || lowerOption.includes('health')) return <Stethoscope className="h-5 w-5" />;
+    if (lowerOption.includes('lead') || lowerOption.includes('organize') || lowerOption.includes('manage')) return <Target className="h-5 w-5" />;
+    if (lowerOption.includes('learn') || lowerOption.includes('study') || lowerOption.includes('education')) return <GraduationCap className="h-5 w-5" />;
+    
+    return <CheckCircle className="h-5 w-5" />; // Default icon
   };
 
   const canProceed = () => {
@@ -584,28 +957,150 @@ export default function PathFinderPage() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -40 }}
-            className="container mx-auto px-4 pt-20 pb-12 text-center"
+            className="container mx-auto px-4 pt-20 pb-12"
           >
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2 }}
+              className="text-center mb-12"
             >
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl leading-tight mb-4">
                 {t.welcome.title}
               </h1>
-              <p className="text-xl sm:text-2xl text-slate-300 mb-8">
-                {t.welcome.tagline}
+              <p className="text-xl sm:text-2xl text-slate-300 mb-4">
+                Choose your diagnostic test
               </p>
-              <Button
-                size="lg"
-                onClick={handleStart}
-                className="bg-gradient-cyan-blue text-black font-semibold h-[52px] px-8 text-lg"
-              >
-                {t.welcome.cta}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 mb-8">
+                {t.welcome.badge}
+              </Badge>
             </motion.div>
+            
+            {/* Test Selection Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-8">
+              {/* Standard Path Finder */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="border-slate-700/70 bg-slate-900/40 hover:border-cyan-500/50 transition-all cursor-pointer h-full"
+                  onClick={handleStart}
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Target className="h-8 w-8 text-cyan-400" />
+                      <CardTitle className="text-2xl">Standard Path Finder</CardTitle>
+                    </div>
+                    <CardDescription>
+                      For Class 10 students discovering their ideal stream
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <Clock className="h-4 w-4" />
+                      <span>~25 questions • 5-8 minutes</span>
+                    </div>
+                    <ul className="text-sm text-slate-300 space-y-2 text-left">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                        <span>Stream recommendation (Science/Commerce/Arts)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                        <span>Career path suggestions</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                        <span>College recommendations</span>
+                      </li>
+                    </ul>
+                    <Button
+                      className="w-full bg-gradient-cyan-blue text-black font-semibold mt-4"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStart();
+                      }}
+                    >
+                      {t.welcome.cta}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* NEET Diagnostic Test */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Card className="border-slate-700/70 bg-slate-900/40 hover:border-teal-500/50 transition-all cursor-pointer h-full"
+                  onClick={() => window.location.href = '/path-finder/neet'}
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Stethoscope className="h-8 w-8 text-teal-400" />
+                      <CardTitle className="text-2xl">NEET Diagnostic Test</CardTitle>
+                    </div>
+                    <CardDescription>
+                      High-stakes diagnostic for NEET aspirants with Plan A & Plan B
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <Clock className="h-4 w-4" />
+                      <span>~25 questions • 8-12 minutes</span>
+                    </div>
+                    <ul className="text-sm text-slate-300 space-y-2 text-left">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                        <span>NEET probability (Govt seat chances)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                        <span>Allied health career fit (Plan B)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                        <span>Subject-wise analysis & rank improvement</span>
+                      </li>
+                    </ul>
+                    <Button
+                      className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-semibold mt-4"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = '/path-finder/neet';
+                      }}
+                    >
+                      Start NEET Diagnostic
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Animation Toggle */}
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <Label htmlFor="animations-toggle" className="text-sm text-slate-400 cursor-pointer">
+                Enable animations
+              </Label>
+              <button
+                id="animations-toggle"
+                onClick={() => handleAnimationsToggle(!animationsEnabled)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  animationsEnabled ? 'bg-yellow-500' : 'bg-slate-700'
+                }`}
+                aria-label="Toggle animations"
+              >
+                <motion.div
+                  className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full"
+                  animate={animationsEnabled ? { x: 24 } : { x: 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              </button>
+            </div>
           </motion.section>
         )}
 
@@ -659,15 +1154,73 @@ export default function PathFinderPage() {
           </motion.section>
         )}
 
+        {/* Level Completion Animation */}
+        <AnimatePresence>
+          {levelCompleted !== null && animationsEnabled && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ y: 50 }}
+                animate={{ y: 0 }}
+                exit={{ y: 50 }}
+                className="text-center"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="mx-auto mb-4 w-20 h-20 rounded-full bg-gradient-to-r from-cyan-500 to-yellow-500 flex items-center justify-center"
+                >
+                  <CheckCircle2 className="h-10 w-10 text-white" />
+                </motion.div>
+                <h2 className="text-3xl font-bold text-white mb-2">
+                  Level {levelCompleted + 1} Complete! 🎉
+                </h2>
+                <p className="text-slate-300">
+                  {getLevelInfo(levelCompleted).name}
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {pageState === 'quiz' && (
           <motion.section
             key="quiz"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
+            initial={animationsEnabled ? { opacity: 0, x: 40 } : { opacity: 1, x: 0 }}
+            animate={animationsEnabled ? { opacity: 1, x: 0 } : { opacity: 1, x: 0 }}
+            exit={animationsEnabled ? { opacity: 0, x: -40 } : { opacity: 1, x: 0 }}
             className="container mx-auto px-4 pt-8 pb-12 max-w-2xl"
+            onKeyDown={(e) => {
+              // Keyboard navigation: Arrow keys to navigate, Enter to select
+              if (e.key === 'ArrowRight' && currentQuestion < pathFinderQuestions.length - 1) {
+                e.preventDefault();
+                handleNext();
+              } else if (e.key === 'ArrowLeft' && currentQuestion > 0) {
+                e.preventDefault();
+                handlePrevious();
+              }
+            }}
+            tabIndex={0}
           >
-            <div className="mb-6">
+            <div className="mb-6 space-y-3">
+              {/* Level Progress Indicator */}
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0">
+                  Level {currentLevel + 1}: {getLevelInfo(currentLevel).name}
+                </Badge>
+                <span className="text-sm text-slate-400">
+                  {(() => {
+                    const levelProgress = getProgressInLevel(currentQuestion);
+                    return `${levelProgress.current} / ${levelProgress.total} questions`;
+                  })()}
+                </span>
+              </div>
+              
+              {/* Overall Progress */}
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-slate-400">
                   {t.quiz.progress.replace('{current}', String(currentQuestion + 1)).replace('{total}', String(pathFinderQuestions.length))}
@@ -683,28 +1236,47 @@ export default function PathFinderPage() {
 
             <Card className="border-slate-700/70 bg-slate-900/40">
               <CardHeader>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-xl" id="question-title">
                   {pathFinderQuestions[currentQuestion].question[language]}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4" role="group" aria-labelledby="question-title">
                 {pathFinderQuestions[currentQuestion].type === 'single_choice' && (
                   <div className="space-y-3">
                     {pathFinderQuestions[currentQuestion].options?.[language].map((option, idx) => {
                       const questionId = pathFinderQuestions[currentQuestion].id;
                       const isSelected = getCurrentAnswer(questionId) === option;
+                      const icon = getOptionIcon(option, questionId);
                       return (
-                        <button
+                        <motion.button
                           key={idx}
                           onClick={() => handleAnswer(questionId, option)}
-                          className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleAnswer(questionId, option);
+                            }
+                          }}
+                          whileHover={animationsEnabled ? { scale: 1.02 } : {}}
+                          whileTap={animationsEnabled ? { scale: 0.98 } : {}}
+                          className={`w-full text-left p-4 rounded-lg border-2 transition-all flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
                             isSelected
-                              ? 'border-yellow-500 bg-yellow-500/10'
-                              : 'border-slate-700 hover:border-slate-600'
+                              ? 'border-yellow-500 bg-yellow-500/10 text-yellow-300'
+                              : 'border-slate-700 hover:border-slate-600 text-slate-200'
                           }`}
+                          aria-label={`Option ${idx + 1}: ${option}${isSelected ? ', selected' : ''}`}
+                          aria-pressed={isSelected}
+                          role="radio"
+                          tabIndex={0}
                         >
-                          {option}
-                        </button>
+                          <div className={`flex-shrink-0 ${isSelected ? 'text-yellow-400' : 'text-slate-400'}`}>
+                            {icon}
+                          </div>
+                          <span className="flex-1">{option}</span>
+                          {isSelected && (
+                            <CheckCircle2 className="h-5 w-5 text-yellow-400 flex-shrink-0" />
+                          )}
+                        </motion.button>
                       );
                     })}
                   </div>
@@ -733,42 +1305,60 @@ export default function PathFinderPage() {
                 {pathFinderQuestions[currentQuestion].type === 'multi_select' && (
                   <div className="space-y-3">
                     <p className="text-sm text-slate-400 mb-2">
-                      {pathFinderQuestions[currentQuestion].id === 'q8' 
+                      {pathFinderQuestions[currentQuestion].id === 'q6'
+                        ? 'Select up to 3 careers you want to avoid'
+                        : pathFinderQuestions[currentQuestion].id === 'q21'
+                        ? 'Select all subjects you enjoy'
+                        : pathFinderQuestions[currentQuestion].id === 'q8' 
                         ? 'Select up to 3 subjects'
-                        : pathFinderQuestions[currentQuestion].id === 'q13' || pathFinderQuestions[currentQuestion].id === 'q14' || pathFinderQuestions[currentQuestion].id === 'q15' || pathFinderQuestions[currentQuestion].id === 'q19' || pathFinderQuestions[currentQuestion].id === 'q22' || pathFinderQuestions[currentQuestion].id === 'q24'
-                        ? 'Select all that apply'
-                        : 'Select up to 3'}
+                        : 'Select all that apply'}
                     </p>
                     {pathFinderQuestions[currentQuestion].options?.[language].map((option, idx) => {
                       const questionId = pathFinderQuestions[currentQuestion].id;
                       const currentAnswer = getCurrentAnswer(questionId);
                       const selectedOptions = Array.isArray(currentAnswer) ? currentAnswer : [];
                       const isSelected = selectedOptions.includes(option);
-                      const maxSelections = (questionId === 'q8' || questionId === 'q13' || questionId === 'q14' || questionId === 'q15' || questionId === 'q19' || questionId === 'q22' || questionId === 'q24') 
-                        ? (questionId === 'q8' ? 3 : 999) 
-                        : 3;
+                      const maxSelections = questionId === 'q6' ? 3 
+                        : questionId === 'q8' ? 3
+                        : questionId === 'q21' ? 999
+                        : 999; // Most multi-select questions allow unlimited
                       const isDisabled = !isSelected && selectedOptions.length >= maxSelections;
                       
+                      const icon = getOptionIcon(option, questionId);
                       return (
-                        <button
+                        <motion.button
                           key={idx}
                           onClick={() => handleMultiSelect(questionId, option)}
+                          onKeyDown={(e) => {
+                            if ((e.key === 'Enter' || e.key === ' ') && !isDisabled) {
+                              e.preventDefault();
+                              handleMultiSelect(questionId, option);
+                            }
+                          }}
                           disabled={isDisabled}
-                          className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                          whileHover={!isDisabled && animationsEnabled ? { scale: 1.02 } : {}}
+                          whileTap={!isDisabled && animationsEnabled ? { scale: 0.98 } : {}}
+                          className={`w-full text-left p-4 rounded-lg border-2 transition-all flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
                             isSelected
-                              ? 'border-yellow-500 bg-yellow-500/10'
+                              ? 'border-yellow-500 bg-yellow-500/10 text-yellow-300'
                               : isDisabled
-                              ? 'border-slate-800 bg-slate-800/50 opacity-50 cursor-not-allowed'
-                              : 'border-slate-700 hover:border-slate-600'
+                              ? 'border-slate-800 bg-slate-800/50 opacity-50 cursor-not-allowed text-slate-500'
+                              : 'border-slate-700 hover:border-slate-600 text-slate-200'
                           }`}
+                          aria-label={`Option ${idx + 1}: ${option}${isSelected ? ', selected' : ''}${isDisabled ? ', disabled' : ''}`}
+                          aria-pressed={isSelected}
+                          aria-disabled={isDisabled}
+                          role="checkbox"
+                          tabIndex={isDisabled ? -1 : 0}
                         >
-                          <div className="flex items-center justify-between">
-                            <span>{option}</span>
-                            {isSelected && (
-                              <CheckCircle2 className="h-5 w-5 text-yellow-500" />
-                            )}
+                          <div className={`flex-shrink-0 ${isSelected ? 'text-yellow-400' : 'text-slate-400'}`}>
+                            {icon}
                           </div>
-                        </button>
+                          <span className="flex-1">{option}</span>
+                          {isSelected && (
+                            <CheckCircle2 className="h-5 w-5 text-yellow-400 flex-shrink-0" />
+                          )}
+                        </motion.button>
                       );
                     })}
                     {Array.isArray(getCurrentAnswer(pathFinderQuestions[currentQuestion].id)) && pathFinderQuestions[currentQuestion].id === 'q8' && (
@@ -800,6 +1390,13 @@ export default function PathFinderPage() {
                     onClick={handlePrevious}
                     disabled={currentQuestion === 0}
                     className="flex-1"
+                    aria-label={`Go to previous question${currentQuestion === 0 ? ' (disabled)' : ''}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (currentQuestion > 0) handlePrevious();
+                      }
+                    }}
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t.quiz.previous}
@@ -808,6 +1405,15 @@ export default function PathFinderPage() {
                     onClick={handleNext}
                     disabled={!canProceed()}
                     className="flex-1 bg-gradient-cyan-blue text-black"
+                    aria-label={currentQuestion === pathFinderQuestions.length - 1 
+                      ? 'Finish quiz and see results' 
+                      : `Go to next question${!canProceed() ? ' (please answer first)' : ''}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (canProceed()) handleNext();
+                      }
+                    }}
                   >
                     {currentQuestion === pathFinderQuestions.length - 1 ? t.quiz.finish : t.quiz.next}
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -823,16 +1429,121 @@ export default function PathFinderPage() {
             key="results"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            className="container mx-auto px-4 pt-8 pb-12"
+            className="container mx-auto px-4 pt-4 pb-12"
           >
-            <div className="text-center mb-8">
-              {studentName && (
-                <h2 className="text-3xl font-bold mb-2">
-                  {language === 'hi' ? `नमस्ते ${studentName}!` : language === 'mr' ? `नमस्कार ${studentName}!` : `Hi ${studentName}!`} Let's find your path!
-                </h2>
-              )}
-              <p className="text-slate-300">Your personalized results are ready</p>
-            </div>
+            {/* SECTION 1: HERO HEADER */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative mb-12 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-yellow-500/20"
+            >
+              {/* Decorative gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-transparent to-cyan-500/10" />
+              
+              <div className="relative px-6 py-12 text-center">
+                {studentName && (
+                  <motion.h1
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-4xl sm:text-5xl md:text-6xl font-poppins font-bold mb-4 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 bg-clip-text text-transparent"
+                  >
+                    {language === 'hi' ? `🎉 नमस्ते ${studentName}!` : language === 'mr' ? `🎉 नमस्कार ${studentName}!` : `🎉 Hi ${studentName}!`}
+                  </motion.h1>
+                )}
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-xl sm:text-2xl text-slate-200 font-medium mb-2"
+                >
+                  {language === 'hi' ? 'आपका रास्ता तैयार है!' : language === 'mr' ? 'तुमचा मार्ग तयार आहे!' : 'Your Path is Ready!'}
+                </motion.p>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-base sm:text-lg text-slate-300 mb-8 max-w-2xl mx-auto"
+                >
+                  {language === 'hi' 
+                    ? 'आपकी अनूठी शक्तियों के आधार पर, यहाँ आपकी व्यक्तिगत 2-वर्षीय सफलता की रोडमैप है' 
+                    : language === 'mr' 
+                    ? 'तुमच्या अनोख्या शक्तींच्या आधारावर, येथे तुमचा वैयक्तिक 2-वर्षीय यशाचा रोडमॅप आहे'
+                    : 'Based on your unique strengths, here\'s your personalized 2-year roadmap to success'}
+                </motion.p>
+                
+                {/* Hero CTAs */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+                >
+                  {!showRoadmap ? (
+                    <Button
+                      size="lg"
+                      onClick={handleBuildRoadmap}
+                      disabled={isLoadingRoadmap}
+                      className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold text-lg px-8 py-6 h-auto hover:from-yellow-300 hover:to-yellow-400 shadow-lg shadow-yellow-500/50"
+                    >
+                      {isLoadingRoadmap ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          {t.roadmap.loading}
+                        </>
+                      ) : (
+                        <>
+                          <Rocket className="mr-2 h-5 w-5" />
+                          {language === 'hi' ? 'अपना 2-वर्षीय रोडमैप बनाएं' : language === 'mr' ? 'तुमचा 2-वर्षीय रोडमॅप तयार करा' : 'Build Your 2-Year Roadmap'}
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      onClick={() => {
+                        if (result && roadmap) {
+                          generatePDFReport({
+                            studentName: studentName || undefined,
+                            stream: result.stream,
+                            strengths: result.strengths,
+                            paths: result.paths,
+                            roadmap,
+                            language,
+                            result: result,
+                            aptitudeDNA: calculateAptitudeDNA(answers, result.traitScores),
+                            streamFit: calculateStreamFit(result.traitScores, answers),
+                            expandedOpportunities: generateExpandedCareerOpportunities(result.stream, result.traitScores, language),
+                            traitScores: result.traitScores,
+                            personalityInsights: result.personalityInsights,
+                            completeTraitProfile: result.completeTraitProfile,
+                            learningStyle: result.learningStyle,
+                            whoYouAreNow: result.whoYouAreNow,
+                            subjectRecommendations: result.subjectRecommendations
+                          });
+                          trackEvent('demo_download_report', { stream: result.stream });
+                          toast.success('Report downloaded successfully!');
+                        }
+                      }}
+                      className="bg-gradient-to-r from-cyan-400 to-cyan-500 text-black font-bold text-lg px-8 py-6 h-auto hover:from-cyan-300 hover:to-cyan-400 shadow-lg shadow-cyan-500/50"
+                    >
+                      <Download className="mr-2 h-5 w-5" />
+                      {language === 'hi' ? 'पूरी रिपोर्ट डाउनलोड करें' : language === 'mr' ? 'संपूर्ण अहवाल डाउनलोड करा' : 'Download Full Report (PDF)'}
+                    </Button>
+                  )}
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={handleShare}
+                    className="border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/10 font-semibold px-6 py-6 h-auto"
+                  >
+                    <Share2 className="mr-2 h-5 w-5" />
+                    {t.results.shareTeacher}
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
 
             <div className="grid gap-6 md:grid-cols-3 mb-8">
               {/* Strengths Card */}
@@ -843,7 +1554,7 @@ export default function PathFinderPage() {
               >
                 <Card className="border-slate-700/70 bg-slate-900/40 h-full">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-lg font-poppins font-semibold text-white">
                       <Sparkles className="h-5 w-5 text-yellow-300" />
                       {t.results.strengths}
                     </CardTitle>
@@ -851,12 +1562,12 @@ export default function PathFinderPage() {
                   <CardContent>
                     <div className="space-y-2">
                       {result.strengths.map((strength, idx) => (
-                        <Badge key={idx} className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
+                        <Badge key={idx} className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 font-medium text-sm px-3 py-1">
                           {strength}
                         </Badge>
                       ))}
                     </div>
-                    <p className="text-sm text-slate-400 mt-4">{t.results.strengthsSubtext}</p>
+                    <p className="text-sm text-slate-300 mt-4 font-medium">{t.results.strengthsSubtext}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -869,15 +1580,15 @@ export default function PathFinderPage() {
               >
                 <Card className="border-slate-700/70 bg-slate-900/40 h-full">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-lg font-poppins font-semibold text-white">
                       <Target className="h-5 w-5 text-teal-300" />
                       {t.results.stream}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <h3 className="text-2xl font-bold mb-2">{result.stream}</h3>
+                    <h3 className="text-2xl font-poppins font-bold mb-2 text-white">{result.stream}</h3>
                     <Badge
-                      className={`mb-4 ${
+                      className={`mb-4 font-medium ${
                         result.confidence === 'High'
                           ? 'bg-green-500/20 text-green-300 border-green-500/30'
                           : result.confidence === 'Medium'
@@ -887,7 +1598,7 @@ export default function PathFinderPage() {
                     >
                       Confidence: {result.confidence}
                     </Badge>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-300 font-medium">
                       {t.results.streamSubtext.replace('{reason}', result.strengths[0].toLowerCase())}
                     </p>
                   </CardContent>
@@ -902,7 +1613,7 @@ export default function PathFinderPage() {
               >
                 <Card className="border-slate-700/70 bg-slate-900/40 h-full">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-lg font-poppins font-semibold text-white">
                       <Rocket className="h-5 w-5 text-pink-300" />
                       {t.results.paths}
                     </CardTitle>
@@ -911,14 +1622,385 @@ export default function PathFinderPage() {
                     <div className="space-y-3">
                       {result.paths.map((path, idx) => (
                         <div key={idx} className="border-l-2 border-yellow-500 pl-3">
-                          <h4 className="font-semibold">{path.name}</h4>
-                          <p className="text-sm text-slate-400">{path.why}</p>
+                          <h4 className="font-poppins font-semibold text-white">{path.name}</h4>
+                          <p className="text-sm text-slate-300 font-medium">{path.why}</p>
                         </div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
+            </div>
+
+            {/* SECTION 3: VISUAL ANALYTICS - Enhanced with Larger Charts */}
+            <div className="space-y-8 mb-12">
+              {/* Aptitude DNA Radar Chart - Full Width, Larger */}
+              <Card className="border-slate-700/70 bg-slate-900/40 hover:border-yellow-500/50 transition-colors">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl font-poppins font-bold text-white">
+                    <Target className="h-6 w-6 text-yellow-300" />
+                    📊 Your Aptitude DNA
+                  </CardTitle>
+                  <CardDescription className="text-slate-300 font-medium text-base">Your core strengths across 5 dimensions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Text Summary for Screen Readers */}
+                  <div className="sr-only" aria-live="polite">
+                    <p>Your Aptitude DNA scores:</p>
+                    <ul>
+                      {calculateAptitudeDNA(answers, result.traitScores).map((item, idx) => (
+                        <li key={idx}>{item.axis}: {Math.round(item.value)}%</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                    <div className="w-full bg-slate-800/30 rounded-lg p-4" style={{ minHeight: '400px' }}>
+                      {(() => {
+                        try {
+                          const radarData = calculateAptitudeDNA(answers, result.traitScores);
+                          const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                          const chartData = isMobile 
+                            ? radarData.slice(0, 4) // Simplified for mobile
+                            : radarData;
+                          
+                          return (
+                            <div className="relative">
+                              <ResponsiveContainer width="100%" height={isMobile ? 350 : 450} minHeight={350}>
+                                <RadarChart 
+                                  data={chartData}
+                                  aria-label="Aptitude DNA Radar Chart showing your strengths across Logic, Creativity, Social, Resilience, and Financial dimensions"
+                                >
+                                  <PolarGrid stroke="#475569" strokeWidth={1} />
+                                  <PolarAngleAxis 
+                                    dataKey="axis" 
+                                    tick={{ fill: '#fbbf24', fontSize: isMobile ? 14 : 18, fontWeight: 700 }}
+                                    reversed={false}
+                                    scale="auto"
+                                  />
+                                  <PolarRadiusAxis 
+                                    angle={90} 
+                                    domain={[0, 100]}
+                                    tick={{ fill: '#eab308', fontSize: isMobile ? 12 : 14, fontWeight: 600 }}
+                                  />
+                                  <Radar
+                                    name="Aptitude"
+                                    dataKey="value"
+                                    stroke="#fbbf24"
+                                    strokeWidth={4}
+                                    fill="#fbbf24"
+                                    fillOpacity={0.9}
+                                  />
+                                  <Tooltip 
+                                    contentStyle={{ 
+                                      backgroundColor: '#1e293b', 
+                                      border: '1px solid #475569',
+                                      borderRadius: '8px'
+                                    }}
+                                  />
+                                </RadarChart>
+                              </ResponsiveContainer>
+                              <button
+                                onClick={() => setExpandedChart(expandedChart === 'radar' ? null : 'radar')}
+                                className="absolute top-2 right-2 p-2 bg-slate-800/80 rounded-lg hover:bg-slate-700 transition-colors"
+                                aria-label="Expand chart"
+                              >
+                                <ExternalLink className="h-4 w-4 text-slate-300" />
+                              </button>
+                            </div>
+                          );
+                        } catch (error) {
+                          console.error('Radar chart error:', error);
+                          setChartError('Charts unavailable, showing text results');
+                          return (
+                            <div className="text-center p-8 text-slate-400">
+                              <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                              <p>Chart unavailable. Your Aptitude DNA:</p>
+                              <div className="mt-4 space-y-2 text-left">
+                                {calculateAptitudeDNA(answers, result.traitScores).map((item, idx) => (
+                                  <div key={idx} className="flex justify-between">
+                                    <span>{item.axis}:</span>
+                                    <span className="font-semibold">{Math.round(item.value)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  </Suspense>
+                </CardContent>
+              </Card>
+
+              {/* Stream Fit Comparison Bar Chart - Full Width, Larger */}
+              <Card className="border-slate-700/70 bg-slate-900/40 hover:border-cyan-500/50 transition-colors">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl font-poppins font-bold text-white">
+                    <TrendingUp className="h-6 w-6 text-cyan-300" />
+                    📈 Stream Fit Comparison
+                  </CardTitle>
+                  <CardDescription className="text-slate-300 font-medium text-base">How well you fit each stream</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Text Summary for Screen Readers */}
+                  <div className="sr-only" aria-live="polite">
+                    <p>Stream Fit Scores:</p>
+                    <ul>
+                      {calculateStreamFit(result.traitScores, answers).map((item, idx) => (
+                        <li key={idx}>{item.stream}: {Math.round(item.score)}% fit{item.stream === result.stream ? ' (Recommended)' : ''}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                    <div className="w-full bg-slate-800/30 rounded-lg p-4" style={{ minHeight: '400px' }}>
+                      {(() => {
+                        try {
+                          const barData = calculateStreamFit(result.traitScores, answers);
+                          const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                          
+                          return (
+                            <div className="relative">
+                              <ResponsiveContainer width="100%" height={isMobile ? 350 : 450} minHeight={350}>
+                                <BarChart 
+                                  data={barData} 
+                                  layout={isMobile ? 'vertical' : 'horizontal'}
+                                  margin={{ top: 20, right: 40, left: isMobile ? 80 : 20, bottom: 20 }}
+                                  aria-label="Stream Fit Comparison Bar Chart showing how well you fit each stream: Science PCM, Science PCB, Commerce, Humanities, and Vocational"
+                                >
+                                  {isMobile ? (
+                                    <>
+                                      <XAxis type="number" domain={[0, 100]} tick={{ fill: '#eab308', fontSize: 14, fontWeight: 600 }} />
+                                      <YAxis 
+                                        type="category" 
+                                        dataKey="stream" 
+                                        tick={{ fill: '#fbbf24', fontSize: 14, fontWeight: 700 }}
+                                        width={120}
+                                      />
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XAxis 
+                                        type="category" 
+                                        dataKey="stream" 
+                                        tick={{ fill: '#fbbf24', fontSize: 16, fontWeight: 700 }}
+                                      />
+                                      <YAxis type="number" domain={[0, 100]} tick={{ fill: '#eab308', fontSize: 14, fontWeight: 600 }} />
+                                    </>
+                                  )}
+                                  <Tooltip 
+                                    contentStyle={{ 
+                                      backgroundColor: '#1e293b', 
+                                      border: '1px solid #475569',
+                                      borderRadius: '8px'
+                                    }}
+                                  />
+                                  <Bar 
+                                    dataKey="score" 
+                                    radius={[6, 6, 0, 0]}
+                                  >
+                                    {barData.map((entry, index) => {
+                                      const fillColor = entry.stream === result.stream 
+                                        ? '#fbbf24' 
+                                        : entry.score > 70 
+                                        ? '#22d3ee' 
+                                        : entry.score > 40 
+                                        ? '#eab308' 
+                                        : '#94a3b8';
+                                      return <Cell key={`cell-${index}`} fill={fillColor} stroke={fillColor} strokeWidth={3} />;
+                                    })}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                              <button
+                                onClick={() => setExpandedChart(expandedChart === 'bar' ? null : 'bar')}
+                                className="absolute top-2 right-2 p-2 bg-slate-800/80 rounded-lg hover:bg-slate-700 transition-colors"
+                                aria-label="Expand chart"
+                              >
+                                <ExternalLink className="h-4 w-4 text-slate-300" />
+                              </button>
+                            </div>
+                          );
+                        } catch (error) {
+                          console.error('Bar chart error:', error);
+                          setChartError('Charts unavailable, showing text results');
+                          return (
+                            <div className="text-center p-8 text-slate-400">
+                              <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                              <p>Chart unavailable. Stream Fit Scores:</p>
+                              <div className="mt-4 space-y-2 text-left">
+                                {calculateStreamFit(result.traitScores, answers).map((item, idx) => (
+                                  <div key={idx} className="flex justify-between">
+                                    <span>{item.stream}:</span>
+                                    <span className="font-semibold">{Math.round(item.score)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  </Suspense>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Full-screen Chart Overlay */}
+            <AnimatePresence>
+              {expandedChart && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4"
+                  onClick={() => setExpandedChart(null)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0.9 }}
+                    className="bg-slate-900 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold text-white">
+                        {expandedChart === 'radar' ? 'Your Aptitude DNA' : 'Stream Fit Comparison'}
+                      </h3>
+                      <button
+                        onClick={() => setExpandedChart(null)}
+                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                        aria-label="Close chart"
+                      >
+                        <AlertCircle className="h-5 w-5 text-slate-400" />
+                      </button>
+                    </div>
+                    <div className="w-full" style={{ height: '500px' }}>
+                      {expandedChart === 'radar' ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={calculateAptitudeDNA(answers, result.traitScores)}>
+                            <PolarGrid />
+                            <PolarAngleAxis 
+                              dataKey="axis" 
+                              tick={{ fill: '#fbbf24', fontSize: 16, fontWeight: 600 }}
+                              reversed={false}
+                              scale="auto"
+                            />
+                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#eab308', fontSize: 14, fontWeight: 500 }} />
+                            <Radar name="Aptitude" dataKey="value" stroke="#fbbf24" strokeWidth={3} fill="#fbbf24" fillOpacity={0.8} />
+                            <Tooltip />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={calculateStreamFit(result.traitScores, answers)}>
+                            <XAxis dataKey="stream" tick={{ fill: '#fbbf24', fontSize: 15, fontWeight: 600 }} />
+                            <YAxis type="number" domain={[0, 100]} tick={{ fill: '#eab308', fontSize: 13, fontWeight: 500 }} />
+                            <Tooltip />
+                            <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                              {calculateStreamFit(result.traitScores, answers).map((entry, index) => {
+                                const fillColor = entry.stream === result.stream 
+                                  ? '#fbbf24' 
+                                  : entry.score > 70 
+                                  ? '#22d3ee' 
+                                  : entry.score > 40 
+                                  ? '#eab308' 
+                                  : '#94a3b8';
+                                return <Cell key={`cell-${index}`} fill={fillColor} stroke={fillColor} strokeWidth={2} />;
+                              })}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* SECTION 4: 2-YEAR ROADMAP - HERO SECTION (Largest, Most Prominent) */}
+            <div className="mb-16">
+              {showRoadmap && roadmap ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-6"
+                >
+                  {/* Roadmap Hero Header */}
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-poppins font-bold text-white mb-4">
+                      🗺️ {language === 'hi' ? 'आपका 2-वर्षीय रोडमैप' : language === 'mr' ? 'तुमचा 2-वर्षीय रोडमॅप' : 'Your 2-Year Roadmap'}
+                    </h2>
+                    <p className="text-lg sm:text-xl text-slate-300 font-medium max-w-3xl mx-auto">
+                      {language === 'hi' 
+                        ? 'कक्षा 10 से कॉलेज तक आपकी पूरी यात्रा' 
+                        : language === 'mr' 
+                        ? 'इयत्ता 10 पासून महाविद्यालयापर्यंत तुमची संपूर्ण यात्रा'
+                        : 'Your complete journey from Class 10 to College'}
+                    </p>
+                  </div>
+
+                  {/* Roadmap Content - Large, Prominent Card */}
+                  <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-slate-900/90 to-slate-800/90 shadow-2xl shadow-yellow-500/20">
+                    <CardHeader className="pb-6">
+                      <CardTitle className="text-2xl font-poppins font-bold text-white flex items-center gap-3">
+                        <Calendar className="h-7 w-7 text-yellow-300" />
+                        {roadmap.title || t.roadmap.title}
+                      </CardTitle>
+                      {roadmap.description && (
+                        <CardDescription className="text-slate-300 font-medium text-base mt-2">
+                          {roadmap.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-8">
+                      <DetailedRoadmap roadmap={roadmap} language={language} />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center"
+                >
+                  <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-slate-900/90 to-slate-800/90 shadow-2xl shadow-yellow-500/20">
+                    <CardHeader className="pb-6">
+                      <CardTitle className="text-2xl sm:text-3xl font-poppins font-bold text-white flex items-center justify-center gap-3 mb-4">
+                        <Calendar className="h-8 w-8 text-yellow-300" />
+                        {language === 'hi' ? '🗺️ आपका 2-वर्षीय रोडमैप' : language === 'mr' ? '🗺️ तुमचा 2-वर्षीय रोडमॅप' : '🗺️ Your 2-Year Roadmap'}
+                      </CardTitle>
+                      <CardDescription className="text-slate-300 font-medium text-lg">
+                        {language === 'hi' 
+                          ? 'अपनी व्यक्तिगत 2-वर्षीय रोडमैप बनाने के लिए नीचे क्लिक करें' 
+                          : language === 'mr' 
+                          ? 'तुमचा वैयक्तिक 2-वर्षीय रोडमॅप तयार करण्यासाठी खाली क्लिक करा'
+                          : 'Click below to generate your personalized 2-year roadmap'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="py-8">
+                      <Button
+                        size="lg"
+                        onClick={handleBuildRoadmap}
+                        disabled={isLoadingRoadmap}
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold text-xl px-12 py-8 h-auto hover:from-yellow-300 hover:to-yellow-400 shadow-lg shadow-yellow-500/50"
+                      >
+                        {isLoadingRoadmap ? (
+                          <>
+                            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                            {t.roadmap.loading}
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className="mr-3 h-6 w-6" />
+                            {language === 'hi' ? 'अपना 2-वर्षीय रोडमैप बनाएं' : language === 'mr' ? 'तुमचा 2-वर्षीय रोडमॅप तयार करा' : 'Build Your 2-Year Roadmap'}
+                            <ArrowRight className="ml-3 h-6 w-6" />
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
             </div>
 
             {/* Enhanced Results Section */}
@@ -1409,112 +2491,159 @@ export default function PathFinderPage() {
                 </Card>
               )}
 
-              {/* College Recommendations */}
-              {result.collegeRecommendations && result.collegeRecommendations.length > 0 && (
-                <Card className="border-slate-700/70 bg-slate-900/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-blue-300" />
-                      Recommended Colleges for You
-                    </CardTitle>
-                    <CardDescription>Top colleges that match your profile and preferences</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {result.collegeRecommendations.map((college, idx) => (
-                        <Card key={idx} className="border-slate-700/70 bg-slate-800/50">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <h5 className="text-lg font-bold text-slate-200 mb-1">{college.name}</h5>
-                                <p className="text-sm text-slate-400 flex items-center gap-1">
-                                  <Globe className="h-3 w-3" />
-                                  {college.location}
-                                </p>
+            {/* SECTION 7: COLLEGE RECOMMENDATIONS - Location & Culture Aware */}
+            {result.collegeRecommendations && result.collegeRecommendations.length > 0 && (
+              <div className="mb-12">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl sm:text-4xl font-poppins font-bold text-white mb-3">
+                    🎓 {language === 'hi' ? 'आपके लिए अनुशंसित कॉलेज' : language === 'mr' ? 'तुमच्यासाठी शिफारस केलेले महाविद्यालये' : 'Recommended Colleges for You'}
+                  </h2>
+                  <p className="text-lg text-slate-300 font-medium">
+                    {language === 'hi' 
+                      ? 'आपकी प्रोफ़ाइल और प्राथमिकताओं से मेल खाने वाले शीर्ष कॉलेज - स्थान और संस्कृति के साथ' 
+                      : language === 'mr' 
+                      ? 'तुमच्या प्रोफाइल आणि प्राधान्यांशी जुळणारे शीर्ष महाविद्यालये - स्थान आणि संस्कृतीसह'
+                      : 'Top colleges matching your profile and preferences - with location and cultural awareness'}
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {result.collegeRecommendations.map((college, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                    >
+                      <Card className="border-slate-700/70 bg-slate-900/40 h-full hover:border-yellow-500/50 transition-all hover:shadow-lg hover:shadow-yellow-500/20">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <h5 className="text-lg font-poppins font-bold text-white mb-1">{college.name}</h5>
+                              <p className="text-sm text-slate-300 flex items-center gap-1 font-medium">
+                                <MapPin className="h-4 w-4 text-cyan-400" />
+                                {college.location}
+                              </p>
+                            </div>
+                            {college.rank && (
+                              <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 font-semibold">
+                                #{college.rank}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <span key={i} className={`text-base ${i < Math.floor(college.rating) ? 'text-yellow-400' : 'text-slate-600'}`}>
+                                  ★
+                                </span>
+                              ))}
+                            </div>
+                            <span className="text-sm text-slate-400 font-medium">({college.rating})</span>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1 font-semibold">Fees:</p>
+                            <p className="text-sm font-bold text-yellow-300">{college.fees}</p>
+                          </div>
+                          
+                          {/* Cultural Context - NEW */}
+                          {college.culturalContext && (
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                              <p className="text-xs text-purple-300 mb-2 font-semibold flex items-center gap-1">
+                                <Globe className="h-3 w-3" />
+                                Cultural Context
+                              </p>
+                              <div className="space-y-2 text-xs">
+                                <div>
+                                  <span className="text-slate-400">Region: </span>
+                                  <span className="text-slate-200 font-medium">{college.culturalContext.region}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Language: </span>
+                                  <span className="text-slate-200 font-medium">{college.culturalContext.localLanguage}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Food: </span>
+                                  <span className="text-slate-200 font-medium">{college.culturalContext.foodCulture}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Lifestyle: </span>
+                                  <span className="text-slate-200 font-medium">{college.culturalContext.lifestyle}</span>
+                                </div>
+                                <div className="pt-2 border-t border-purple-500/20">
+                                  <span className="text-purple-300 font-medium italic">{college.culturalContext.culturalFit}</span>
+                                </div>
                               </div>
-                              {college.rank && (
-                                <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
-                                  Rank #{college.rank}
-                                </Badge>
+                            </div>
+                          )}
+
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1 font-semibold">Admission Requirements:</p>
+                            <ul className="space-y-1">
+                              {college.admissionRequirements.map((req, reqIdx) => (
+                                <li key={reqIdx} className="text-xs text-slate-300 flex items-start gap-2">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 flex-shrink-0"></span>
+                                  <span>{req}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          
+                          {college.placementStats && (
+                            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                              <p className="text-xs text-slate-400 mb-1 font-semibold">Average Package:</p>
+                              <p className="text-base font-bold text-green-300">{college.placementStats.averagePackage}</p>
+                              {college.placementStats.topRecruiters.length > 0 && (
+                                <div className="mt-2">
+                                  <p className="text-xs text-slate-400 mb-1 font-semibold">Top Recruiters:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {college.placementStats.topRecruiters.slice(0, 3).map((recruiter, recIdx) => (
+                                      <Badge key={recIdx} variant="outline" className="border-green-500/30 text-green-300 text-xs">
+                                        {recruiter}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <span key={i} className={`text-sm ${i < Math.floor(college.rating) ? 'text-yellow-400' : 'text-slate-600'}`}>
-                                    ★
-                                  </span>
-                                ))}
-                              </div>
-                              <span className="text-xs text-slate-400">({college.rating})</span>
+                          )}
+                          
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1 font-semibold">Highlights:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {college.highlights.map((highlight, highIdx) => (
+                                <Badge key={highIdx} className="bg-slate-700/50 text-slate-300 border-slate-600 text-xs">
+                                  {highlight}
+                                </Badge>
+                              ))}
                             </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div>
-                              <p className="text-xs text-slate-400 mb-1">Fees:</p>
-                              <p className="text-sm font-semibold text-slate-200">{college.fees}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400 mb-1">Admission Requirements:</p>
-                              <ul className="space-y-1">
-                                {college.admissionRequirements.map((req, reqIdx) => (
-                                  <li key={reqIdx} className="text-xs text-slate-300 flex items-start gap-2">
-                                    <span className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></span>
-                                    <span>{req}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                            {college.placementStats && (
-                              <div className="p-2 rounded bg-green-500/10 border border-green-500/20">
-                                <p className="text-xs text-slate-400 mb-1">Average Package:</p>
-                                <p className="text-sm font-bold text-green-300">{college.placementStats.averagePackage}</p>
-                                {college.placementStats.topRecruiters.length > 0 && (
-                                  <div className="mt-2">
-                                    <p className="text-xs text-slate-400 mb-1">Top Recruiters:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {college.placementStats.topRecruiters.slice(0, 3).map((recruiter, recIdx) => (
-                                        <Badge key={recIdx} variant="outline" className="border-green-500/30 text-green-300 text-xs">
-                                          {recruiter}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            <div>
-                              <p className="text-xs text-slate-400 mb-1">Highlights:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {college.highlights.map((highlight, highIdx) => (
-                                  <Badge key={highIdx} className="bg-slate-700 text-slate-300 border-slate-600 text-xs">
-                                    {highlight}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                              <p className="text-xs text-slate-400 mb-1">Why This Fits You:</p>
-                              <p className="text-xs text-blue-300">{college.whyFit}</p>
-                            </div>
-                            {college.url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => window.open(college.url, '_blank')}
-                              >
-                                <ExternalLink className="h-3 w-3 mr-2" />
-                                Visit College Website
-                              </Button>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                          </div>
+                          
+                          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                            <p className="text-xs text-slate-400 mb-1 font-semibold">Why This Fits You:</p>
+                            <p className="text-xs text-blue-300 font-medium">{college.whyFit}</p>
+                          </div>
+                          
+                          {college.url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10 font-medium"
+                              onClick={() => window.open(college.url, '_blank')}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Visit College Website
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
 
               {/* Life Visualization */}
               {result.lifeVisualization && (
@@ -1661,85 +2790,452 @@ export default function PathFinderPage() {
               )}
             </div>
 
-            {/* Roadmap Teaser */}
-            {showRoadmap && roadmap ? (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="mb-8"
-              >
-                <Card className="border-slate-700/70 bg-slate-900/40">
-                  <CardHeader>
-                    <CardTitle>{t.roadmap.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DetailedRoadmap roadmap={roadmap} language={language} />
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ) : (
-              <Card className="border-slate-700/70 bg-slate-900/40 mb-8">
-                <CardHeader>
-                  <CardTitle>{t.roadmap.title}</CardTitle>
-                  <CardDescription>Click below to generate your personalized 2-year roadmap</CardDescription>
-                </CardHeader>
-              </Card>
-            )}
+            {/* SECTION 4: 2-YEAR ROADMAP - HERO SECTION (Largest, Most Prominent) */}
+            <div className="mb-16">
+              {showRoadmap && roadmap ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-6"
+                >
+                  {/* Roadmap Hero Header */}
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-poppins font-bold text-white mb-4">
+                      🗺️ {language === 'hi' ? 'आपका 2-वर्षीय रोडमैप' : language === 'mr' ? 'तुमचा 2-वर्षीय रोडमॅप' : 'Your 2-Year Roadmap'}
+                    </h2>
+                    <p className="text-lg sm:text-xl text-slate-300 font-medium max-w-3xl mx-auto">
+                      {language === 'hi' 
+                        ? 'कक्षा 10 से कॉलेज तक आपकी पूरी यात्रा' 
+                        : language === 'mr' 
+                        ? 'इयत्ता 10 पासून महाविद्यालयापर्यंत तुमची संपूर्ण यात्रा'
+                        : 'Your complete journey from Class 10 to College'}
+                    </p>
+                  </div>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
-              {!showRoadmap ? (
-                <Button
-                  size="lg"
-                  onClick={handleBuildRoadmap}
-                  disabled={isLoadingRoadmap}
-                  className="flex-1 bg-gradient-cyan-blue text-black font-semibold h-[52px]"
-                >
-                  {isLoadingRoadmap ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      {t.roadmap.loading}
-                    </>
-                  ) : (
-                    <>
-                      {t.results.buildRoadmap}
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </>
-                  )}
-                </Button>
+                  {/* Roadmap Content - Large, Prominent Card */}
+                  <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-slate-900/90 to-slate-800/90 shadow-2xl shadow-yellow-500/20">
+                    <CardHeader className="pb-6">
+                      <CardTitle className="text-2xl font-poppins font-bold text-white flex items-center gap-3">
+                        <Calendar className="h-7 w-7 text-yellow-300" />
+                        {roadmap.title || t.roadmap.title}
+                      </CardTitle>
+                      {roadmap.description && (
+                        <CardDescription className="text-slate-300 font-medium text-base mt-2">
+                          {roadmap.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-8">
+                      <DetailedRoadmap roadmap={roadmap} language={language} />
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ) : (
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    if (result && roadmap) {
-                      generatePDFReport({
-                        studentName: studentName || undefined,
-                        stream: result.stream,
-                        strengths: result.strengths,
-                        paths: result.paths,
-                        roadmap,
-                        language
-                      });
-                      trackEvent('demo_download_report', { stream: result.stream });
-                      toast.success('Report downloaded successfully!');
-                    }
-                  }}
-                  className="flex-1 bg-gradient-cyan-blue text-black font-semibold h-[52px]"
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center"
                 >
-                  <Download className="mr-2 h-5 w-5" />
-                  Download Report (PDF)
-                </Button>
+                  <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-slate-900/90 to-slate-800/90 shadow-2xl shadow-yellow-500/20">
+                    <CardHeader className="pb-6">
+                      <CardTitle className="text-2xl sm:text-3xl font-poppins font-bold text-white flex items-center justify-center gap-3 mb-4">
+                        <Calendar className="h-8 w-8 text-yellow-300" />
+                        {language === 'hi' ? '🗺️ आपका 2-वर्षीय रोडमैप' : language === 'mr' ? '🗺️ तुमचा 2-वर्षीय रोडमॅप' : '🗺️ Your 2-Year Roadmap'}
+                      </CardTitle>
+                      <CardDescription className="text-slate-300 font-medium text-lg">
+                        {language === 'hi' 
+                          ? 'अपनी व्यक्तिगत 2-वर्षीय रोडमैप बनाने के लिए नीचे क्लिक करें' 
+                          : language === 'mr' 
+                          ? 'तुमचा वैयक्तिक 2-वर्षीय रोडमॅप तयार करण्यासाठी खाली क्लिक करा'
+                          : 'Click below to generate your personalized 2-year roadmap'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="py-8">
+                      <Button
+                        size="lg"
+                        onClick={handleBuildRoadmap}
+                        disabled={isLoadingRoadmap}
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold text-xl px-12 py-8 h-auto hover:from-yellow-300 hover:to-yellow-400 shadow-lg shadow-yellow-500/50"
+                      >
+                        {isLoadingRoadmap ? (
+                          <>
+                            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                            {t.roadmap.loading}
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className="mr-3 h-6 w-6" />
+                            {language === 'hi' ? 'अपना 2-वर्षीय रोडमैप बनाएं' : language === 'mr' ? 'तुमचा 2-वर्षीय रोडमॅप तयार करा' : 'Build Your 2-Year Roadmap'}
+                            <ArrowRight className="ml-3 h-6 w-6" />
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )}
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleShare}
-                className="flex-1 h-[52px]"
-              >
-                <Share2 className="mr-2 h-5 w-5" />
-                {t.results.shareTeacher}
-              </Button>
             </div>
+
+            {/* Shareable Card (Hidden - for html2canvas) */}
+            <div 
+              id="shareable-card" 
+              className="hidden fixed -left-[9999px] w-[600px] h-[800px] bg-gradient-to-br from-cyan-900 via-purple-900 to-pink-900 rounded-2xl p-8 text-white"
+              style={{ position: 'absolute', left: '-9999px' }}
+            >
+              <div className="h-full flex flex-col justify-between">
+                <div>
+                  <div className="text-4xl font-bold mb-2 bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">
+                    {studentName || 'Student'}'s Path Finder Results
+                  </div>
+                  {result.personalityInsights && (
+                    <div className="text-2xl font-semibold text-yellow-300 mb-4">
+                      {result.personalityInsights.type}
+                    </div>
+                  )}
+                  <div className="space-y-3 mb-6">
+                    <div>
+                      <div className="text-sm text-slate-300 mb-1">Top 3 Strengths</div>
+                      <div className="flex flex-wrap gap-2">
+                        {result.strengths.slice(0, 3).map((strength, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-yellow-500/20 rounded-full text-yellow-300 text-sm">
+                            {strength}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-slate-300 mb-1">Recommended Stream</div>
+                      <div className="text-xl font-bold text-cyan-300">{result.stream}</div>
+                    </div>
+                    {result.completeTraitProfile && result.completeTraitProfile.length > 0 && (
+                      <div>
+                        <div className="text-sm text-slate-300 mb-2">Trait Profile</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {result.completeTraitProfile.map((trait, idx) => (
+                            <div key={idx} className="text-xs">
+                              <div className="flex justify-between mb-1">
+                                <span>{trait.trait}</span>
+                                <span className="font-semibold">{trait.percentage}%</span>
+                              </div>
+                              <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-cyan-400 to-yellow-400" 
+                                  style={{ width: `${trait.percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-center text-xs text-slate-400">
+                  Generated by Mentark Path Finder
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 5: EXPANDED CAREER OPPORTUNITIES */}
+            {(() => {
+              const opportunities = generateExpandedCareerOpportunities(result.stream, result.traitScores, language);
+              const niche = opportunities.filter(o => o.category === 'niche');
+              const international = opportunities.filter(o => o.category === 'international');
+              const government = opportunities.filter(o => o.category === 'government');
+              
+              return (niche.length > 0 || international.length > 0 || government.length > 0) ? (
+                <div className="space-y-8 mb-12">
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl sm:text-4xl font-poppins font-bold text-white mb-3">
+                      {language === 'hi' ? 'दुनिया कितनी बड़ी है - अनंत संभावनाएं' : language === 'mr' ? 'जग किती मोठे आहे - अमर्याद शक्यता' : 'The World is Bigger Than You Think'}
+                    </h2>
+                    <p className="text-lg text-slate-300 font-medium">
+                      {language === 'hi' ? 'कम ज्ञात लेकिन उत्कृष्ट करियर विकल्पों का अन्वेषण करें' : language === 'mr' ? 'कमी ओळखले जाणारे परंतु उत्कृष्ट करिअर पर्यायांचा शोध घ्या' : 'Explore lesser-known but excellent career opportunities'}
+                    </p>
+                  </div>
+
+                  {/* Niche Roles */}
+                  {niche.length > 0 && (
+                    <Card className="border-slate-700/70 bg-slate-900/40">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl font-poppins font-semibold text-white">
+                          <Zap className="h-6 w-6 text-yellow-300" />
+                          {language === 'hi' ? 'अनोखे करियर (Niche Roles)' : language === 'mr' ? 'अनोखे करिअर (Niche Roles)' : 'Niche & Emerging Careers'}
+                        </CardTitle>
+                        <CardDescription className="text-slate-300 font-medium">
+                          {language === 'hi' ? 'कम ज्ञात लेकिन उच्च विकास क्षमता वाले करियर' : language === 'mr' ? 'कमी ओळखले जाणारे परंतु उच्च वाढ क्षमता असलेले करिअर' : 'Lesser-known careers with high growth potential'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {niche.map((opp, idx) => (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: idx * 0.1 }}
+                              className="p-5 rounded-lg border border-yellow-500/20 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <h4 className="text-lg font-poppins font-semibold text-yellow-300">{opp.title}</h4>
+                                <Badge className={`${
+                                  opp.growthPotential === 'High' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                                  opp.growthPotential === 'Emerging' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' :
+                                  'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                                }`}>
+                                  {opp.growthPotential}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-slate-300 mb-4 font-medium">{opp.description}</p>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                  <DollarSign className="h-4 w-4" />
+                                  <span className="font-medium">{opp.salaryRange}</span>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-400 mb-1 font-semibold">Requirements:</p>
+                                  <ul className="space-y-1">
+                                    {opp.requirements.map((req, i) => (
+                                      <li key={i} className="text-xs text-slate-300 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                                        {req}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <p className="text-xs text-yellow-300 mt-3 font-medium italic">💡 {opp.whyConsider}</p>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* International Opportunities */}
+                  {international.length > 0 && (
+                    <Card className="border-slate-700/70 bg-slate-900/40">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl font-poppins font-semibold text-white">
+                          <Globe className="h-6 w-6 text-cyan-300" />
+                          {language === 'hi' ? 'अंतर्राष्ट्रीय अवसर' : language === 'mr' ? 'आंतरराष्ट्रीय संधी' : 'International Opportunities'}
+                        </CardTitle>
+                        <CardDescription className="text-slate-300 font-medium">
+                          {language === 'hi' ? 'दुनिया भर में करियर बनाएं - वैश्विक अनुभव प्राप्त करें' : language === 'mr' ? 'जगभरात करिअर तयार करा - जागतिक अनुभव मिळवा' : 'Build careers worldwide - gain global experience'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {international.map((opp, idx) => (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: idx * 0.1 }}
+                              className="p-5 rounded-lg border border-cyan-500/20 bg-cyan-500/5 hover:bg-cyan-500/10 transition-colors"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <h4 className="text-lg font-poppins font-semibold text-cyan-300">{opp.title}</h4>
+                                {opp.countries && (
+                                  <div className="flex items-center gap-1">
+                                    {opp.countries.map((country, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs border-cyan-500/30 text-cyan-300">
+                                        {country}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-sm text-slate-300 mb-4 font-medium">{opp.description}</p>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                  <DollarSign className="h-4 w-4" />
+                                  <span className="font-medium">{opp.salaryRange}</span>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-400 mb-1 font-semibold">Requirements:</p>
+                                  <ul className="space-y-1">
+                                    {opp.requirements.map((req, i) => (
+                                      <li key={i} className="text-xs text-slate-300 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                                        {req}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <p className="text-xs text-cyan-300 mt-3 font-medium italic">🌍 {opp.whyConsider}</p>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Government Roles */}
+                  {government.length > 0 && (
+                    <Card className="border-slate-700/70 bg-slate-900/40">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl font-poppins font-semibold text-white">
+                          <Shield className="h-6 w-6 text-green-300" />
+                          {language === 'hi' ? 'सरकारी करियर' : language === 'mr' ? 'सरकारी करिअर' : 'Government Careers'}
+                        </CardTitle>
+                        <CardDescription className="text-slate-300 font-medium">
+                          {language === 'hi' ? 'राष्ट्र निर्माण में योगदान दें - सुरक्षित और प्रतिष्ठित करियर' : language === 'mr' ? 'राष्ट्र निर्माणात योगदान द्या - सुरक्षित आणि प्रतिष्ठित करिअर' : 'Contribute to nation-building - secure and prestigious careers'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {government.map((opp, idx) => (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: idx * 0.1 }}
+                              className="p-5 rounded-lg border border-green-500/20 bg-green-500/5 hover:bg-green-500/10 transition-colors"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <h4 className="text-lg font-poppins font-semibold text-green-300">{opp.title}</h4>
+                                <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
+                                  {language === 'hi' ? 'सरकारी' : language === 'mr' ? 'सरकारी' : 'Govt'}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-slate-300 mb-4 font-medium">{opp.description}</p>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                  <DollarSign className="h-4 w-4" />
+                                  <span className="font-medium">{opp.salaryRange}</span>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-400 mb-1 font-semibold">Requirements:</p>
+                                  <ul className="space-y-1">
+                                    {opp.requirements.map((req, i) => (
+                                      <li key={i} className="text-xs text-slate-300 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                        {req}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <p className="text-xs text-green-300 mt-3 font-medium italic">🇮🇳 {opp.whyConsider}</p>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : null;
+            })()}
+
+            {/* SECTION 8: FINAL CTAs - Conversion Focused */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-16 mb-8"
+            >
+              <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-slate-900/90 to-slate-800/90">
+                <CardHeader className="text-center pb-6">
+                  <CardTitle className="text-2xl sm:text-3xl font-poppins font-bold text-white mb-3">
+                    🎯 {language === 'hi' ? 'अपनी यात्रा शुरू करने के लिए तैयार हैं?' : language === 'mr' ? 'तुमची यात्रा सुरू करण्यासाठी तयार आहात?' : 'Ready to Start Your Journey?'}
+                  </CardTitle>
+                  <CardDescription className="text-slate-300 font-medium text-base">
+                    {language === 'hi' 
+                      ? 'व्यक्तिगत मेंटरशिप प्राप्त करें, प्रगति ट्रैक करें, और Mentark के साथ अपनी पूरी क्षमता को अनलॉक करें' 
+                      : language === 'mr' 
+                      ? 'वैयक्तिक मेंटरशिप मिळवा, प्रगती ट्रॅक करा, आणि Mentark सह तुमची पूर्ण क्षमता अनलॉक करा'
+                      : 'Get personalized mentorship, track progress, and unlock your full potential with Mentark'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {showRoadmap ? (
+                      <Button
+                        size="lg"
+                        onClick={() => {
+                          if (result && roadmap) {
+                            generatePDFReport({
+                              studentName: studentName || undefined,
+                              stream: result.stream,
+                              strengths: result.strengths,
+                              paths: result.paths,
+                              roadmap,
+                              language,
+                              result: result,
+                              aptitudeDNA: calculateAptitudeDNA(answers, result.traitScores),
+                              streamFit: calculateStreamFit(result.traitScores, answers),
+                              expandedOpportunities: generateExpandedCareerOpportunities(result.stream, result.traitScores, language),
+                              traitScores: result.traitScores,
+                              personalityInsights: result.personalityInsights,
+                              completeTraitProfile: result.completeTraitProfile,
+                              learningStyle: result.learningStyle,
+                              whoYouAreNow: result.whoYouAreNow,
+                              subjectRecommendations: result.subjectRecommendations
+                            });
+                            trackEvent('demo_download_report', { stream: result.stream });
+                            toast.success('Report downloaded successfully!');
+                          }
+                        }}
+                        className="bg-gradient-to-r from-cyan-400 to-cyan-500 text-black font-bold h-[60px] hover:from-cyan-300 hover:to-cyan-400 shadow-lg shadow-cyan-500/50"
+                      >
+                        <Download className="mr-2 h-5 w-5" />
+                        {language === 'hi' ? 'पूरी रिपोर्ट डाउनलोड करें' : language === 'mr' ? 'संपूर्ण अहवाल डाउनलोड करा' : 'Download Full Report (PDF)'}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="lg"
+                        onClick={handleBuildRoadmap}
+                        disabled={isLoadingRoadmap}
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold h-[60px] hover:from-yellow-300 hover:to-yellow-400 shadow-lg shadow-yellow-500/50"
+                      >
+                        {isLoadingRoadmap ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            {t.roadmap.loading}
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className="mr-2 h-5 w-5" />
+                            {t.results.buildRoadmap}
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={handleShare}
+                      className="border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/10 font-semibold h-[60px]"
+                    >
+                      <Share2 className="mr-2 h-5 w-5" />
+                      {t.results.shareTeacher}
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={handleGenerateShareableCard}
+                      className="border-pink-500/50 text-pink-300 hover:bg-pink-500/10 font-semibold h-[60px]"
+                    >
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      {language === 'hi' ? 'Instagram पर शेयर करें' : language === 'mr' ? 'Instagram वर शेअर करा' : 'Share on Instagram'}
+                    </Button>
+                    <Button
+                      size="lg"
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold h-[60px] hover:from-purple-400 hover:to-pink-400 shadow-lg shadow-purple-500/50"
+                      onClick={() => {
+                        trackEvent('demo_click_get_full_access', { stream: result.stream });
+                        toast.info(language === 'hi' ? 'पूर्ण पहुंच के लिए जल्द ही उपलब्ध होगा!' : language === 'mr' ? 'पूर्ण प्रवेश लवकरच उपलब्ध होईल!' : 'Full access coming soon!');
+                      }}
+                    >
+                      <Star className="mr-2 h-5 w-5" />
+                      {language === 'hi' ? 'पूर्ण पहुंच प्राप्त करें' : language === 'mr' ? 'पूर्ण प्रवेश मिळवा' : 'Get Full Access'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             <p className="text-center text-xs text-slate-500 mt-4">
               {t.results.schoolsNote}

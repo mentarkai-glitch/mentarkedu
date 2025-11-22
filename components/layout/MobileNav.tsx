@@ -60,14 +60,13 @@ export function MobileNav() {
                 {/* Menu Items */}
                 <nav className="space-y-4">
                   {[
+                    { href: "/", label: "Home" },
+                    { href: "/product", label: "Product" },
                     { href: "/features", label: "Features" },
-                    { href: "#why-mentark", label: "Why Mentark" },
-                    { href: "#manifesto", label: "Manifesto" },
-                    { href: "#quantum", label: "Mentark Quantum" },
-                    { href: "#neuro", label: "Mentark Neuro" },
-                    { href: "#pricing", label: "Pricing" },
-                    { href: "/payments", label: "Payments" },
-                    { href: "#contact", label: "Contact" },
+                    { href: "/team", label: "Team" },
+                    { href: "/about", label: "About" },
+                    { href: "/contact", label: "Contact" },
+                    { href: "/demo", label: "Demo" },
                   ].map((item) => (
                     <Link
                       key={item.href}

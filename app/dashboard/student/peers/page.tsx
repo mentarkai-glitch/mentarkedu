@@ -13,9 +13,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { TabNav } from '@/components/ui/tab-nav';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
+import { StatCard } from '@/components/ui/card/card-variants';
 
 interface PeerMatch {
   student_id: string;
@@ -149,7 +154,7 @@ export default function PeerMatchesPage() {
       case 'study_buddy': return 'bg-purple-500/20 text-purple-400 border-purple-500/50';
       case 'complementary': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';
       case 'similar_interests': return 'bg-pink-500/20 text-pink-400 border-pink-500/50';
-      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+      default: return 'bg-card/20 text-muted-foreground border-border/50';
     }
   };
 
@@ -198,27 +203,20 @@ export default function PeerMatchesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Peer recommendations are based on your last successful search."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <Users className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Peer Matches
-                </h1>
-                <p className="text-slate-400">Connect with compatible study partners</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Peer recommendations are based on your last successful search."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Peer Matches"
+          description="Connect with compatible study partners"
+          icon={<Users className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex items-center gap-3 text-xs sm:text-sm">
               {isOnline ? (
                 <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> Online</span>
               ) : (
@@ -227,18 +225,21 @@ export default function PeerMatchesPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                className="border-gold/40 text-gold hover:bg-gold/10"
                 onClick={exportMatches}
                 disabled={matches.length === 0}
               >
                 <Download className="h-3 w-3 mr-1" /> Export
               </Button>
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {history.length > 0 && (
-            <Alert className="mb-4 bg-slate-900/60 border-yellow-500/20">
-              <AlertDescription className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            <Alert className="mb-4 bg-card/60 border-yellow-500/20">
+              <AlertDescription className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 Recent runs:
                 {history.slice(0, 5).map((entry) => (
                   <Badge key={entry.timestamp} variant="outline" className="border-yellow-500/40 text-yellow-300">
@@ -261,7 +262,7 @@ export default function PeerMatchesPage() {
                     <p className="text-sm text-amber-400 mb-2">Interests</p>
                     <div className="flex flex-wrap gap-2">
                       {profile.interests?.slice(0, 5).map((interest, idx) => (
-                        <Badge key={idx} variant="outline" className="bg-slate-800">
+                        <Badge key={idx} variant="outline" className="bg-card">
                           {interest}
                         </Badge>
                       ))}
@@ -271,7 +272,7 @@ export default function PeerMatchesPage() {
                     <p className="text-sm text-amber-400 mb-2">Goals</p>
                     <div className="flex flex-wrap gap-2">
                       {profile.goals?.slice(0, 3).map((goal, idx) => (
-                        <Badge key={idx} variant="outline" className="bg-slate-800">
+                        <Badge key={idx} variant="outline" className="bg-card">
                           {goal}
                         </Badge>
                       ))}
@@ -281,7 +282,7 @@ export default function PeerMatchesPage() {
                     <p className="text-sm text-amber-400 mb-2">Career Interest</p>
                     <div className="flex flex-wrap gap-2">
                       {profile.top_career_categories?.map((cat, idx) => (
-                        <Badge key={idx} variant="outline" className="bg-slate-800">
+                        <Badge key={idx} variant="outline" className="bg-card">
                           {cat}
                         </Badge>
                       ))}
@@ -294,29 +295,38 @@ export default function PeerMatchesPage() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'matches' | 'groups')} className="mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-900/50 border-yellow-500/30">
-              <TabsTrigger value="matches" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                <Users className="w-4 h-4 mr-2" />
-                Matches
-              </TabsTrigger>
-              <TabsTrigger value="groups" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                <Users className="w-4 h-4 mr-2" />
-                Study Groups
-              </TabsTrigger>
-            </TabsList>
+            <TabNav
+              items={[
+                {
+                  value: 'matches',
+                  label: 'Matches',
+                  icon: <Users className="w-4 h-4" />
+                },
+                {
+                  value: 'groups',
+                  label: 'Study Groups',
+                  icon: <Users className="w-4 h-4" />
+                }
+              ]}
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as 'matches' | 'groups')}
+              fullWidth={false}
+              variant="default"
+              size="md"
+            />
 
             <TabsContent value="matches" className="mt-6">
           {/* Action Button */}
           {!loading && matches.length === 0 && (
-            <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
+            <Card className="bg-card/50 border-yellow-500/30 mb-6">
               <CardContent className="pt-12 pb-12">
                 <div className="flex flex-col items-center justify-center text-center space-y-6">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
                     <Users className="w-12 h-12 text-yellow-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">Find Your Study Partners</h3>
-                    <p className="text-slate-400 text-sm mb-6">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Find Your Study Partners</h3>
+                    <p className="text-muted-foreground text-sm mb-6">
                       Connect with students who share your interests and goals
                     </p>
                     <Button
@@ -344,7 +354,7 @@ export default function PeerMatchesPage() {
           {loading && (
             <div className="grid md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="bg-slate-900/50 border-yellow-500/30">
+                <Card key={i} className="bg-card/50 border-yellow-500/30">
                   <CardContent className="pt-6">
                     <Skeleton className="h-48 w-full" />
                   </CardContent>
@@ -357,12 +367,12 @@ export default function PeerMatchesPage() {
           {!loading && matches.length > 0 && (
             <div className="space-y-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-foreground">
                   Your Matches ({filteredMatches.length})
                 </h2>
                 <div className="flex flex-wrap items-center gap-3">
                   <Select value={matchTypeFilter} onValueChange={(value: any) => setMatchTypeFilter(value)}>
-                    <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                    <SelectTrigger className="bg-card border-border text-muted-foreground">
                       <SelectValue placeholder="Match Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -385,7 +395,7 @@ export default function PeerMatchesPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 {filteredMatches.map((match) => (
-                  <Card key={match.student_id} className="bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
+                  <Card key={match.student_id} className="bg-card/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -397,9 +407,9 @@ export default function PeerMatchesPage() {
                             )}
                           </div>
                           <div>
-                            <CardTitle className="text-white">{match.name}</CardTitle>
+                            <CardTitle className="text-foreground">{match.name}</CardTitle>
                             {match.grade && (
-                              <CardDescription className="text-slate-400">
+                              <CardDescription className="text-muted-foreground">
                                 {match.grade}
                               </CardDescription>
                             )}
@@ -414,7 +424,7 @@ export default function PeerMatchesPage() {
                     <CardContent className="space-y-4">
                       {/* Compatibility Score */}
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-400">Compatibility:</span>
+                        <span className="text-sm text-muted-foreground">Compatibility:</span>
                         <span className={`text-2xl font-bold ${getCompatibilityColor(match.compatibility_score)}`}>
                           {Math.round(match.compatibility_score * 100)}%
                         </span>
@@ -423,10 +433,10 @@ export default function PeerMatchesPage() {
                       {/* Interests */}
                       {match.interests && match.interests.length > 0 && (
                         <div>
-                          <p className="text-sm text-slate-500 mb-2">Interests</p>
+                          <p className="text-sm text-muted-foreground mb-2">Interests</p>
                           <div className="flex flex-wrap gap-2">
                             {match.interests.slice(0, 4).map((interest, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs bg-slate-800 border-slate-700">
+                              <Badge key={idx} variant="outline" className="text-xs bg-card border-border">
                                 {interest}
                               </Badge>
                             ))}
@@ -437,10 +447,10 @@ export default function PeerMatchesPage() {
                       {/* Goals */}
                       {match.goals && match.goals.length > 0 && (
                         <div>
-                          <p className="text-sm text-slate-500 mb-2">Goals</p>
+                          <p className="text-sm text-muted-foreground mb-2">Goals</p>
                           <div className="flex flex-wrap gap-2">
                             {match.goals.slice(0, 3).map((goal, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs bg-slate-800 border-slate-700">
+                              <Badge key={idx} variant="outline" className="text-xs bg-card border-border">
                                 {goal}
                               </Badge>
                             ))}
@@ -450,11 +460,11 @@ export default function PeerMatchesPage() {
 
                       {/* Match Factors */}
                       {match.factors && match.factors.length > 0 && (
-                        <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                        <div className="p-3 bg-card/50 rounded-lg border border-border">
                           <p className="text-xs text-yellow-400 font-semibold mb-2">Why you match</p>
                           <ul className="space-y-1">
                             {match.factors.map((factor, idx) => (
-                              <li key={idx} className="text-xs text-slate-300 flex items-center gap-2">
+                              <li key={idx} className="text-xs text-muted-foreground flex items-center gap-2">
                                 <span className="text-yellow-400">•</span>
                                 {factor}
                               </li>
@@ -474,7 +484,7 @@ export default function PeerMatchesPage() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
+                          className="flex-1 border-border text-muted-foreground hover:bg-card"
                         >
                           <MessageCircle className="w-4 h-4 mr-2" />
                           Message
@@ -499,7 +509,7 @@ export default function PeerMatchesPage() {
                 ))}
               </div>
               {filteredMatches.length === 0 && (
-                <div className="text-center text-slate-400 py-8">
+                <div className="text-center text-muted-foreground py-8">
                   No matches for this filter right now. Try refreshing or switching types.
                 </div>
               )}
@@ -509,7 +519,7 @@ export default function PeerMatchesPage() {
 
             <TabsContent value="groups" className="mt-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Study Groups</h2>
+                <h2 className="text-2xl font-bold text-foreground">Study Groups</h2>
                 <Button
                   onClick={() => setShowCreateGroup(true)}
                   className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
@@ -522,10 +532,10 @@ export default function PeerMatchesPage() {
               {studyGroups.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-4">
                   {studyGroups.map((group) => (
-                    <Card key={group.id} className="bg-slate-900/50 border-yellow-500/30">
+                    <Card key={group.id} className="bg-card/50 border-yellow-500/30">
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-white">{group.name}</CardTitle>
+                          <CardTitle className="text-foreground">{group.name}</CardTitle>
                           <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
                             {group.members?.length || 0} members
                           </Badge>
@@ -535,8 +545,8 @@ export default function PeerMatchesPage() {
                       <CardContent>
                         <div className="space-y-3">
                           <div>
-                            <Label className="text-xs text-slate-500 mb-1 block">Subject</Label>
-                            <Badge variant="outline" className="bg-slate-800">{group.subject}</Badge>
+                            <Label className="text-xs text-muted-foreground mb-1 block">Subject</Label>
+                            <Badge variant="outline" className="bg-card">{group.subject}</Badge>
                           </div>
                           <div className="flex gap-2">
                             <Button variant="outline" size="sm" className="flex-1 border-yellow-500/30 text-yellow-400">
@@ -547,7 +557,7 @@ export default function PeerMatchesPage() {
                               <Calendar className="w-3 h-3 mr-1" />
                               Schedule
                             </Button>
-                            <Button variant="outline" size="sm" className="border-slate-700 text-slate-400">
+                            <Button variant="outline" size="sm" className="border-border text-muted-foreground">
                               <Settings className="w-3 h-3" />
                             </Button>
                           </div>
@@ -557,13 +567,13 @@ export default function PeerMatchesPage() {
                   ))}
                 </div>
               ) : (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardContent className="pt-12 pb-12">
                     <div className="flex flex-col items-center justify-center text-center space-y-4">
                       <Users className="w-16 h-16 text-yellow-400 opacity-50" />
                       <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">No Study Groups Yet</h3>
-                        <p className="text-slate-400 text-sm mb-4">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">No Study Groups Yet</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
                           Create a study group to collaborate with your peers
                         </p>
                         <Button
@@ -583,7 +593,7 @@ export default function PeerMatchesPage() {
 
           {/* Create Study Group Dialog */}
           <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
-            <DialogContent className="bg-slate-900 border-slate-700">
+            <DialogContent className="bg-card border-border">
               <DialogHeader>
                 <DialogTitle className="text-yellow-400">Create Study Group</DialogTitle>
                 <DialogDescription>
@@ -592,34 +602,34 @@ export default function PeerMatchesPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="group-name" className="text-slate-300 mb-2 block">Group Name *</Label>
+                  <Label htmlFor="group-name" className="text-muted-foreground mb-2 block">Group Name *</Label>
                   <Input
                     id="group-name"
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
                     placeholder="e.g., Math Study Group"
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="group-subject" className="text-slate-300 mb-2 block">Subject *</Label>
+                  <Label htmlFor="group-subject" className="text-muted-foreground mb-2 block">Subject *</Label>
                   <Input
                     id="group-subject"
                     value={newGroupSubject}
                     onChange={(e) => setNewGroupSubject(e.target.value)}
                     placeholder="e.g., Mathematics, Physics"
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="group-description" className="text-slate-300 mb-2 block">Description</Label>
+                  <Label htmlFor="group-description" className="text-muted-foreground mb-2 block">Description</Label>
                   <Textarea
                     id="group-description"
                     value={newGroupDescription}
                     onChange={(e) => setNewGroupDescription(e.target.value)}
                     placeholder="What will this group focus on?"
                     rows={3}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -664,7 +674,7 @@ export default function PeerMatchesPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="border-slate-700 text-slate-400"
+                    className="border-border text-muted-foreground"
                     onClick={() => {
                       setShowCreateGroup(false);
                       setNewGroupName('');
@@ -678,9 +688,9 @@ export default function PeerMatchesPage() {
               </div>
             </DialogContent>
           </Dialog>
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

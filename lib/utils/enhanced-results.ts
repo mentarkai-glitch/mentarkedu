@@ -194,7 +194,29 @@ export function generateSubjectRecommendations(
   stream: string,
   language: Language = 'en'
 ): SubjectRecommendation[] {
-  const q8Answer = answers.find(a => a.question_id === 'q8')?.answer as string[] || [];
+  // Q21 is now the Subject Interest multi-select question (was Q8 in old structure)
+  const q21Answer = answers.find(a => a.question_id === 'q21')?.answer;
+  
+  // Ensure it's an array - handle all edge cases
+  let selectedSubjects: string[] = [];
+  if (Array.isArray(q21Answer)) {
+    selectedSubjects = q21Answer.filter((s): s is string => typeof s === 'string');
+  } else if (typeof q21Answer === 'string') {
+    // Handle case where it might be a single string
+    selectedSubjects = [q21Answer];
+  } else if (q21Answer != null) {
+    // Try to convert to array if it's some other type
+    try {
+      selectedSubjects = Array.from(q21Answer as any).filter((s): s is string => typeof s === 'string');
+    } catch {
+      selectedSubjects = [];
+    }
+  }
+  
+  // Debug log (remove in production if needed)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Q21 Answer:', q21Answer, 'Selected Subjects:', selectedSubjects, 'Is Array:', Array.isArray(selectedSubjects));
+  }
   
   const subjectMap: Record<string, Record<Language, { name: string; reason: string }>> = {
     'Mathematics': {
@@ -216,13 +238,98 @@ export function generateSubjectRecommendations(
       en: { name: 'Biology', reason: 'Combines logical thinking with understanding living systems' },
       hi: { name: 'जीव विज्ञान', reason: 'तार्किक सोच को जीवित प्रणालियों की समझ के साथ जोड़ता है' },
       mr: { name: 'जीवशास्त्र', reason: 'तार्किक विचारास जिवंत प्रणालींच्या समजुतीसह जोडते' }
+    },
+    'History': {
+      en: { name: 'History', reason: 'Develops critical thinking and understanding of human patterns' },
+      hi: { name: 'इतिहास', reason: 'आलोचनात्मक सोच और मानवीय पैटर्न की समझ विकसित करता है' },
+      mr: { name: 'इतिहास', reason: 'आलोचनात्मक विचार आणि मानवीय पॅटर्नची समज विकसित करते' }
+    },
+    'Geography': {
+      en: { name: 'Geography', reason: 'Builds spatial awareness and environmental understanding' },
+      hi: { name: 'भूगोल', reason: 'स्थानिक जागरूकता और पर्यावरणीय समझ बनाता है' },
+      mr: { name: 'भूगोल', reason: 'स्थानिक जागरूकता आणि पर्यावरणीय समज तयार करते' }
+    },
+    'English': {
+      en: { name: 'English', reason: 'Essential for communication and expression' },
+      hi: { name: 'अंग्रेजी', reason: 'संचार और अभिव्यक्ति के लिए आवश्यक' },
+      mr: { name: 'इंग्रजी', reason: 'संचार आणि अभिव्यक्तीसाठी आवश्यक' }
+    },
+    'Computer Science': {
+      en: { name: 'Computer Science', reason: 'Builds logical thinking and technical skills' },
+      hi: { name: 'कंप्यूटर विज्ञान', reason: 'तार्किक सोच और तकनीकी कौशल बनाता है' },
+      mr: { name: 'संगणक विज्ञान', reason: 'तार्किक विचार आणि तांत्रिक कौशल्ये तयार करते' }
+    },
+    'Economics': {
+      en: { name: 'Economics', reason: 'Develops analytical thinking about systems and markets' },
+      hi: { name: 'अर्थशास्त्र', reason: 'सिस्टम और बाजारों के बारे में विश्लेषणात्मक सोच विकसित करता है' },
+      mr: { name: 'अर्थशास्त्र', reason: 'सिस्टम आणि बाजारांबद्दल विश्लेषणात्मक विचार विकसित करते' }
+    },
+    'Art': {
+      en: { name: 'Art', reason: 'Fosters creativity and visual expression' },
+      hi: { name: 'कला', reason: 'रचनात्मकता और दृश्य अभिव्यक्ति को बढ़ावा देता है' },
+      mr: { name: 'कला', reason: 'सर्जनशीलता आणि दृश्य अभिव्यक्तीला प्रोत्साहन देते' }
+    },
+    'Physical Education': {
+      en: { name: 'Physical Education', reason: 'Promotes physical health and discipline' },
+      hi: { name: 'शारीरिक शिक्षा', reason: 'शारीरिक स्वास्थ्य और अनुशासन को बढ़ावा देता है' },
+      mr: { name: 'शारीरिक शिक्षण', reason: 'शारीरिक आरोग्य आणि शिस्तला प्रोत्साहन देते' }
     }
   };
 
-  // Get top 3 selected subjects
-  const selectedSubjects = q8Answer.slice(0, 3);
+  // Get top 3 selected subjects (or all if less than 3)
+  // Double-check it's an array before using slice
+  const topSubjects: string[] = Array.isArray(selectedSubjects) ? selectedSubjects.slice(0, 3) : [];
   
-  return selectedSubjects.map((subject, idx) => {
+  // If no subjects selected, return default recommendations based on stream
+  if (!Array.isArray(topSubjects) || topSubjects.length === 0) {
+    const defaultSubjects: Record<string, string[]> = {
+      'Science (PCM)': ['Mathematics', 'Physics', 'Chemistry'],
+      'Science (PCB)': ['Biology', 'Chemistry', 'Physics'],
+      'Commerce': ['Economics', 'Mathematics', 'English'],
+      'Arts/Humanities': ['History', 'English', 'Geography'],
+      'Vocational': ['Computer Science', 'Art', 'Physical Education']
+    };
+    const streamDefaults = defaultSubjects[stream] || ['Mathematics', 'English', 'Computer Science'];
+    return streamDefaults.map((subject, idx) => {
+      const subjectInfo = subjectMap[subject] || {
+        en: { name: subject, reason: 'Important for your chosen stream' },
+        hi: { name: subject, reason: 'आपके चुने गए स्ट्रीम के लिए महत्वपूर्ण' },
+        mr: { name: subject, reason: 'तुमच्या निवडलेल्या स्ट्रीमसाठी महत्त्वाचे' }
+      };
+      return {
+        subject: subjectInfo[language].name,
+        priority: idx === 0 ? 'High' : idx === 1 ? 'Medium' : 'Low' as 'High' | 'Medium' | 'Low',
+        reason: subjectInfo[language].reason
+      };
+    });
+  }
+  
+  // Final safety check before mapping
+  if (!Array.isArray(topSubjects)) {
+    // Fallback to stream defaults
+    const defaultSubjects: Record<string, string[]> = {
+      'Science (PCM)': ['Mathematics', 'Physics', 'Chemistry'],
+      'Science (PCB)': ['Biology', 'Chemistry', 'Physics'],
+      'Commerce': ['Economics', 'Mathematics', 'English'],
+      'Arts/Humanities': ['History', 'English', 'Geography'],
+      'Vocational': ['Computer Science', 'Art', 'Physical Education']
+    };
+    const streamDefaults = defaultSubjects[stream] || ['Mathematics', 'English', 'Computer Science'];
+    return streamDefaults.map((subject, idx) => {
+      const subjectInfo = subjectMap[subject] || {
+        en: { name: subject, reason: 'Important for your chosen stream' },
+        hi: { name: subject, reason: 'आपके चुने गए स्ट्रीम के लिए महत्वपूर्ण' },
+        mr: { name: subject, reason: 'तुमच्या निवडलेल्या स्ट्रीमसाठी महत्त्वाचे' }
+      };
+      return {
+        subject: subjectInfo[language].name,
+        priority: idx === 0 ? 'High' : idx === 1 ? 'Medium' : 'Low' as 'High' | 'Medium' | 'Low',
+        reason: subjectInfo[language].reason
+      };
+    });
+  }
+  
+  return topSubjects.map((subject, idx) => {
     const subjectInfo = subjectMap[subject] || {
       en: { name: subject, reason: 'Important for your chosen stream' },
       hi: { name: subject, reason: 'आपके चुने गए स्ट्रीम के लिए महत्वपूर्ण' },
@@ -491,12 +598,81 @@ export function generateWhoYouAreNow(
   traitScores: TraitScores,
   language: Language = 'en'
 ): WhoYouAreNow {
-  const q13Answer = answers.find(a => a.question_id === 'q13')?.answer as string[] || [];
-  const q14Answer = answers.find(a => a.question_id === 'q14')?.answer as string[] || [];
-  const q15Answer = answers.find(a => a.question_id === 'q15')?.answer as string[] || [];
-  const q16Answer = answers.find(a => a.question_id === 'q16')?.answer as string || '';
-  const q8Answer = answers.find(a => a.question_id === 'q8')?.answer as string[] || [];
+  // New question structure - Q13, Q14, Q15 are now single choice
+  // Ensure all answers are strings, not arrays
+  const q13AnswerRaw = answers.find(a => a.question_id === 'q13')?.answer;
+  const q13Answer = Array.isArray(q13AnswerRaw) ? q13AnswerRaw[0] || '' : (q13AnswerRaw as string || '');
   
+  const q14AnswerRaw = answers.find(a => a.question_id === 'q14')?.answer;
+  const q14Answer = Array.isArray(q14AnswerRaw) ? q14AnswerRaw[0] || '' : (q14AnswerRaw as string || '');
+  
+  const q15AnswerRaw = answers.find(a => a.question_id === 'q15')?.answer;
+  const q15Answer = Array.isArray(q15AnswerRaw) ? q15AnswerRaw[0] || '' : (q15AnswerRaw as string || '');
+  
+  const q16AnswerRaw = answers.find(a => a.question_id === 'q16')?.answer;
+  const q16Answer = Array.isArray(q16AnswerRaw) ? q16AnswerRaw[0] || '' : (q16AnswerRaw as string || '');
+  
+  const q5AnswerRaw = answers.find(a => a.question_id === 'q5')?.answer;
+  const q5Answer = Array.isArray(q5AnswerRaw) ? q5AnswerRaw[0] || '' : (q5AnswerRaw as string || ''); // Flow State
+  
+  const q1AnswerRaw = answers.find(a => a.question_id === 'q1')?.answer;
+  const q1Answer = Array.isArray(q1AnswerRaw) ? q1AnswerRaw[0] || '' : (q1AnswerRaw as string || ''); // Scroll Test
+  
+  const q2AnswerRaw = answers.find(a => a.question_id === 'q2')?.answer;
+  const q2Answer = Array.isArray(q2AnswerRaw) ? q2AnswerRaw[0] || '' : (q2AnswerRaw as string || ''); // School Fest
+  
+  // Derive passions from Q13 (Entrepreneurship Meter) and trait scores
+  const passions: string[] = [];
+  if (q13Answer.includes('Build a product') || q13Answer.includes('prototype')) {
+    passions.push(language === 'hi' ? 'नवाचार' : language === 'mr' ? 'नवकल्पना' : 'Innovation');
+  }
+  if (q13Answer.includes('Buy and resell') || q13Answer.includes('profit')) {
+    passions.push(language === 'hi' ? 'व्यापार' : language === 'mr' ? 'व्यवसाय' : 'Business');
+  }
+  if (q13Answer.includes('content channel') || q13Answer.includes('film') || q13Answer.includes('portfolio')) {
+    passions.push(language === 'hi' ? 'रचनात्मकता' : language === 'mr' ? 'सर्जनशीलता' : 'Creativity');
+  }
+  if (traitScores.logical > 3) {
+    passions.push(language === 'hi' ? 'समस्या-समाधान' : language === 'mr' ? 'समस्या-निराकरण' : 'Problem Solving');
+  }
+  if (traitScores.people > 3) {
+    passions.push(language === 'hi' ? 'लोगों की मदद' : language === 'mr' ? 'लोकांना मदत' : 'Helping Others');
+  }
+  
+  // Derive natural abilities from Q14 (Why Driver) and Q2 (School Fest)
+  const naturalAbilities: string[] = [];
+  if (q14Answer.includes('build') || q14Answer.includes('invent')) {
+    naturalAbilities.push(language === 'hi' ? 'निर्माण' : language === 'mr' ? 'निर्माण' : 'Building');
+  }
+  if (q14Answer.includes('understand') || q14Answer.includes('world')) {
+    naturalAbilities.push(language === 'hi' ? 'विश्लेषण' : language === 'mr' ? 'विश्लेषण' : 'Analysis');
+  }
+  if (q14Answer.includes('organize') || q14Answer.includes('money')) {
+    naturalAbilities.push(language === 'hi' ? 'संगठन' : language === 'mr' ? 'संघटना' : 'Organization');
+  }
+  if (q14Answer.includes('express') || q14Answer.includes('creatively')) {
+    naturalAbilities.push(language === 'hi' ? 'अभिव्यक्ति' : language === 'mr' ? 'अभिव्यक्ती' : 'Expression');
+  }
+  if (q2Answer.includes('Designing') || q2Answer.includes('poster')) {
+    naturalAbilities.push(language === 'hi' ? 'डिज़ाइन' : language === 'mr' ? 'डिझाइन' : 'Design');
+  }
+  
+  // Derive flow activities from Q5 (Flow State)
+  const flowActivities: string[] = [];
+  if (q5Answer.includes('Math') || q5Answer.includes('coding')) {
+    flowActivities.push(language === 'hi' ? 'गणित/कोडिंग' : language === 'mr' ? 'गणित/कोडिंग' : 'Math/Coding');
+  }
+  if (q5Answer.includes('Reading') || q5Answer.includes('story') || q5Answer.includes('history')) {
+    flowActivities.push(language === 'hi' ? 'पढ़ना' : language === 'mr' ? 'वाचन' : 'Reading');
+  }
+  if (q5Answer.includes('Drawing') || q5Answer.includes('editing') || q5Answer.includes('music')) {
+    flowActivities.push(language === 'hi' ? 'कला/संगीत' : language === 'mr' ? 'कला/संगीत' : 'Art/Music');
+  }
+  if (q5Answer.includes('biological') || q5Answer.includes('chemical')) {
+    flowActivities.push(language === 'hi' ? 'विज्ञान' : language === 'mr' ? 'विज्ञान' : 'Science');
+  }
+  
+  // Get top strengths from trait scores
   const topStrengths = Object.entries(traitScores)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
@@ -512,25 +688,58 @@ export function generateWhoYouAreNow(
       return names[trait]?.[language] || trait;
     });
 
+  // Build summary based on new question structure
+  const entrepreneurshipStyle = q13Answer.includes('Build') ? 'building and creating'
+    : q13Answer.includes('Buy and resell') ? 'business and profit'
+    : q13Answer.includes('content') ? 'creating content'
+    : 'taking calculated risks';
+    
+  const whyDriver = q14Answer.includes('build') ? 'building and inventing'
+    : q14Answer.includes('understand') ? 'understanding how things work'
+    : q14Answer.includes('organize') ? 'organizing systems'
+    : q14Answer.includes('express') ? 'expressing yourself creatively'
+    : 'pursuing your goals';
+    
+  const flowState = q5Answer.includes('Math') ? 'solving problems'
+    : q5Answer.includes('Reading') ? 'reading and learning'
+    : q5Answer.includes('Drawing') ? 'creating art'
+    : q5Answer.includes('biological') ? 'exploring science'
+    : 'doing what you love';
+
   const translations = {
     en: {
-      summary: `You are someone who ${q13Answer.length > 0 ? `feels most alive when ${q13Answer.slice(0, 2).join(' and ')}` : 'has diverse interests'}. Your natural abilities include ${q14Answer.slice(0, 2).join(' and ') || 'multiple talents'}, and you lose track of time when ${q15Answer.slice(0, 1)[0] || 'engaged in activities you love'}.`
+      summary: `You are someone who ${entrepreneurshipStyle !== 'taking calculated risks' ? `thinks about ${entrepreneurshipStyle}` : 'has diverse interests'}. Your drive comes from ${whyDriver}, and you lose track of time when ${flowState}.`
     },
     hi: {
-      summary: `आप किसी ऐसे व्यक्ति हैं जो ${q13Answer.length > 0 ? `सबसे ज्यादा जीवंत महसूस करते हैं जब ${q13Answer.slice(0, 2).join(' और ')}` : 'विविध रुचियां रखते हैं'}. आपकी प्राकृतिक क्षमताओं में ${q14Answer.slice(0, 2).join(' और ') || 'कई प्रतिभाएं'} शामिल हैं, और आप समय का हिसाब भूल जाते हैं जब ${q15Answer.slice(0, 1)[0] || 'आप उन गतिविधियों में लगे होते हैं जिनसे आप प्यार करते हैं'}.`
+      summary: `आप किसी ऐसे व्यक्ति हैं जो ${entrepreneurshipStyle !== 'taking calculated risks' ? `${entrepreneurshipStyle} के बारे में सोचते हैं` : 'विविध रुचियां रखते हैं'}. आपकी प्रेरणा ${whyDriver} से आती है, और आप समय का हिसाब भूल जाते हैं जब ${flowState}.`
     },
     mr: {
-      summary: `तुम असे व्यक्ती आहात जे ${q13Answer.length > 0 ? `सर्वात जास्त जिवंत वाटते जेव्हा ${q13Answer.slice(0, 2).join(' आणि ')}` : 'विविध स्वारस्ये आहेत'}. तुमच्या नैसर्गिक क्षमतांमध्ये ${q14Answer.slice(0, 2).join(' आणि ') || 'अनेक प्रतिभा'} समाविष्ट आहेत, आणि तुम्ही वेळेचा हिशोब विसरता जेव्हा ${q15Answer.slice(0, 1)[0] || 'तुम्ही त्या क्रियाकलापांमध्ये गुंतलेले असता ज्यांचे तुम्ही प्रेम करता'}.`
+      summary: `तुम असे व्यक्ती आहात जे ${entrepreneurshipStyle !== 'taking calculated risks' ? `${entrepreneurshipStyle} बद्दल विचार करता` : 'विविध स्वारस्ये आहेत'}. तुमची प्रेरणा ${whyDriver} पासून येते, आणि तुम्ही वेळेचा हिशोब विसरता जेव्हा ${flowState}.`
     }
   };
 
+  // Get interests from Q1 (Scroll Test)
+  const interests: string[] = [];
+  if (q1Answer.includes('Tech') || q1Answer.includes('coding')) {
+    interests.push(language === 'hi' ? 'तकनीक' : language === 'mr' ? 'तंत्रज्ञान' : 'Technology');
+  }
+  if (q1Answer.includes('Finance') || q1Answer.includes('business')) {
+    interests.push(language === 'hi' ? 'वित्त' : language === 'mr' ? 'वित्त' : 'Finance');
+  }
+  if (q1Answer.includes('Art') || q1Answer.includes('music')) {
+    interests.push(language === 'hi' ? 'कला' : language === 'mr' ? 'कला' : 'Arts');
+  }
+  if (q1Answer.includes('Psychology') || q1Answer.includes('social')) {
+    interests.push(language === 'hi' ? 'मनोविज्ञान' : language === 'mr' ? 'मानसशास्त्र' : 'Psychology');
+  }
+
   return {
-    passions: q13Answer.slice(0, 5),
-    naturalAbilities: q14Answer.slice(0, 5),
-    flowActivities: q15Answer.slice(0, 5),
+    passions: passions.slice(0, 5),
+    naturalAbilities: naturalAbilities.slice(0, 5),
+    flowActivities: flowActivities.slice(0, 5),
     values: q16Answer ? [q16Answer] : [],
     currentStrengths: topStrengths,
-    interests: q8Answer.slice(0, 5),
+    interests: interests.slice(0, 5),
     summary: translations[language].summary
   };
 }
@@ -676,6 +885,311 @@ export function generateCareerPathsWithProgression(
 }
 
 /**
+ * Generate expanded career opportunities including niche, international, and government roles
+ */
+export interface ExpandedCareerOpportunity {
+  category: 'niche' | 'international' | 'government';
+  title: string;
+  description: string;
+  countries?: string[];
+  salaryRange: string;
+  requirements: string[];
+  growthPotential: 'High' | 'Medium' | 'Emerging';
+  whyConsider: string;
+}
+
+export function generateExpandedCareerOpportunities(
+  stream: string,
+  traitScores: TraitScores,
+  language: Language = 'en'
+): ExpandedCareerOpportunity[] {
+  const opportunities: Record<string, Record<Language, ExpandedCareerOpportunity[]>> = {
+    'Science (PCM)': {
+      en: [
+        // Niche Roles
+        {
+          category: 'niche',
+          title: 'Quantum Computing Engineer',
+          description: 'Work on cutting-edge quantum algorithms and hardware. This emerging field combines physics, computer science, and mathematics.',
+          salaryRange: '$80K-150K (International) / ₹15-40 LPA (India)',
+          requirements: ['Strong Physics & Math background', 'Programming skills', 'Research mindset'],
+          growthPotential: 'Emerging',
+          whyConsider: 'Quantum computing is the future - early entry means massive opportunities'
+        },
+        {
+          category: 'niche',
+          title: 'Robotics & Autonomous Systems Engineer',
+          description: 'Design and build robots, drones, and autonomous vehicles. Combines mechanical, electrical, and software engineering.',
+          salaryRange: '$70K-130K (International) / ₹12-35 LPA (India)',
+          requirements: ['Mechanical/Electrical Engineering', 'Programming', 'Systems thinking'],
+          growthPotential: 'High',
+          whyConsider: 'Robotics is transforming every industry - from healthcare to agriculture'
+        },
+        {
+          category: 'niche',
+          title: 'Space Systems Engineer',
+          description: 'Work on satellites, space missions, and aerospace technology. ISRO, NASA, SpaceX, and private space companies need talent.',
+          salaryRange: '$75K-140K (International) / ₹10-30 LPA (India - ISRO)',
+          requirements: ['Aerospace/Mechanical Engineering', 'Physics', 'Problem-solving'],
+          growthPotential: 'High',
+          whyConsider: 'Space industry is booming - India is a global leader in cost-effective space missions'
+        },
+        {
+          category: 'niche',
+          title: 'Blockchain Developer',
+          description: 'Build decentralized applications, smart contracts, and cryptocurrency systems. High demand in fintech and Web3.',
+          salaryRange: '$90K-180K (International) / ₹18-50 LPA (India)',
+          requirements: ['Strong Programming', 'Cryptography basics', 'Distributed systems'],
+          growthPotential: 'High',
+          whyConsider: 'Blockchain is revolutionizing finance, supply chain, and digital identity'
+        },
+        {
+          category: 'niche',
+          title: 'Climate Tech Engineer',
+          description: 'Develop solutions for climate change - renewable energy, carbon capture, sustainable technology.',
+          salaryRange: '$65K-120K (International) / ₹12-30 LPA (India)',
+          requirements: ['Engineering background', 'Environmental awareness', 'Innovation mindset'],
+          growthPotential: 'High',
+          whyConsider: 'Climate tech is critical and growing - make impact while building career'
+        },
+        // International Opportunities
+        {
+          category: 'international',
+          title: 'Software Engineer (Silicon Valley)',
+          description: 'Work at top tech companies like Google, Apple, Meta. High salaries, cutting-edge projects, global exposure.',
+          countries: ['USA', 'Canada'],
+          salaryRange: '$120K-250K+ (USD)',
+          requirements: ['Top-tier coding skills', 'Strong CS fundamentals', 'H1B visa eligibility'],
+          growthPotential: 'High',
+          whyConsider: 'Silicon Valley offers unparalleled learning, networking, and career growth'
+        },
+        {
+          category: 'international',
+          title: 'Research Scientist (Europe)',
+          description: 'Work at universities and research institutes in Germany, Switzerland, UK. Focus on AI, quantum, or biotech.',
+          countries: ['Germany', 'Switzerland', 'UK', 'Netherlands'],
+          salaryRange: '€50K-90K (EUR)',
+          requirements: ['Research experience', 'PhD preferred', 'Publication record'],
+          growthPotential: 'High',
+          whyConsider: 'Europe offers excellent work-life balance and world-class research facilities'
+        },
+        {
+          category: 'international',
+          title: 'Tech Consultant (Middle East)',
+          description: 'Help governments and companies digitize. UAE, Saudi Arabia offer tax-free salaries and modern infrastructure.',
+          countries: ['UAE', 'Saudi Arabia', 'Qatar'],
+          salaryRange: '$60K-120K (USD, tax-free)',
+          requirements: ['Consulting skills', 'Tech expertise', 'Cultural adaptability'],
+          growthPotential: 'Medium',
+          whyConsider: 'Tax-free income, modern cities, and growing tech ecosystems'
+        },
+        {
+          category: 'international',
+          title: 'Data Scientist (Singapore)',
+          description: 'Singapore is Asia\'s tech hub. Work on fintech, AI, and smart city projects.',
+          countries: ['Singapore'],
+          salaryRange: 'S$70K-140K (SGD)',
+          requirements: ['Data science skills', 'ML/AI knowledge', 'Business acumen'],
+          growthPotential: 'High',
+          whyConsider: 'Singapore bridges East and West - perfect for global career'
+        },
+        // Government Roles
+        {
+          category: 'government',
+          title: 'Scientist/Engineer (ISRO)',
+          description: 'Work on India\'s space missions, satellites, and rocket technology. Job security, pension, and national pride.',
+          salaryRange: '₹10-25 LPA (Plus benefits)',
+          requirements: ['GATE/ISRO exam', 'Engineering degree', 'Strong technical skills'],
+          growthPotential: 'High',
+          whyConsider: 'ISRO is world-renowned for cost-effective space missions - be part of history'
+        },
+        {
+          category: 'government',
+          title: 'Scientist (DRDO)',
+          description: 'Defense Research and Development Organization. Work on missiles, radar, cybersecurity for national defense.',
+          salaryRange: '₹10-28 LPA (Plus benefits)',
+          requirements: ['GATE/DRDO exam', 'Engineering/Physics', 'Security clearance'],
+          growthPotential: 'High',
+          whyConsider: 'Contribute to national security while working on cutting-edge defense tech'
+        },
+        {
+          category: 'government',
+          title: 'Engineer (BHEL/NTPC)',
+          description: 'Public sector power and heavy engineering. Job security, good benefits, and impact on national infrastructure.',
+          salaryRange: '₹8-20 LPA (Plus benefits)',
+          requirements: ['GATE exam', 'Engineering degree', 'Technical knowledge'],
+          growthPotential: 'Medium',
+          whyConsider: 'Stable career with pension, work on national infrastructure projects'
+        },
+        {
+          category: 'government',
+          title: 'Scientist (BARC)',
+          description: 'Bhabha Atomic Research Centre. Work on nuclear energy, medical isotopes, and advanced research.',
+          salaryRange: '₹12-30 LPA (Plus benefits)',
+          requirements: ['GATE/BARC exam', 'Physics/Chemistry/Engineering', 'Research aptitude'],
+          growthPotential: 'High',
+          whyConsider: 'Work on critical national projects in nuclear science and technology'
+        },
+        {
+          category: 'government',
+          title: 'IAS/IFS Officer (Tech Background)',
+          description: 'Use your technical background in policy-making. Manage tech initiatives, digital governance, innovation.',
+          salaryRange: '₹15-40 LPA (Plus benefits)',
+          requirements: ['UPSC exam', 'Engineering degree', 'Leadership skills'],
+          growthPotential: 'High',
+          whyConsider: 'Combine technical expertise with public service - shape India\'s future'
+        }
+      ],
+      hi: [
+        {
+          category: 'niche',
+          title: 'क्वांटम कंप्यूटिंग इंजीनियर',
+          description: 'अत्याधुनिक क्वांटम एल्गोरिदम और हार्डवेयर पर काम करें। यह उभरता हुआ क्षेत्र भौतिकी, कंप्यूटर विज्ञान और गणित को जोड़ता है।',
+          salaryRange: '$80K-150K (अंतर्राष्ट्रीय) / ₹15-40 LPA (भारत)',
+          requirements: ['मजबूत भौतिकी और गणित पृष्ठभूमि', 'प्रोग्रामिंग कौशल', 'अनुसंधान मानसिकता'],
+          growthPotential: 'Emerging',
+          whyConsider: 'क्वांटम कंप्यूटिंग भविष्य है - शीघ्र प्रवेश का मतलब है बड़े अवसर'
+        },
+        {
+          category: 'government',
+          title: 'वैज्ञानिक/अभियंता (इसरो)',
+          description: 'भारत के अंतरिक्ष मिशन, उपग्रह और रॉकेट प्रौद्योगिकी पर काम करें। नौकरी की सुरक्षा, पेंशन और राष्ट्रीय गौरव।',
+          salaryRange: '₹10-25 LPA (प्लस लाभ)',
+          requirements: ['GATE/ISRO परीक्षा', 'इंजीनियरिंग डिग्री', 'मजबूत तकनीकी कौशल'],
+          growthPotential: 'High',
+          whyConsider: 'इसरो लागत-प्रभावी अंतरिक्ष मिशनों के लिए विश्व-प्रसिद्ध है - इतिहास का हिस्सा बनें'
+        }
+      ],
+      mr: [
+        {
+          category: 'niche',
+          title: 'क्वांटम कंप्यूटिंग अभियंता',
+          description: 'अत्याधुनिक क्वांटम अल्गोरिदम आणि हार्डवेअरवर काम करा। हे उदयोन्मुख क्षेत्र भौतिकशास्त्र, संगणक विज्ञान आणि गणित एकत्र करते।',
+          salaryRange: '$80K-150K (आंतरराष्ट्रीय) / ₹15-40 LPA (भारत)',
+          requirements: ['मजबूत भौतिकशास्त्र आणि गणित पार्श्वभूमी', 'प्रोग्रामिंग कौशल्ये', 'संशोधन मानसिकता'],
+          growthPotential: 'Emerging',
+          whyConsider: 'क्वांटम कंप्यूटिंग भविष्य आहे - लवकर प्रवेश म्हणजे मोठ्या संधी'
+        },
+        {
+          category: 'government',
+          title: 'वैज्ञानिक/अभियंता (इसरो)',
+          description: 'भारताच्या अंतराळ मिशन, उपग्रह आणि रॉकेट तंत्रज्ञानावर काम करा। नोकरीची सुरक्षा, पेन्शन आणि राष्ट्रीय अभिमान।',
+          salaryRange: '₹10-25 LPA (प्लस फायदे)',
+          requirements: ['GATE/ISRO परीक्षा', 'अभियांत्रिकी पदवी', 'मजबूत तांत्रिक कौशल्ये'],
+          growthPotential: 'High',
+          whyConsider: 'इसरो खर्च-प्रभावी अंतराळ मिशनसाठी जागतिक-प्रसिद्ध आहे - इतिहासाचा भाग व्हा'
+        }
+      ]
+    },
+    'Commerce': {
+      en: [
+        {
+          category: 'niche',
+          title: 'Fintech Product Manager',
+          description: 'Build financial technology products - digital payments, blockchain banking, crypto platforms.',
+          salaryRange: '$85K-160K (International) / ₹18-45 LPA (India)',
+          requirements: ['Finance + Tech knowledge', 'Product thinking', 'User experience'],
+          growthPotential: 'High',
+          whyConsider: 'Fintech is revolutionizing banking - huge growth potential'
+        },
+        {
+          category: 'international',
+          title: 'Investment Banker (Wall Street)',
+          description: 'Work at Goldman Sachs, JPMorgan, Morgan Stanley. High-stakes finance, global deals, high compensation.',
+          countries: ['USA', 'UK', 'Singapore'],
+          salaryRange: '$100K-300K+ (USD)',
+          requirements: ['Top MBA/CFA', 'Analytical skills', 'Networking'],
+          growthPotential: 'High',
+          whyConsider: 'Wall Street offers highest finance salaries and global exposure'
+        },
+        {
+          category: 'government',
+          title: 'RBI Grade B Officer',
+          description: 'Reserve Bank of India. Monetary policy, banking regulation, financial stability of India.',
+          salaryRange: '₹15-35 LPA (Plus benefits)',
+          requirements: ['RBI Grade B exam', 'Economics/Finance background', 'Analytical skills'],
+          growthPotential: 'High',
+          whyConsider: 'Shape India\'s monetary policy - prestigious and impactful role'
+        }
+      ],
+      hi: [],
+      mr: []
+    },
+    'Science (PCB)': {
+      en: [
+        {
+          category: 'niche',
+          title: 'Biotech Research Scientist',
+          description: 'Work on gene therapy, personalized medicine, CRISPR technology. Future of healthcare.',
+          salaryRange: '$70K-140K (International) / ₹12-35 LPA (India)',
+          requirements: ['Biology/Chemistry background', 'Research experience', 'Lab skills'],
+          growthPotential: 'High',
+          whyConsider: 'Biotech is transforming medicine - be at the forefront'
+        },
+        {
+          category: 'international',
+          title: 'Medical Researcher (USA/Europe)',
+          description: 'Work at top medical institutions. Research new treatments, clinical trials, medical breakthroughs.',
+          countries: ['USA', 'UK', 'Germany', 'Switzerland'],
+          salaryRange: '$80K-150K (USD/EUR)',
+          requirements: ['MD/PhD', 'Research publications', 'Clinical experience'],
+          growthPotential: 'High',
+          whyConsider: 'Work on cutting-edge medical research at world\'s best institutions'
+        },
+        {
+          category: 'government',
+          title: 'Scientist (ICMR)',
+          description: 'Indian Council of Medical Research. Public health research, disease control, medical policy.',
+          salaryRange: '₹12-28 LPA (Plus benefits)',
+          requirements: ['Medical/Research background', 'ICMR exam', 'Research aptitude'],
+          growthPotential: 'High',
+          whyConsider: 'Contribute to India\'s public health and medical research'
+        }
+      ],
+      hi: [],
+      mr: []
+    },
+    'Humanities': {
+      en: [
+        {
+          category: 'niche',
+          title: 'UX Researcher (Tech)',
+          description: 'Study user behavior, design better products. Tech companies need human-centered design.',
+          salaryRange: '$70K-130K (International) / ₹12-30 LPA (India)',
+          requirements: ['Psychology/Sociology background', 'Research skills', 'Design thinking'],
+          growthPotential: 'High',
+          whyConsider: 'Combine human insights with tech - growing field'
+        },
+        {
+          category: 'international',
+          title: 'Policy Analyst (Think Tanks)',
+          description: 'Work at international organizations - UN, World Bank, policy institutes. Shape global policy.',
+          countries: ['USA', 'Switzerland', 'Belgium'],
+          salaryRange: '$60K-120K (USD)',
+          requirements: ['Policy/Economics background', 'Research skills', 'International perspective'],
+          growthPotential: 'Medium',
+          whyConsider: 'Work on global challenges - climate, development, peace'
+        },
+        {
+          category: 'government',
+          title: 'IAS Officer (Social Services)',
+          description: 'Use your humanities background in public administration. Education, health, rural development.',
+          salaryRange: '₹15-40 LPA (Plus benefits)',
+          requirements: ['UPSC exam', 'Any degree', 'Leadership skills'],
+          growthPotential: 'High',
+          whyConsider: 'Shape India\'s social policies - maximum impact on people\'s lives'
+        }
+      ],
+      hi: [],
+      mr: []
+    }
+  };
+
+  const streamOpportunities = opportunities[stream] || opportunities['Science (PCM)'];
+  return streamOpportunities[language] || streamOpportunities.en;
+}
+
+/**
  * Generate college recommendations
  */
 export function generateCollegeRecommendations(
@@ -684,9 +1198,42 @@ export function generateCollegeRecommendations(
   budgetConstraint: boolean,
   language: Language = 'en'
 ): CollegeRecommendation[] {
+  // Location-based college mapping with cultural context
+  const locationColleges: Record<string, any[]> = {
+    'Metro city': [
+      { name: 'IIT Delhi', location: 'New Delhi', region: 'North', culture: 'Cosmopolitan, diverse, English-friendly', localLanguage: 'Hindi/English', food: 'North Indian, International', lifestyle: 'Fast-paced, modern' },
+      { name: 'IIT Bombay', location: 'Mumbai', region: 'West', culture: 'Metropolitan, business-oriented, Marathi influence', localLanguage: 'Marathi/English', food: 'Maharashtrian, Street food', lifestyle: 'Dynamic, competitive' },
+      { name: 'IIT Madras', location: 'Chennai', region: 'South', culture: 'Traditional yet modern, Tamil culture', localLanguage: 'Tamil/English', food: 'South Indian, Vegetarian-friendly', lifestyle: 'Balanced, academic focus' },
+      { name: 'IIT Kharagpur', location: 'Kharagpur', region: 'East', culture: 'Academic hub, Bengali influence', localLanguage: 'Bengali/English', food: 'Bengali, Vegetarian options', lifestyle: 'Campus-focused, traditional' },
+      { name: 'BITS Pilani', location: 'Pilani', region: 'North', culture: 'Elite private, English-medium', localLanguage: 'Hindi/English', food: 'North Indian, Vegetarian', lifestyle: 'Campus-based, modern' },
+      { name: 'NIT Warangal', location: 'Warangal', region: 'South', culture: 'Telugu culture, tech-focused', localLanguage: 'Telugu/English', food: 'Telugu, Spicy cuisine', lifestyle: 'Tech-oriented, growing city' }
+    ],
+    'Tier 2 city': [
+      { name: 'NIT Trichy', location: 'Tiruchirappalli', region: 'South', culture: 'Tamil culture, temple city', localLanguage: 'Tamil/English', food: 'South Indian, Traditional', lifestyle: 'Peaceful, affordable' },
+      { name: 'NIT Surathkal', location: 'Mangalore', region: 'South', culture: 'Coastal Karnataka, multilingual', localLanguage: 'Kannada/Tulu/English', food: 'Coastal, Seafood', lifestyle: 'Coastal, relaxed' },
+      { name: 'NIT Calicut', location: 'Calicut', region: 'South', culture: 'Kerala culture, progressive', localLanguage: 'Malayalam/English', food: 'Kerala, Vegetarian-friendly', lifestyle: 'Educational hub, moderate pace' },
+      { name: 'NIT Rourkela', location: 'Rourkela', region: 'East', culture: 'Industrial city, Odia culture', localLanguage: 'Odia/English', food: 'Odia, Traditional', lifestyle: 'Industrial, affordable' },
+      { name: 'IIIT Hyderabad', location: 'Hyderabad', region: 'South', culture: 'Tech hub, Hyderabadi culture', localLanguage: 'Telugu/Urdu/English', food: 'Hyderabadi, Biryani famous', lifestyle: 'Tech city, growing' },
+      { name: 'VIT Vellore', location: 'Vellore', region: 'South', culture: 'Private, modern, diverse', localLanguage: 'Tamil/English', food: 'South Indian, Multi-cuisine', lifestyle: 'Modern campus, international' }
+    ],
+    'Small city/Town': [
+      { name: 'NIT Hamirpur', location: 'Hamirpur', region: 'North', culture: 'Himachali culture, hilly', localLanguage: 'Hindi/Pahari/English', food: 'Himachali, Simple', lifestyle: 'Mountain town, peaceful' },
+      { name: 'NIT Jalandhar', location: 'Jalandhar', region: 'North', culture: 'Punjabi culture, vibrant', localLanguage: 'Punjabi/English', food: 'Punjabi, Rich cuisine', lifestyle: 'Cultural, friendly' },
+      { name: 'NIT Patna', location: 'Patna', region: 'East', culture: 'Bihari culture, historical', localLanguage: 'Hindi/Bhojpuri/English', food: 'Bihari, Traditional', lifestyle: 'Historical city, affordable' },
+      { name: 'NIT Raipur', location: 'Raipur', region: 'Central', culture: 'Chhattisgarhi culture, emerging', localLanguage: 'Hindi/Chhattisgarhi/English', food: 'Chhattisgarhi, Tribal influence', lifestyle: 'Emerging city, growing' },
+      { name: 'NIT Durgapur', location: 'Durgapur', region: 'East', culture: 'Bengali culture, industrial', localLanguage: 'Bengali/English', food: 'Bengali, Sweet culture', lifestyle: 'Industrial town, affordable' }
+    ],
+    'Village/Rural': [
+      { name: 'NIT Silchar', location: 'Silchar', region: 'Northeast', culture: 'Assamese culture, diverse', localLanguage: 'Assamese/Bengali/English', food: 'Assamese, Unique cuisine', lifestyle: 'Northeast, peaceful' },
+      { name: 'NIT Meghalaya', location: 'Shillong', region: 'Northeast', culture: 'Khasi culture, hill station', localLanguage: 'Khasi/English', food: 'Northeast, Tribal', lifestyle: 'Hill station, scenic' },
+      { name: 'NIT Agartala', location: 'Agartala', region: 'Northeast', culture: 'Tripuri culture, border city', localLanguage: 'Bengali/Kokborok/English', food: 'Northeast, Bengali influence', lifestyle: 'Border city, unique' }
+    ]
+  };
+
   const colleges: Record<string, Record<Language, CollegeRecommendation[]>> = {
     'Science (PCM)': {
       en: [
+        // Metro Cities - Premium Options
         {
           name: 'IIT Delhi',
           location: 'New Delhi',
@@ -695,14 +1242,68 @@ export function generateCollegeRecommendations(
           rating: 4.8,
           fees: '₹2-3 Lakhs/year',
           admissionRequirements: ['JEE Advanced', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
-          highlights: ['Top NIRF Rank', 'Excellent Placements', 'World-class Faculty'],
+          highlights: ['Top NIRF Rank', 'Excellent Placements', 'World-class Faculty', 'Metro location', 'Diverse culture'],
           placementStats: {
             averagePackage: '₹20-25 LPA',
             topRecruiters: ['Google', 'Microsoft', 'Amazon', 'Goldman Sachs']
           },
           whyFit: 'Perfect for logical thinkers with high study tolerance',
-          url: 'https://home.iitd.ac.in/'
+          url: 'https://home.iitd.ac.in/',
+          culturalContext: {
+            region: 'North India',
+            localLanguage: 'Hindi/English',
+            foodCulture: 'North Indian, International options available',
+            lifestyle: 'Fast-paced, cosmopolitan, diverse student community',
+            culturalFit: 'Easy adaptation for most Indian students, English-friendly environment'
+          }
         },
+        {
+          name: 'IIT Bombay',
+          location: 'Mumbai',
+          stream: 'Engineering',
+          rank: 1,
+          rating: 4.9,
+          fees: '₹2-3 Lakhs/year',
+          admissionRequirements: ['JEE Advanced', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['#1 NIRF Rank', 'Highest Placements', 'Financial capital', 'Marathi culture'],
+          placementStats: {
+            averagePackage: '₹22-28 LPA',
+            topRecruiters: ['Google', 'Microsoft', 'Goldman Sachs', 'JP Morgan']
+          },
+          whyFit: 'Best for ambitious students seeking top-tier opportunities',
+          url: 'https://www.iitb.ac.in/',
+          culturalContext: {
+            region: 'West India',
+            localLanguage: 'Marathi/English',
+            foodCulture: 'Maharashtrian, Street food paradise, Vada Pav, Pav Bhaji',
+            lifestyle: 'Dynamic, competitive, business-oriented, 24/7 city',
+            culturalFit: 'Fast-paced environment, Marathi culture with English professional setting'
+          }
+        },
+        {
+          name: 'IIT Madras',
+          location: 'Chennai',
+          stream: 'Engineering',
+          rank: 3,
+          rating: 4.8,
+          fees: '₹2-3 Lakhs/year',
+          admissionRequirements: ['JEE Advanced', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Top 3 NIRF', 'Strong research', 'Tamil culture', 'Coastal city'],
+          placementStats: {
+            averagePackage: '₹18-24 LPA',
+            topRecruiters: ['Microsoft', 'Amazon', 'Intel', 'Qualcomm']
+          },
+          whyFit: 'Ideal for research-oriented students',
+          url: 'https://www.iitm.ac.in/',
+          culturalContext: {
+            region: 'South India',
+            localLanguage: 'Tamil/English',
+            foodCulture: 'South Indian, Idli-Dosa, Filter Coffee, Vegetarian-friendly',
+            lifestyle: 'Balanced, academic focus, traditional values with modern education',
+            culturalFit: 'Tamil culture prominent, but English-medium education, welcoming to all'
+          }
+        },
+        // Tier 2 Cities - Balanced Options
         {
           name: 'NIT Trichy',
           location: 'Tiruchirappalli',
@@ -711,13 +1312,137 @@ export function generateCollegeRecommendations(
           rating: 4.6,
           fees: '₹1.5-2 Lakhs/year',
           admissionRequirements: ['JEE Main', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
-          highlights: ['Top NIT', 'Strong Industry Connections', 'Affordable'],
+          highlights: ['Top NIT', 'Strong Industry Connections', 'Affordable', 'Temple city'],
           placementStats: {
             averagePackage: '₹12-18 LPA',
             topRecruiters: ['TCS', 'Infosys', 'Wipro', 'Cognizant']
           },
           whyFit: 'Great balance of quality education and affordability',
-          url: 'https://www.nitt.edu/'
+          url: 'https://www.nitt.edu/',
+          culturalContext: {
+            region: 'South India',
+            localLanguage: 'Tamil/English',
+            foodCulture: 'South Indian, Traditional Tamil cuisine, Vegetarian options',
+            lifestyle: 'Peaceful, affordable, temple city atmosphere, moderate pace',
+            culturalFit: 'Tamil culture, but diverse student body, English-medium'
+          }
+        },
+        {
+          name: 'NIT Surathkal',
+          location: 'Mangalore',
+          stream: 'Engineering',
+          rank: 12,
+          rating: 4.5,
+          fees: '₹1.5-2 Lakhs/year',
+          admissionRequirements: ['JEE Main', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Coastal location', 'Good placements', 'Affordable', 'Beautiful campus'],
+          placementStats: {
+            averagePackage: '₹10-16 LPA',
+            topRecruiters: ['Infosys', 'Wipro', 'TCS', 'L&T']
+          },
+          whyFit: 'Excellent for students who prefer coastal, relaxed environment',
+          url: 'https://www.nitk.ac.in/',
+          culturalContext: {
+            region: 'South India (Coastal Karnataka)',
+            localLanguage: 'Kannada/Tulu/English',
+            foodCulture: 'Coastal Karnataka, Seafood, Mangalorean cuisine, Spicy',
+            lifestyle: 'Coastal, relaxed, moderate pace, beautiful beaches nearby',
+            culturalFit: 'Multilingual (Kannada, Tulu, Konkani), English-medium, welcoming'
+          }
+        },
+        {
+          name: 'IIIT Hyderabad',
+          location: 'Hyderabad',
+          stream: 'Engineering',
+          rank: 15,
+          rating: 4.7,
+          fees: '₹2-3 Lakhs/year',
+          admissionRequirements: ['JEE Main', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Tech-focused', 'Strong CS program', 'Hyderabad tech hub', 'Good placements'],
+          placementStats: {
+            averagePackage: '₹15-22 LPA',
+            topRecruiters: ['Microsoft', 'Google', 'Amazon', 'Adobe']
+          },
+          whyFit: 'Perfect for tech enthusiasts',
+          url: 'https://www.iiit.ac.in/',
+          culturalContext: {
+            region: 'South India (Telangana)',
+            localLanguage: 'Telugu/Urdu/English',
+            foodCulture: 'Hyderabadi, Famous Biryani, Spicy cuisine, Multi-cultural',
+            lifestyle: 'Tech city, growing, modern infrastructure, IT hub',
+            culturalFit: 'Hyderabadi culture (mix of Telugu and Urdu), very welcoming, English-friendly'
+          }
+        },
+        // Small Cities - Budget-Friendly
+        {
+          name: 'NIT Hamirpur',
+          location: 'Hamirpur',
+          stream: 'Engineering',
+          rank: 35,
+          rating: 4.2,
+          fees: '₹1-1.5 Lakhs/year',
+          admissionRequirements: ['JEE Main', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Budget-friendly', 'Hilly location', 'Peaceful', 'Good quality'],
+          placementStats: {
+            averagePackage: '₹8-12 LPA',
+            topRecruiters: ['TCS', 'Infosys', 'Wipro', 'Tech Mahindra']
+          },
+          whyFit: 'Great for budget-conscious students who prefer peaceful environment',
+          url: 'https://www.nith.ac.in/',
+          culturalContext: {
+            region: 'North India (Himachal Pradesh)',
+            localLanguage: 'Hindi/Pahari/English',
+            foodCulture: 'Himachali, Simple, Traditional, Vegetarian-friendly',
+            lifestyle: 'Mountain town, peaceful, scenic, moderate pace',
+            culturalFit: 'Himachali culture, Hindi-speaking, very friendly, English-medium education'
+          }
+        },
+        {
+          name: 'NIT Patna',
+          location: 'Patna',
+          stream: 'Engineering',
+          rank: 40,
+          rating: 4.1,
+          fees: '₹1-1.5 Lakhs/year',
+          admissionRequirements: ['JEE Main', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Historical city', 'Affordable', 'Growing', 'Good placements'],
+          placementStats: {
+            averagePackage: '₹7-11 LPA',
+            topRecruiters: ['TCS', 'Infosys', 'Wipro', 'Capgemini']
+          },
+          whyFit: 'Ideal for students from Eastern India or budget-conscious families',
+          url: 'https://www.nitp.ac.in/',
+          culturalContext: {
+            region: 'East India (Bihar)',
+            localLanguage: 'Hindi/Bhojpuri/English',
+            foodCulture: 'Bihari, Traditional, Litti-Chokha, Vegetarian options',
+            lifestyle: 'Historical city, affordable, moderate pace, cultural heritage',
+            culturalFit: 'Bihari culture, Hindi/Bhojpuri speaking, very welcoming, English-medium'
+          }
+        },
+        // Northeast - Unique Options
+        {
+          name: 'NIT Silchar',
+          location: 'Silchar',
+          stream: 'Engineering',
+          rank: 45,
+          rating: 4.0,
+          fees: '₹1-1.5 Lakhs/year',
+          admissionRequirements: ['JEE Main', 'Class 12: 75%+', 'Physics, Chemistry, Math'],
+          highlights: ['Northeast location', 'Diverse culture', 'Affordable', 'Unique experience'],
+          placementStats: {
+            averagePackage: '₹6-10 LPA',
+            topRecruiters: ['TCS', 'Infosys', 'Wipro', 'Tech Mahindra']
+          },
+          whyFit: 'Great for students interested in Northeast culture and affordable education',
+          url: 'https://www.nits.ac.in/',
+          culturalContext: {
+            region: 'Northeast India (Assam)',
+            localLanguage: 'Assamese/Bengali/English',
+            foodCulture: 'Assamese, Unique Northeast cuisine, Non-vegetarian options, Tea culture',
+            lifestyle: 'Northeast culture, peaceful, scenic, moderate pace, unique experience',
+            culturalFit: 'Assamese culture, multilingual, very welcoming, English-medium, diverse student body'
+          }
         }
       ],
       hi: [
@@ -760,7 +1485,56 @@ export function generateCollegeRecommendations(
   };
 
   const streamColleges = colleges[stream] || colleges['Science (PCM)'];
-  return streamColleges[language] || streamColleges.en;
+  let recommendations = streamColleges[language] || streamColleges.en;
+  
+  // Filter colleges based on geographic preference
+  if (geographicPreference && geographicPreference.length > 0) {
+    const locationMap: Record<string, string[]> = {
+      'Metro city': ['New Delhi', 'Mumbai', 'Chennai', 'Bangalore', 'Kolkata', 'Hyderabad', 'Pune'],
+      'Tier 2 city': ['Tiruchirappalli', 'Mangalore', 'Calicut', 'Vellore', 'Warangal', 'Surat', 'Indore'],
+      'Small city/Town': ['Hamirpur', 'Jalandhar', 'Patna', 'Raipur', 'Durgapur', 'Rourkela'],
+      'Village/Rural': ['Silchar', 'Shillong', 'Agartala', 'Meghalaya']
+    };
+    
+    // Get preferred locations
+    const preferredLocations: string[] = [];
+    geographicPreference.forEach(pref => {
+      if (locationMap[pref]) {
+        preferredLocations.push(...locationMap[pref]);
+      }
+    });
+    
+    // Filter and prioritize colleges in preferred locations
+    if (preferredLocations.length > 0) {
+      const preferred = recommendations.filter(college => 
+        preferredLocations.some(loc => college.location.includes(loc) || loc.includes(college.location))
+      );
+      const others = recommendations.filter(college => 
+        !preferredLocations.some(loc => college.location.includes(loc) || loc.includes(college.location))
+      );
+      recommendations = [...preferred, ...others].slice(0, 8); // Limit to 8 recommendations
+    }
+  }
+  
+  // Filter by budget if constraint exists
+  if (budgetConstraint) {
+    recommendations = recommendations
+      .filter(college => {
+        const feesMatch = college.fees.match(/₹(\d+)/);
+        if (feesMatch) {
+          const fee = parseInt(feesMatch[1]);
+          return fee <= 2; // Prefer colleges with fees <= 2 lakhs
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const feeA = a.fees.match(/₹(\d+)/)?.[1] || '999';
+        const feeB = b.fees.match(/₹(\d+)/)?.[1] || '999';
+        return parseInt(feeA) - parseInt(feeB);
+      });
+  }
+  
+  return recommendations.slice(0, 8); // Return top 8 recommendations
 }
 
 /**

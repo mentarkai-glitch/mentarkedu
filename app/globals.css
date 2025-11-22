@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root,
+  [data-theme="dark"] {
     --background: 0 0% 0%; /* Pure Black */
     --foreground: 0 0% 100%; /* #FFFFFF */
     
@@ -32,6 +33,36 @@
     
     --radius: 0.75rem;
   }
+
+  [data-theme="light"] {
+    --background: 0 0% 100%; /* Pure White */
+    --foreground: 0 0% 6%; /* #0F0F0F */
+    
+    --primary: 43 96% 56%; /* Amber-500 for light theme */
+    --primary-foreground: 0 0% 0%;
+    
+    --secondary: 339 100% 58%; /* Hot Pink #FF006E */
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 0 0% 96%; /* Very light gray */
+    --muted-foreground: 0 0% 40%;
+    
+    --card: 0 0% 98%; /* Off-white */
+    --card-foreground: 0 0% 6%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 6%;
+    
+    --border: 0 0% 90%; /* Light gray borders */
+    --input: 0 0% 90%;
+    --ring: 43 96% 56%;
+    
+    --success: 142 71% 45%;
+    --warning: 43 96% 56%;
+    --error: 0 72% 51%;
+    
+    --radius: 0.75rem;
+  }
 }
 
 @layer base {
@@ -40,21 +71,55 @@
   }
   
   html {
+    @apply transition-colors duration-200;
+  }
+
+  [data-theme="dark"] html {
     @apply bg-black;
+  }
+
+  [data-theme="light"] html {
+    @apply bg-white;
   }
   
   body {
-    @apply bg-black text-white;
+    @apply transition-colors duration-200;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-size: 16px;
     font-weight: 500;
     line-height: 1.6;
   }
+
+  [data-theme="dark"] body {
+    @apply bg-black text-white;
+  }
+
+  [data-theme="light"] body {
+    @apply bg-white text-slate-900;
+  }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold text-white;
+    @apply font-bold transition-colors duration-200;
     font-weight: 800;
     letter-spacing: -0.02em;
+  }
+
+  [data-theme="dark"] h1,
+  [data-theme="dark"] h2,
+  [data-theme="dark"] h3,
+  [data-theme="dark"] h4,
+  [data-theme="dark"] h5,
+  [data-theme="dark"] h6 {
+    @apply text-white;
+  }
+
+  [data-theme="light"] h1,
+  [data-theme="light"] h2,
+  [data-theme="light"] h3,
+  [data-theme="light"] h4,
+  [data-theme="light"] h5,
+  [data-theme="light"] h6 {
+    @apply text-slate-900;
   }
   
   h1 {
@@ -88,13 +153,24 @@
   }
   
   a {
-    @apply text-yellow-400 font-semibold;
+    @apply font-semibold transition-all duration-200;
     font-weight: 600;
-    transition: all 0.2s;
   }
-  
-  a:hover {
-    @apply text-yellow-300;
+
+  [data-theme="dark"] a {
+    @apply text-gold;
+  }
+
+  [data-theme="dark"] a:hover {
+    @apply text-gold-bright;
+  }
+
+  [data-theme="light"] a {
+    @apply text-amber-600;
+  }
+
+  [data-theme="light"] a:hover {
+    @apply text-amber-700;
   }
   
   /* Custom scrollbar */
@@ -107,12 +183,20 @@
     @apply bg-background;
   }
   
-  ::-webkit-scrollbar-thumb {
-    @apply bg-yellow-500/30 rounded-full;
+  [data-theme="dark"] ::-webkit-scrollbar-thumb {
+    @apply bg-gold/30 rounded-full;
   }
   
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-yellow-500/50;
+  [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gold/50;
+  }
+
+  [data-theme="light"] ::-webkit-scrollbar-thumb {
+    @apply bg-amber-400/30 rounded-full;
+  }
+  
+  [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    @apply bg-amber-400/50;
   }
   
   /* Smooth scrolling */
@@ -121,8 +205,12 @@
   }
   
   /* Selection highlight */
-  ::selection {
-    @apply bg-yellow-500/30 text-yellow-300;
+  [data-theme="dark"] ::selection {
+    @apply bg-gold/30 text-gold;
+  }
+
+  [data-theme="light"] ::selection {
+    @apply bg-amber-400/30 text-amber-900;
   }
 }
 

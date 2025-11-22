@@ -27,6 +27,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface College {
   id: string;
@@ -243,53 +246,49 @@ export default function FormFillerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Form data will be cached until you reconnect."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <ClipboardCheck className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Form Filler
-                </h1>
-                <p className="text-slate-400">AI-powered college admission form assistant</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Form data will be cached until you reconnect."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Form Filler"
+          description="AI-powered college admission form assistant"
+          icon={<ClipboardCheck className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
               {isOnline ? (
                 <>
                   <Wifi className="h-4 w-4 text-green-400" />
-                  <span>Connected to form services</span>
+                  <span className="text-muted-foreground">Connected</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-4 w-4 text-red-400" />
-                  <span className="text-red-300">Offline &mdash; selections are saved locally</span>
+                  <span className="text-red-300">Offline</span>
                 </>
               )}
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {/* Selection Form */}
-          <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
+          <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg mb-6">
             <CardHeader>
               <CardTitle className="text-yellow-400">Select Your Target</CardTitle>
               <CardDescription>Choose a college and course to auto-fill admission forms, or upload a document to extract data</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {history.length > 0 && (
-                <div className="text-xs text-slate-500 flex flex-wrap gap-2">
+                <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
                   <span>Recent runs:</span>
                   {history.map((item) => (
-                    <Badge key={item.timestamp} variant="outline" className="text-slate-300">
+                    <Badge key={item.timestamp} variant="outline" className="text-muted-foreground">
                       {new Date(item.timestamp).toLocaleString()}
                     </Badge>
                   ))}
@@ -298,12 +297,12 @@ export default function FormFillerPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-slate-300">
+                  <label className="text-sm font-medium mb-2 block text-muted-foreground">
                     <Building2 className="w-4 h-4 inline mr-1" />
                     College
                   </label>
                   <Select value={selectedCollege} onValueChange={setSelectedCollege}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue placeholder="Select college...">
                         {colleges.find(c => c.id === selectedCollege)?.name || 'Select college...'}
                       </SelectValue>
@@ -318,12 +317,12 @@ export default function FormFillerPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-slate-300">
+                  <label className="text-sm font-medium mb-2 block text-muted-foreground">
                     <GraduationCap className="w-4 h-4 inline mr-1" />
                     Course
                   </label>
                   <Select value={selectedCourse} onValueChange={setSelectedCourse} disabled={!selectedCollege}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue placeholder="Select course...">
                         {courses.find(c => c.id === selectedCourse)?.name || 'Select course...'}
                       </SelectValue>
@@ -340,14 +339,14 @@ export default function FormFillerPage() {
               </div>
 
               {/* Document Upload Section */}
-              <div className="border-t border-slate-700 pt-4 mt-4">
-                <label className="text-sm font-medium mb-2 block text-slate-300">
+              <div className="border-t border-border pt-4 mt-4">
+                <label className="text-sm font-medium mb-2 block text-muted-foreground">
                   <FileText className="w-4 h-4 inline mr-1" />
                   Upload Document (Optional)
                 </label>
                 <div className="space-y-3">
                   {!uploadedDocument ? (
-                    <div className="border-2 border-dashed border-slate-700 rounded-lg p-6 text-center hover:border-yellow-500/50 transition-colors">
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-yellow-500/50 transition-colors">
                       <input
                         type="file"
                         id="document-upload"
@@ -415,23 +414,23 @@ export default function FormFillerPage() {
                         htmlFor="document-upload"
                         className="cursor-pointer flex flex-col items-center gap-2"
                       >
-                        <Upload className="w-8 h-8 text-slate-400" />
-                        <span className="text-sm text-slate-400">
+                        <Upload className="w-8 h-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           Click to upload or drag and drop
                         </span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted-foreground">
                           PDF, PNG, JPEG (max 20MB)
                         </span>
                       </label>
                     </div>
                   ) : (
-                    <div className="p-4 rounded-lg bg-slate-800 border border-slate-700">
+                    <div className="p-4 rounded-lg bg-card border border-border">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <FileCheck className="w-5 h-5 text-yellow-400" />
                           <div>
-                            <p className="text-sm font-medium text-white">{uploadedDocument.name}</p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-sm font-medium text-foreground">{uploadedDocument.name}</p>
+                            <p className="text-xs text-muted-foreground">
                               {(uploadedDocument.size / 1024 / 1024).toFixed(2)} MB
                             </p>
                           </div>
@@ -447,7 +446,7 @@ export default function FormFillerPage() {
                               setUploadedDocument(null);
                               setExtractedData(null);
                             }}
-                            className="text-slate-400 hover:text-red-400"
+                            className="text-muted-foreground hover:text-red-400"
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -455,28 +454,28 @@ export default function FormFillerPage() {
                       </div>
                       
                       {extractedData && (
-                        <div className="mt-3 pt-3 border-t border-slate-700">
+                        <div className="mt-3 pt-3 border-t border-border">
                           {extractedData.form_fields && Object.keys(extractedData.form_fields).length > 0 ? (
                             <div className="space-y-2">
-                              <p className="text-xs text-slate-400">Extracted Form Fields:</p>
+                              <p className="text-xs text-muted-foreground">Extracted Form Fields:</p>
                               <div className="grid grid-cols-2 gap-2">
                                 {Object.entries(extractedData.form_fields).slice(0, 6).map(([key, value]) => (
-                                  <div key={key} className="text-xs bg-slate-900/50 p-2 rounded">
-                                    <span className="text-slate-500">{key}:</span>{' '}
-                                    <span className="text-slate-300">{String(value)}</span>
+                                  <div key={key} className="text-xs bg-card/50 p-2 rounded">
+                                    <span className="text-muted-foreground">{key}:</span>{' '}
+                                    <span className="text-muted-foreground">{String(value)}</span>
                                   </div>
                                 ))}
                               </div>
                               {Object.keys(extractedData.form_fields).length > 6 && (
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-muted-foreground">
                                   + {Object.keys(extractedData.form_fields).length - 6} more fields
                                 </p>
                               )}
                             </div>
                           ) : extractedData.text ? (
                             <div>
-                              <p className="text-xs text-slate-400 mb-2">Extracted Text:</p>
-                              <p className="text-xs text-slate-300 line-clamp-3 bg-slate-900/50 p-2 rounded">
+                              <p className="text-xs text-muted-foreground mb-2">Extracted Text:</p>
+                              <p className="text-xs text-muted-foreground line-clamp-3 bg-card/50 p-2 rounded">
                                 {extractedData.text.substring(0, 200)}...
                               </p>
                             </div>
@@ -519,7 +518,7 @@ export default function FormFillerPage() {
           {loading && (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="bg-slate-900/50 border-yellow-500/30">
+                <Card key={i} className="bg-card/50 border-yellow-500/30">
                   <CardContent className="pt-6">
                     <Skeleton className="h-32 w-full" />
                   </CardContent>
@@ -533,7 +532,7 @@ export default function FormFillerPage() {
             <div className="space-y-6">
               {/* Personal & Academic Info */}
               {formData.filled_data && (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardHeader>
                     <CardTitle className="text-yellow-400 flex items-center gap-2">
                       <FileText className="w-5 h-5" />
@@ -543,32 +542,32 @@ export default function FormFillerPage() {
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">Name</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground mb-1">Name</p>
+                        <p className="text-foreground">
                           {formData.filled_data.first_name} {formData.filled_data.last_name}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">Email</p>
-                        <p className="text-white">{formData.filled_data.email || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Email</p>
+                        <p className="text-foreground">{formData.filled_data.email || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">Phone</p>
-                        <p className="text-white">{formData.filled_data.phone || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                        <p className="text-foreground">{formData.filled_data.phone || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">Location</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground mb-1">Location</p>
+                        <p className="text-foreground">
                           {formData.filled_data.city}, {formData.filled_data.state}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">Exam Score</p>
-                        <p className="text-white">{formData.filled_data.score || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Exam Score</p>
+                        <p className="text-foreground">{formData.filled_data.score || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">Category</p>
-                        <p className="text-white">{formData.filled_data.category || 'General'}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Category</p>
+                        <p className="text-foreground">{formData.filled_data.category || 'General'}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -577,16 +576,16 @@ export default function FormFillerPage() {
 
               {/* Required Documents */}
               {formData.required_documents && formData.required_documents.length > 0 && (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardHeader>
                     <CardTitle className="text-yellow-400">Required Documents</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       {formData.required_documents.map((doc, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-3 bg-slate-800 rounded-lg">
+                        <div key={idx} className="flex items-center gap-2 p-3 bg-card rounded-lg">
                           <CheckCircle className="w-5 h-5 text-green-400" />
-                          <span className="text-white">{doc}</span>
+                          <span className="text-foreground">{doc}</span>
                         </div>
                       ))}
                     </div>
@@ -605,7 +604,7 @@ export default function FormFillerPage() {
                       {formData.ai_recommendations.map((rec, idx) => (
                         <div key={idx} className="flex items-start gap-2">
                           <Sparkles className="w-4 h-4 text-yellow-400 mt-0.5" />
-                          <p className="text-sm text-slate-300">{rec}</p>
+                          <p className="text-sm text-muted-foreground">{rec}</p>
                         </div>
                       ))}
                     </div>
@@ -656,15 +655,15 @@ export default function FormFillerPage() {
 
           {/* Empty State */}
           {!loading && !formData && (
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-card/50 border-yellow-500/30">
               <CardContent className="pt-12 pb-12">
                 <div className="flex flex-col items-center justify-center text-center space-y-4">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
                     <ClipboardCheck className="w-12 h-12 text-yellow-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">Ready to Fill Forms?</h3>
-                    <p className="text-slate-400 text-sm">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Ready to Fill Forms?</h3>
+                    <p className="text-muted-foreground text-sm">
                       Select a college and course above to generate AI-powered form data
                     </p>
                   </div>
@@ -672,8 +671,8 @@ export default function FormFillerPage() {
               </CardContent>
             </Card>
           )}
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }

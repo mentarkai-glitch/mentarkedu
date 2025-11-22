@@ -21,6 +21,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface BadgeRecord {
   id: string;
@@ -174,43 +177,39 @@ export default function AchievementsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Viewing cached achievements."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <Trophy className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Achievements
-                </h1>
-                <p className="text-slate-400">Celebrate milestones and see what&apos;s next to unlock.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Viewing cached achievements."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Achievements"
+          description="Celebrate milestones and see what's next to unlock"
+          icon={<Trophy className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex items-center gap-3 text-xs sm:text-sm">
               {isOnline ? (
-                <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> Online</span>
+                <span className="inline-flex items-center gap-1"><Wifi className="h-4 w-4 text-green-400" /> <span className="text-muted-foreground">Online</span></span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-red-300"><WifiOff className="h-4 w-4 text-red-400" /> Offline</span>
               )}
               <Button
                 variant="outline"
                 size="sm"
-                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                className="border-gold/40 text-gold hover:bg-gold/10"
                 onClick={exportBadges}
                 disabled={!badgeData}
               >
                 <Download className="h-3 w-3 mr-1" /> Export
               </Button>
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {error && (
             <Alert className="mb-4 bg-red-500/10 border-red-500/30">
@@ -219,40 +218,40 @@ export default function AchievementsPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg">
               <CardContent className="pt-6">
-                <p className="text-sm text-slate-400">Badges Earned</p>
-                <p className="text-3xl font-bold text-white">
+                <p className="text-sm text-muted-foreground">Badges Earned</p>
+                <p className="text-3xl font-bold text-foreground">
                   {badgeData?.totalEarned || 0}
-                  <span className="text-sm text-slate-500"> / {badgeData?.totalAvailable || 0}</span>
+                  <span className="text-sm text-muted-foreground"> / {badgeData?.totalAvailable || 0}</span>
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-card/50 border-yellow-500/30">
               <CardContent className="pt-6">
-                <p className="text-sm text-slate-400">Latest Badge</p>
-                <p className="text-lg font-semibold text-white">
+                <p className="text-sm text-muted-foreground">Latest Badge</p>
+                <p className="text-lg font-semibold text-foreground">
                   {badgeData?.earned?.[0]?.achievements?.title || '—'}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {badgeData?.earned?.[0]?.earned_at
                     ? new Date(badgeData.earned[0].earned_at!).toLocaleDateString()
                     : 'No badges yet'}
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-card/50 border-yellow-500/30">
               <CardContent className="pt-6">
-                <p className="text-sm text-slate-400">Focus Badge</p>
-                <p className="text-lg font-semibold text-white">
+                <p className="text-sm text-muted-foreground">Focus Badge</p>
+                <p className="text-lg font-semibold text-foreground">
                   {badgeData?.available?.[0]?.title || 'Complete more ARKs'}
                 </p>
-                <p className="text-xs text-slate-500">Next unlock waiting for you</p>
+                <p className="text-xs text-muted-foreground">Next unlock waiting for you</p>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="bg-slate-900/50 border-yellow-500/30">
+          <Card className="bg-card/50 border-yellow-500/30">
             <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <CardTitle className="text-yellow-400 flex items-center gap-2">
@@ -262,7 +261,7 @@ export default function AchievementsPage() {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Select value={filter} onValueChange={(value: 'all' | 'earned' | 'available') => setFilter(value)}>
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                  <SelectTrigger className="bg-card border-border text-muted-foreground">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -272,7 +271,7 @@ export default function AchievementsPage() {
                   </SelectContent>
                 </Select>
                 <Select value={sort} onValueChange={(value: 'recent' | 'xp' | 'alpha') => setSort(value)}>
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                  <SelectTrigger className="bg-card border-border text-muted-foreground">
                     <SelectValue placeholder="Sort" />
                   </SelectTrigger>
                   <SelectContent>
@@ -287,11 +286,11 @@ export default function AchievementsPage() {
               {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-32 bg-slate-900/80 border border-slate-800 rounded-xl animate-pulse" />
+                    <div key={i} className="h-32 bg-card/80 border border-border rounded-xl animate-pulse" />
                   ))}
                 </div>
               ) : filteredBadges.length === 0 ? (
-                <div className="text-center text-slate-400 py-12">
+                <div className="text-center text-muted-foreground py-12">
                   No badges to show yet. Keep exploring to unlock more.
                 </div>
               ) : (
@@ -306,24 +305,24 @@ export default function AchievementsPage() {
                         className={`p-4 rounded-xl border transition-all ${
                           earned
                             ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30'
-                            : 'bg-slate-900/60 border-slate-700 opacity-75'
+                            : 'bg-card/60 border-border opacity-75'
                         }`}
                       >
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center">
                             {renderIcon(record.achievements?.type || record.type)}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white">{title}</p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-sm font-semibold text-foreground">{title}</p>
+                            <p className="text-xs text-muted-foreground">
                               {earned && record.earned_at
                                 ? `Earned ${new Date(record.earned_at).toLocaleDateString()}`
                                 : 'Locked'}
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm text-slate-300 mb-3">{description}</p>
-                        <div className="flex items-center justify-between text-xs text-slate-400">
+                        <p className="text-sm text-muted-foreground mb-3">{description}</p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>XP Reward</span>
                           <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/40">
                             +{xpReward} XP
@@ -336,9 +335,9 @@ export default function AchievementsPage() {
               )}
             </CardContent>
           </Card>
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

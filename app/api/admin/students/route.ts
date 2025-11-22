@@ -26,6 +26,15 @@ export async function GET(request: NextRequest) {
     const batch = searchParams.get("batch");
     const grade = searchParams.get("grade");
     const search = searchParams.get("search");
+    const limit = parseInt(searchParams.get("limit") || "500");
+    const offset = parseInt(searchParams.get("offset") || "0");
+
+    // Check cache
+    const cacheKey = cacheKeys.students(`${batch}-${grade}-${search}-${limit}-${offset}`);
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return successResponse(cached);
+    }
 
     // Build query
     let query = supabase
@@ -51,7 +60,14 @@ export async function GET(request: NextRequest) {
       query = query.eq("grade", grade);
     }
 
-    const { data: students, error } = await query.order("created_at", { ascending: false }).limit(500);
+    // Get total count first
+    const { count } = await supabase
+      .from("students")
+      .select("*", { count: "exact", head: true });
+
+    const { data: students, error } = await query
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       return errorResponse(error.message, 500);
@@ -82,10 +98,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return successResponse({
+    const responseData = {
       students: transformedStudents,
-      total: transformedStudents.length,
-    });
+      total: count || transformedStudents.length,
+      limit,
+      offset,
+    };
+
+    // Cache for 2 minutes
+    cache.set(cacheKey, responseData, 120);
+
+    return successResponse(responseData);
   } catch (error: any) {
     console.error("Failed to fetch admin student list", error);
     return errorResponse(error?.message || "Internal server error", 500);

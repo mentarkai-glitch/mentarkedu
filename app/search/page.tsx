@@ -3,10 +3,13 @@
 import { useState, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search, Sparkles, ExternalLink, BookOpen, Target, TrendingUp, Lightbulb, ArrowRight, FileText, Download, Loader2 } from "lucide-react";
+import { Search, Sparkles, ExternalLink, BookOpen, Target, TrendingUp, Lightbulb, ArrowRight, FileText, Download, Loader2, Bookmark, History as HistoryIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SavedSearches } from "@/components/search/SavedSearches";
+import { SearchHistory } from "@/components/search/SearchHistory";
 import { toast } from "sonner";
 import { generateStudyNotes, downloadDocumentAsFile } from "@/lib/services/document-generation";
 import Link from "next/link";
@@ -94,6 +97,22 @@ function SearchPageContent() {
     setQuery(searchText);
     if (overrideContext && overrideContext !== context) {
       setContext(overrideContext);
+    }
+
+    // Record search in history
+    try {
+      await fetch('/api/search/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          query: searchText,
+          context: searchContext,
+          filters: {},
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to record search history:', err);
     }
 
     setLoading(true);
@@ -303,26 +322,76 @@ function SearchPageContent() {
           </div>
         )}
 
-        {recentQueries.length > 0 && (
-          <div className="max-w-4xl mx-auto mb-6">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
-              <Sparkles className="h-3 w-3 text-yellow-400" />
-              <span>Recent searches</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {recentQueries.map((item) => (
-                <button
-                  key={`${item.query}-${item.context}`}
-                  onClick={() => handleSearch(item.query, item.context)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/60 text-xs sm:text-sm text-slate-300 hover:border-yellow-500 hover:text-white transition-all"
-                >
-                  {item.query}
-                  <span className="ml-2 text-[10px] uppercase tracking-wide text-yellow-400">{item.context}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Saved Searches & History Tabs */}
+        <div className="max-w-4xl mx-auto mb-6">
+          <Tabs defaultValue="results" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-yellow-500/30 mb-4">
+              <TabsTrigger value="results" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+                <Search className="w-4 h-4 mr-2" />
+                Results
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+                <Bookmark className="w-4 h-4 mr-2" />
+                Saved
+              </TabsTrigger>
+              <TabsTrigger value="history" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+                <HistoryIcon className="w-4 h-4 mr-2" />
+                History
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="saved">
+              <SavedSearches 
+                onSelectSearch={(search) => {
+                  handleSearch(search.query, search.context as SearchContext);
+                  // Switch to results tab after search
+                  setTimeout(() => {
+                    const resultsTab = document.querySelector('[value="results"]') as HTMLElement;
+                    if (resultsTab) resultsTab.click();
+                  }, 100);
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="history">
+              <SearchHistory
+                onSelectHistory={(item) => {
+                  handleSearch(item.query, item.context as SearchContext);
+                  // Switch to results tab after search
+                  setTimeout(() => {
+                    const resultsTab = document.querySelector('[value="results"]') as HTMLElement;
+                    if (resultsTab) resultsTab.click();
+                  }, 100);
+                }}
+                days={30}
+                limit={50}
+              />
+            </TabsContent>
+
+            <TabsContent value="results">
+              {recentQueries.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
+                    <Sparkles className="h-3 w-3 text-yellow-400" />
+                    <span>Recent searches</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recentQueries.map((item) => (
+                      <button
+                        key={`${item.query}-${item.context}`}
+                        onClick={() => handleSearch(item.query, item.context)}
+                        className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/60 text-xs sm:text-sm text-slate-300 hover:border-yellow-500 hover:text-white transition-all"
+                      >
+                        {item.query}
+                        <span className="ml-2 text-[10px] uppercase tracking-wide text-yellow-400">{item.context}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
 
         {error && (
           <div className="max-w-4xl mx-auto mb-6">
@@ -454,6 +523,47 @@ function SearchPageContent() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Save Search Button */}
+            {results && (
+              <div className="max-w-4xl mx-auto mb-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/search/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                          query: query,
+                          context: context,
+                          filters: {},
+                        }),
+                      });
+                      
+                      if (response.ok) {
+                        toast.success('Search saved');
+                      } else {
+                        const error = await response.json();
+                        if (error.error?.includes('already saved')) {
+                          toast.info('Search already saved');
+                        } else {
+                          throw new Error(error.error);
+                        }
+                      }
+                    } catch (err: any) {
+                      toast.error(err.message || 'Failed to save search');
+                    }
+                  }}
+                  className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                >
+                  <Bookmark className="w-4 h-4 mr-2" />
+                  Save Search
+                </Button>
+              </div>
             )}
 
             {/* Related Queries */}

@@ -37,6 +37,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Paper {
   paperId: string;
@@ -191,7 +194,7 @@ export default function AcademicPapersPage() {
     if (count > 1000) return 'bg-red-500/20 text-red-400 border-red-500/50';
     if (count > 500) return 'bg-orange-500/20 text-orange-400 border-orange-500/50';
     if (count > 100) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
-    return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+    return 'bg-card/20 text-muted-foreground border-border/50';
   };
 
   const toggleBookmark = (paper: Paper) => {
@@ -326,40 +329,36 @@ export default function AcademicPapersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Results shown are from your saved searches."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <Library className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Academic Papers
-                </h1>
-                <p className="text-slate-400">Search research papers from Semantic Scholar</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Results shown are from your saved searches."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Academic Papers"
+          description="Search research papers from Semantic Scholar"
+          icon={<Library className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
               {isOnline ? (
                 <>
                   <Wifi className="h-4 w-4 text-green-400" />
-                  <span>Connected to Semantic Scholar</span>
+                  <span className="text-muted-foreground">Connected</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-4 w-4 text-red-400" />
-                  <span className="text-red-300">Offline &mdash; saved history will still be available</span>
+                  <span className="text-red-300">Offline</span>
                 </>
               )}
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {error && (
             <Card className="mb-4 bg-red-500/10 border-red-500/30">
@@ -371,7 +370,7 @@ export default function AcademicPapersPage() {
           )}
 
           {/* Search Form */}
-          <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
+          <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg mb-6">
             <CardContent className="pt-6">
               <form onSubmit={handleSearch} className="flex gap-4">
                 <div className="flex-1">
@@ -379,9 +378,9 @@ export default function AcademicPapersPage() {
                     placeholder="Search for research papers, topics, authors..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     {QUERY_TEMPLATES.map((template) => (
                       <Button
                         key={template}
@@ -420,7 +419,7 @@ export default function AcademicPapersPage() {
           </Card>
 
           {history.length > 0 && (
-            <div className="mb-6 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            <div className="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <BookmarkCheck className="h-4 w-4 text-yellow-300" />
               <span>Recent searches:</span>
               {history.map((item) => (
@@ -476,7 +475,7 @@ export default function AcademicPapersPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-slate-400 hover:text-slate-300"
+                  className="text-muted-foreground hover:text-muted-foreground"
                   onClick={() => setSelectedPapers(new Set())}
                 >
                   Clear Selection
@@ -486,7 +485,7 @@ export default function AcademicPapersPage() {
             {papers.length > 0 && (
               <div className="ml-auto flex items-center gap-2">
                 <Select value={bibliographyFormat} onValueChange={(v: any) => setBibliographyFormat(v)}>
-                  <SelectTrigger className="w-32 h-8 border-slate-700 bg-slate-800 text-slate-300">
+                  <SelectTrigger className="w-32 h-8 border-border bg-card text-muted-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -504,7 +503,7 @@ export default function AcademicPapersPage() {
           {loading && (
             <div className="space-y-4">
               {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="bg-slate-900/50 border-yellow-500/30">
+                <Card key={i} className="bg-card/50 border-yellow-500/30">
                   <CardContent className="pt-6">
                     <Skeleton className="h-40 w-full" />
                   </CardContent>
@@ -517,15 +516,15 @@ export default function AcademicPapersPage() {
           {!loading && papers.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-foreground">
                   Search Results ({papers.length})
                 </h2>
-                <span className="text-xs text-slate-400">Showing top {papers.length} matches</span>
+                <span className="text-xs text-muted-foreground">Showing top {papers.length} matches</span>
               </div>
 
-              <Card className="bg-slate-900/50 border-yellow-500/30">
+              <Card className="bg-card/50 border-yellow-500/30">
                 <CardContent className="py-4">
-                  <div className="flex flex-wrap gap-4 text-sm text-slate-300">
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-yellow-400" />
                       <span>Highest citations: {Math.max(...papers.map((p) => p.citationCount))}</span>
@@ -543,7 +542,7 @@ export default function AcademicPapersPage() {
               </Card>
 
               {papers.map((paper) => (
-                <Card key={paper.paperId} className={`bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors ${selectedPapers.has(paper.paperId) ? 'ring-2 ring-blue-500/50' : ''}`}>
+                <Card key={paper.paperId} className={`bg-card/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors ${selectedPapers.has(paper.paperId) ? 'ring-2 ring-blue-500/50' : ''}`}>
                   <CardContent className="pt-6">
                     <div className="space-y-4">
                       {/* Header with selection and actions */}
@@ -556,14 +555,14 @@ export default function AcademicPapersPage() {
                               className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                                 selectedPapers.has(paper.paperId)
                                   ? 'bg-blue-500 border-blue-500'
-                                  : 'border-slate-600 hover:border-blue-500'
+                                  : 'border-border hover:border-blue-500'
                               }`}
                             >
                               {selectedPapers.has(paper.paperId) && (
-                                <CheckCircle2 className="w-3 h-3 text-white" />
+                                <CheckCircle2 className="w-3 h-3 text-foreground" />
                               )}
                             </button>
-                            <h3 className="text-xl font-bold text-white flex items-start gap-2 flex-1">
+                            <h3 className="text-xl font-bold text-foreground flex items-start gap-2 flex-1">
                               <BookOpen className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                               <a
                                 href={paper.url}
@@ -581,7 +580,7 @@ export default function AcademicPapersPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-xs text-slate-400 hover:text-purple-300"
+                            className="text-xs text-muted-foreground hover:text-purple-300"
                             onClick={() => setShowNotes(showNotes === paper.paperId ? null : paper.paperId)}
                             title="Add research notes"
                           >
@@ -592,7 +591,7 @@ export default function AcademicPapersPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-xs text-slate-400 hover:text-blue-300"
+                            className="text-xs text-muted-foreground hover:text-blue-300"
                             onClick={() => handleSummarize(paper)}
                             disabled={summarizing === paper.paperId || !!summaries[paper.paperId]}
                             title="AI Summarize"
@@ -609,7 +608,7 @@ export default function AcademicPapersPage() {
                       </div>
 
                       {/* Meta Info */}
-                      <div className="flex flex-wrap gap-4 text-sm text-slate-400">
+                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         {paper.year && (
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
@@ -634,7 +633,7 @@ export default function AcademicPapersPage() {
                           <TrendingUp className="w-3 h-3 mr-1" />
                           {paper.citationCount} citations
                         </Badge>
-                        <Badge variant="outline" className="bg-slate-800">
+                        <Badge variant="outline" className="bg-card">
                           Influence: {paper.influence.toFixed(2)}
                         </Badge>
                       </div>
@@ -642,7 +641,7 @@ export default function AcademicPapersPage() {
                       {/* Abstract */}
                       {paper.abstract && (
                         <div>
-                          <p className="text-sm text-slate-400 line-clamp-3">
+                          <p className="text-sm text-muted-foreground line-clamp-3">
                             {paper.abstract}
                           </p>
                         </div>
@@ -655,7 +654,7 @@ export default function AcademicPapersPage() {
                             <Brain className="w-4 h-4 text-blue-400" />
                             <span className="text-sm font-semibold text-blue-300">AI Summary</span>
                           </div>
-                          <div className="space-y-2 text-sm text-slate-300">
+                          <div className="space-y-2 text-sm text-muted-foreground">
                             {summaries[paper.paperId].keyFindings && summaries[paper.paperId].keyFindings.length > 0 && (
                               <div>
                                 <p className="text-xs text-blue-400 font-semibold mb-1">Key Findings:</p>
@@ -690,7 +689,7 @@ export default function AcademicPapersPage() {
                             onChange={(e) => setNotes(prev => ({ ...prev, [paper.paperId]: e.target.value }))}
                             placeholder="Add your research notes, quotes, insights..."
                             rows={4}
-                            className="bg-slate-800 border-slate-700 text-slate-300 text-sm mb-2"
+                            className="bg-card border-border text-muted-foreground text-sm mb-2"
                           />
                           <div className="flex items-center gap-2">
                             <Button
@@ -707,7 +706,7 @@ export default function AcademicPapersPage() {
                               type="button"
                               size="sm"
                               variant="ghost"
-                              className="text-slate-400 hover:text-slate-300"
+                              className="text-muted-foreground hover:text-muted-foreground"
                               onClick={() => setShowNotes(null)}
                             >
                               Close
@@ -732,7 +731,7 @@ export default function AcademicPapersPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-xs text-slate-400 hover:text-yellow-300"
+                            className="text-xs text-muted-foreground hover:text-yellow-300"
                             onClick={() => toggleBookmark(paper)}
                           >
                             <BookmarkCheck className="w-4 h-4 mr-1" />
@@ -749,7 +748,7 @@ export default function AcademicPapersPage() {
 
           {/* Bibliography Dialog */}
           <Dialog open={showBibliography} onOpenChange={setShowBibliography}>
-            <DialogContent className="max-w-3xl bg-slate-900 border-slate-700">
+            <DialogContent className="max-w-3xl bg-card border-border">
               <DialogHeader>
                 <DialogTitle className="text-yellow-400">Generated Bibliography ({bibliographyFormat.toUpperCase()})</DialogTitle>
                 <DialogDescription>
@@ -757,10 +756,10 @@ export default function AcademicPapersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 max-h-96 overflow-y-auto">
+                <div className="p-4 bg-card rounded-lg border border-border max-h-96 overflow-y-auto">
                   <ol className="space-y-3">
                     {bibliography.map((entry, idx) => (
-                      <li key={idx} className="text-sm text-slate-300 list-decimal list-inside">
+                      <li key={idx} className="text-sm text-muted-foreground list-decimal list-inside">
                         {entry}
                       </li>
                     ))}
@@ -786,7 +785,7 @@ export default function AcademicPapersPage() {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="text-slate-400"
+                    className="text-muted-foreground"
                     onClick={() => {
                       navigator.clipboard.writeText(bibliography.join('\n\n'));
                       toast.success('Bibliography copied to clipboard');
@@ -802,24 +801,24 @@ export default function AcademicPapersPage() {
 
           {bookmarks.length > 0 && (
             <div className="mt-8 space-y-4">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <BookmarkCheck className="w-5 h-5 text-yellow-300" /> Saved papers ({bookmarks.length})
               </h2>
               {bookmarks.map((paper) => (
-                <Card key={`bookmark-${paper.paperId}`} className="bg-slate-900/40 border-slate-700">
+                <Card key={`bookmark-${paper.paperId}`} className="bg-card/40 border-border">
                   <CardContent className="pt-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <a href={paper.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-yellow-300 hover:text-yellow-200">
                           {paper.title}
                         </a>
-                        <p className="text-xs text-slate-500 mt-1">{formatAuthors(paper.authors)} • {paper.year ?? 'Unknown'}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{formatAuthors(paper.authors)} • {paper.year ?? 'Unknown'}</p>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="text-xs text-slate-400 hover:text-red-300"
+                        className="text-xs text-muted-foreground hover:text-red-300"
                         onClick={() => toggleBookmark(paper)}
                       >
                         Remove
@@ -833,15 +832,15 @@ export default function AcademicPapersPage() {
 
           {/* No Results */}
           {!loading && hasSearched && papers.length === 0 && (
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-card/50 border-yellow-500/30">
               <CardContent className="pt-12 pb-12">
                 <div className="flex flex-col items-center justify-center text-center space-y-4">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
                     <Library className="w-12 h-12 text-yellow-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">No Papers Found</h3>
-                    <p className="text-slate-400 text-sm">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">No Papers Found</h3>
+                    <p className="text-muted-foreground text-sm">
                       Try a different search query or check your spelling
                     </p>
                   </div>
@@ -852,29 +851,29 @@ export default function AcademicPapersPage() {
 
           {/* Empty State */}
           {!loading && !hasSearched && (
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-card/50 border-yellow-500/30">
               <CardContent className="pt-12 pb-12">
                 <div className="flex flex-col items-center justify-center text-center space-y-4">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
                     <Library className="w-12 h-12 text-yellow-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">Discover Research Papers</h3>
-                    <p className="text-slate-400 text-sm mb-6">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Discover Research Papers</h3>
+                    <p className="text-muted-foreground text-sm mb-6">
                       Search millions of academic papers from Semantic Scholar
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl">
-                      <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                      <div className="p-4 bg-card rounded-lg border border-border">
                         <TrendingUp className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                        <p className="text-sm text-slate-300">Latest Research</p>
+                        <p className="text-sm text-muted-foreground">Latest Research</p>
                       </div>
-                      <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                      <div className="p-4 bg-card rounded-lg border border-border">
                         <Users className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                        <p className="text-sm text-slate-300">Author Search</p>
+                        <p className="text-sm text-muted-foreground">Author Search</p>
                       </div>
-                      <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                      <div className="p-4 bg-card rounded-lg border border-border">
                         <FileText className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                        <p className="text-sm text-slate-300">Topic Discovery</p>
+                        <p className="text-sm text-muted-foreground">Topic Discovery</p>
                       </div>
                     </div>
                   </div>
@@ -882,8 +881,8 @@ export default function AcademicPapersPage() {
               </CardContent>
             </Card>
           )}
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }

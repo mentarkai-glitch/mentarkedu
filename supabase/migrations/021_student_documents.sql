@@ -120,3 +120,8 @@ COMMENT ON TABLE resume_versions IS 'Tracks different versions of student resume
 COMMENT ON COLUMN student_documents.metadata IS 'JSONB field storing document-specific metadata like job_id, project_id, source feature, etc.';
 
 
+
+
+
+
+

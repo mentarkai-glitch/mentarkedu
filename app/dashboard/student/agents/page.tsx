@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner } from '@/components/ui/loading';
 import {
   Brain,
   Sparkles,
@@ -142,35 +144,28 @@ export default function AgentsHubPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Page Header */}
-      <div className="border-b border-slate-700 bg-slate-900/50">
-        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold text-white mb-2">AI Agents Hub</h1>
-                <p className="text-slate-400 text-lg">Choose the right agent for your task</p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
-              <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <PageHeader
+          title="AI Agents Hub"
+          description="Choose the right agent for your task"
+          icon={<Sparkles className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 p-3 bg-card/50 rounded-lg border border-border">
                 <Switch
                   checked={voiceMode}
                   onCheckedChange={handleToggleVoice}
                   id="voice-mode"
                 />
-                <Label htmlFor="voice-mode" className="text-slate-300 cursor-pointer">
+                <Label htmlFor="voice-mode" className="text-muted-foreground cursor-pointer">
                   Voice Mode
                 </Label>
                 {voiceMode && (
                   <Button
                     size="sm"
                     variant={isListening ? "destructive" : "outline"}
-                    className={isListening ? "bg-red-500 text-white" : "border-green-500/40 text-green-400"}
+                    className={isListening ? "bg-red-500 text-foreground" : "border-green-500/40 text-green-400"}
                     onClick={handleStartListening}
                   >
                     {isListening ? (
@@ -191,7 +186,7 @@ export default function AgentsHubPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-slate-700 text-slate-400"
+                  className="border-border text-muted-foreground"
                   onClick={() => {
                     // Voice settings dialog would go here
                     toast.info('Voice settings coming soon');
@@ -202,11 +197,10 @@ export default function AgentsHubPage() {
                 </Button>
               )}
             </div>
-          </motion.div>
-        </div>
-      </div>
+          }
+        />
 
-      {/* Agents Grid */}
+        {/* Agents Grid */}
       <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0 }}
@@ -214,7 +208,7 @@ export default function AgentsHubPage() {
           transition={{ delay: 0.2 }}
           className="mb-6"
         >
-          <p className="text-slate-400 text-center max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-center max-w-2xl mx-auto">
             Each agent is specialized for a specific task, powered by cutting-edge AI models and
             integrated with your ARK for personalized results.
           </p>
@@ -230,34 +224,34 @@ export default function AgentsHubPage() {
                 whileHover={{ scale: 1.02, y: -5 }}
                 className="h-full"
               >
-                <Card className={`${agent.bgColor} hover:border-opacity-60 transition-all h-full cursor-pointer group`}>
+                <Card className={`bg-gradient-to-br from-slate-900/80 to-slate-800/60 ${agent.bgColor} hover:border-opacity-80 hover:shadow-xl transition-all h-full cursor-pointer group`}>
                   <CardHeader>
                     <div className="flex items-start justify-between mb-3">
                       <div
-                        className={`w-14 h-14 rounded-xl bg-gradient-to-br ${agent.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}
+                        className={`w-14 h-14 rounded-xl bg-gradient-to-br ${agent.color} flex items-center justify-center shadow-lg shadow-black/30 group-hover:scale-110 group-hover:shadow-xl transition-all`}
                       >
-                        <agent.icon className="w-7 h-7 text-white" />
+                        <agent.icon className="w-7 h-7 text-foreground" />
                       </div>
-                      <Badge className="bg-slate-800/50 text-slate-300 text-xs border-slate-600">
+                      <Badge className="bg-card/70 text-muted-foreground text-xs border-border/50">
                         {agent.badge}
                       </Badge>
                     </div>
-                    <CardTitle className="text-xl text-white mb-2">{agent.name}</CardTitle>
-                    <CardDescription className="text-slate-300 text-sm">
+                    <CardTitle className="text-xl text-foreground mb-2 group-hover:text-gold transition-colors">{agent.name}</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm">
                       {agent.description}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       {agent.features.map((feature, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm text-slate-400">
+                        <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                           <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
                           {feature}
                         </div>
                       ))}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-slate-700">
-                      <div className="flex items-center gap-2 text-sm font-medium text-white group-hover:text-yellow-400 transition-colors">
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground group-hover:text-gold transition-colors">
                         Try Agent <TrendingUp className="w-4 h-4" />
                       </div>
                     </div>
@@ -274,23 +268,23 @@ export default function AgentsHubPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1 }}
         >
-          <Card className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 border-2 border-cyan-500/30 overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"></div>
+          <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/70 border-2 border-cyan-500/50 overflow-hidden shadow-xl hover:shadow-cyan-500/20 transition-all">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"></div>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-xl flex items-center justify-center">
-                  <Brain className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                  <Brain className="w-8 h-8 text-foreground" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl text-white mb-1">Analyze Agent</CardTitle>
-                  <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                  <CardTitle className="text-2xl text-foreground mb-1">Analyze Agent</CardTitle>
+                  <Badge className="bg-cyan-500/30 text-cyan-300 border-cyan-500/50 shadow-md">
                     All-in-One Intelligence Platform
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-300 mb-6">
+              <p className="text-muted-foreground mb-6">
                 Our most powerful agent that combines all capabilities. Feed it any task, and it will
                 intelligently route to the right specialized agent, combine results, and deliver
                 comprehensive answers.
@@ -298,7 +292,7 @@ export default function AgentsHubPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {["Multi-agent orchestration", "Context awareness", "ARK integration", "Memory learning"].map(
                   (feature, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm text-slate-400">
+                    <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
                       <div className="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
                       {feature}
                     </div>
@@ -308,8 +302,9 @@ export default function AgentsHubPage() {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

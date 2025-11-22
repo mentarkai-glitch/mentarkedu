@@ -149,20 +149,20 @@ export default function DocumentGeneratorPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+          <h1 className="text-4xl font-bold text-foreground mb-2 flex items-center gap-3">
             <Sparkles className="w-10 h-10 text-purple-400" />
             Document Generator
           </h1>
-          <p className="text-slate-400">Generate professional documents from your Mentark data</p>
+          <p className="text-muted-foreground">Generate professional documents from your Mentark data</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Document Type Selection */}
           <div className="lg:col-span-2">
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-card/50 border-border">
               <CardHeader>
-                <CardTitle className="text-white">Select Document Type</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardTitle className="text-foreground">Select Document Type</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   Choose the type of document you want to generate
                 </CardDescription>
               </CardHeader>
@@ -177,25 +177,25 @@ export default function DocumentGeneratorPage() {
                       <Card
                         className={`cursor-pointer transition-all ${
                           selectedType === docType.id
-                            ? 'bg-slate-700 border-purple-500'
-                            : 'bg-slate-800/30 border-slate-600 hover:border-slate-500'
+                            ? 'bg-card border-purple-500'
+                            : 'bg-card/30 border-border hover:border-border'
                         }`}
                         onClick={() => setSelectedType(docType.id)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
-                            <div className={`${docType.color} p-3 rounded-lg text-white`}>
+                            <div className={`${docType.color} p-3 rounded-lg text-foreground`}>
                               {docType.icon}
                             </div>
                             <div className="flex-1">
-                              <h3 className="text-white font-semibold mb-1">{docType.name}</h3>
-                              <p className="text-slate-400 text-sm">{docType.description}</p>
+                              <h3 className="text-foreground font-semibold mb-1">{docType.name}</h3>
+                              <p className="text-muted-foreground text-sm">{docType.description}</p>
                               <div className="flex gap-2 mt-2">
                                 {docType.formats.map((format) => (
                                   <Badge
                                     key={format}
                                     variant="outline"
-                                    className="text-xs border-slate-600 text-slate-300"
+                                    className="text-xs border-border text-muted-foreground"
                                   >
                                     {format.toUpperCase()}
                                   </Badge>
@@ -215,16 +215,16 @@ export default function DocumentGeneratorPage() {
             </Card>
 
             {/* Quick Links */}
-            <Card className="bg-slate-800/50 border-slate-700 mt-6">
+            <Card className="bg-card/50 border-border mt-6">
               <CardHeader>
-                <CardTitle className="text-white">Quick Actions</CardTitle>
+                <CardTitle className="text-foreground">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <Link href="/dashboard/student/resume-builder">
                     <Button
                       variant="outline"
-                      className="w-full border-slate-600 text-slate-200 hover:bg-slate-700/50"
+                      className="w-full border-border text-muted-foreground hover:bg-card/50"
                     >
                       <Briefcase className="w-4 h-4 mr-2" />
                       Resume Builder
@@ -233,7 +233,7 @@ export default function DocumentGeneratorPage() {
                   <Link href="/dashboard/student/documents">
                     <Button
                       variant="outline"
-                      className="w-full border-slate-600 text-slate-200 hover:bg-slate-700/50"
+                      className="w-full border-border text-muted-foreground hover:bg-card/50"
                     >
                       <FileText className="w-4 h-4 mr-2" />
                       My Documents
@@ -246,10 +246,10 @@ export default function DocumentGeneratorPage() {
 
           {/* Generation Panel */}
           <div className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-card/50 border-border">
               <CardHeader>
-                <CardTitle className="text-white">Generate Document</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardTitle className="text-foreground">Generate Document</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   Configure and generate your document
                 </CardDescription>
               </CardHeader>
@@ -257,12 +257,12 @@ export default function DocumentGeneratorPage() {
                 {selectedDocType && (
                   <>
                     <div>
-                      <label className="text-slate-300 text-sm mb-2 block">Format</label>
+                      <label className="text-muted-foreground text-sm mb-2 block">Format</label>
                       <Select
                         value={selectedFormat}
                         onValueChange={setSelectedFormat}
                       >
-                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                        <SelectTrigger className="bg-card/50 border-border text-foreground">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -295,7 +295,7 @@ export default function DocumentGeneratorPage() {
                     </Button>
 
                     {lastGenerated && lastGenerated.type === selectedType && (
-                      <div className="pt-4 border-t border-slate-700">
+                      <div className="pt-4 border-t border-border">
                         <div className="flex items-center gap-2 text-sm text-green-400 mb-2">
                           <CheckCircle className="w-4 h-4" />
                           <span>Document ready</span>
@@ -303,7 +303,7 @@ export default function DocumentGeneratorPage() {
                         <Button
                           onClick={handleDownload}
                           variant="outline"
-                          className="w-full border-slate-600 text-slate-200 hover:bg-slate-700/50"
+                          className="w-full border-border text-muted-foreground hover:bg-card/50"
                         >
                           <Download className="w-4 h-4 mr-2" />
                           Download
@@ -314,18 +314,18 @@ export default function DocumentGeneratorPage() {
                 )}
 
                 {!selectedType && (
-                  <p className="text-slate-400 text-sm text-center py-4">
+                  <p className="text-muted-foreground text-sm text-center py-4">
                     Select a document type to get started
                   </p>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-card/50 border-border">
               <CardHeader>
-                <CardTitle className="text-white">Integration Points</CardTitle>
+                <CardTitle className="text-foreground">Integration Points</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-slate-400">
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>• Generate resumes from Job Matcher</p>
                 <p>• Create project reports from Project Helper</p>
                 <p>• Export flashcards from Practice Questions</p>
@@ -339,5 +339,10 @@ export default function DocumentGeneratorPage() {
     </div>
   );
 }
+
+
+
+
+
 
 

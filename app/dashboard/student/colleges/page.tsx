@@ -12,6 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface CollegeRecommendation {
   id: string;
@@ -275,30 +278,30 @@ export default function CollegeMatcherPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-4"
       >
-        <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all">
+        <Card className="bg-card/50 border-border hover:border-border transition-all">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4">
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center flex-shrink-0`}>
-                <Icon className="w-6 h-6 text-white" />
+                <Icon className="w-6 h-6 text-foreground" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">
+                    <h3 className="text-lg font-semibold text-foreground mb-1">
                       {rec.colleges.short_name || rec.colleges.name}
                     </h3>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-muted-foreground">
                       {rec.colleges.city}, {rec.colleges.state}
                     </p>
                   </div>
-                  <Badge className={`bg-gradient-to-r ${colorClass} text-white border-0`}>
+                  <Badge className={`bg-gradient-to-r ${colorClass} text-foreground border-0`}>
                     {Math.round(rec.admission_probability)}% chance
                   </Badge>
                 </div>
 
-                <div className="text-sm text-slate-300 mb-3">
+                <div className="text-sm text-muted-foreground mb-3">
                   <p className="font-medium mb-1">{rec.college_courses.name}</p>
-                  <div className="flex items-center gap-4 text-slate-400">
+                  <div className="flex items-center gap-4 text-muted-foreground">
                     <span>₹{rec.college_courses.fees_total?.toLocaleString()}/yr</span>
                     <span>₹{rec.college_courses.average_salary}L avg package</span>
                     <span>{rec.college_courses.placement_percentage}% placements</span>
@@ -308,7 +311,7 @@ export default function CollegeMatcherPage() {
                 {rec.strengths && rec.strengths.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
                     {rec.strengths.map((strength, idx) => (
-                      <span key={idx} className="text-xs px-2 py-1 bg-slate-700/50 rounded-md text-slate-300">
+                      <span key={idx} className="text-xs px-2 py-1 bg-card/50 rounded-md text-muted-foreground">
                         {strength}
                       </span>
                     ))}
@@ -316,17 +319,17 @@ export default function CollegeMatcherPage() {
                 )}
 
                 <div className="flex items-center gap-4 mt-3">
-                  <div className="flex items-center gap-1 text-sm text-slate-400">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <GraduationCap className="w-4 h-4" />
                     <span>{rec.colleges.tier}</span>
                   </div>
                   {rec.colleges.nirf_rank && (
-                    <div className="flex items-center gap-1 text-sm text-slate-400">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <TrendingUp className="w-4 h-4" />
                       <span>NIRF #{rec.colleges.nirf_rank}</span>
                     </div>
                   )}
-                  <div className="text-sm text-slate-400">
+                  <div className="text-sm text-muted-foreground">
                     {rec.colleges.type}
                   </div>
                 </div>
@@ -339,37 +342,32 @@ export default function CollegeMatcherPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent mb-2">
-                College Matcher
-              </h1>
-              <p className="text-slate-400">Find your perfect college match based on your scores and preferences</p>
-              <OfflineBanner
-                isOnline={isOnline}
-                message="You are offline. College recommendations reflect your last sync."
-                className="mt-3"
-              />
-            </div>
-          </div>
-        </motion.div>
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. College recommendations reflect your last sync."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="College Matcher"
+          description="Find your perfect college match based on your scores and preferences"
+          icon={<Building2 className="w-8 h-8 text-gold" />}
+        />
+
+        <PageContainer spacing="md">
 
         {recommendations.length === 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg">
               <CardContent className="pt-6">
                 <div className="text-center">
                   <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
-                    <Search className="w-10 h-10 text-white" />
+                    <Search className="w-10 h-10 text-foreground" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Find Your Perfect College</h3>
-                  <p className="text-slate-400 mb-6 max-w-2xl mx-auto">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Find Your Perfect College</h3>
+                  <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
                     Get personalized college recommendations based on your exam scores, preferences, and career goals.
                   </p>
                   <Button
@@ -403,16 +401,16 @@ export default function CollegeMatcherPage() {
 
         {recommendations.length > 0 && (
           <div className="space-y-8">
-            <Card className="bg-slate-900/50 border-slate-700">
+            <Card className="bg-card/50 border-border">
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-white">Your Recommendations</h2>
-                    <p className="text-slate-400">
+                    <h2 className="text-2xl font-bold text-foreground">Your Recommendations</h2>
+                    <p className="text-muted-foreground">
                       {filteredCounts.total} of {recommendations.length} colleges match the current filters
                     </p>
                     {lastRunAt && (
-                      <p className="text-xs text-slate-500 mt-1">Last updated {new Date(lastRunAt).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Last updated {new Date(lastRunAt).toLocaleString()}</p>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -420,7 +418,7 @@ export default function CollegeMatcherPage() {
                       onClick={handleFindColleges}
                       disabled={loading || !isOnline}
                       variant="outline"
-                      className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                      className="border-border text-muted-foreground hover:bg-card"
                     >
                       {loading ? (
                         <>
@@ -456,38 +454,38 @@ export default function CollegeMatcherPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
-                    <p className="text-xs text-slate-400">Total matches</p>
-                    <p className="text-2xl font-semibold text-white">{filteredCounts.total}</p>
+                  <div className="p-3 rounded-lg bg-card border border-border">
+                    <p className="text-xs text-muted-foreground">Total matches</p>
+                    <p className="text-2xl font-semibold text-foreground">{filteredCounts.total}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
-                    <p className="text-xs text-slate-400">Safe bets</p>
-                    <p className="text-2xl font-semibold text-white">{filteredCounts.safe}</p>
+                  <div className="p-3 rounded-lg bg-card border border-border">
+                    <p className="text-xs text-muted-foreground">Safe bets</p>
+                    <p className="text-2xl font-semibold text-foreground">{filteredCounts.safe}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
-                    <p className="text-xs text-slate-400">Moderate chances</p>
-                    <p className="text-2xl font-semibold text-white">{filteredCounts.moderate}</p>
+                  <div className="p-3 rounded-lg bg-card border border-border">
+                    <p className="text-xs text-muted-foreground">Moderate chances</p>
+                    <p className="text-2xl font-semibold text-foreground">{filteredCounts.moderate}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-slate-800 border border-slate-700">
-                    <p className="text-xs text-slate-400">Reach/Dream</p>
-                    <p className="text-2xl font-semibold text-white">{filteredCounts.reach + filteredCounts.dream}</p>
+                  <div className="p-3 rounded-lg bg-card border border-border">
+                    <p className="text-xs text-muted-foreground">Reach/Dream</p>
+                    <p className="text-2xl font-semibold text-foreground">{filteredCounts.reach + filteredCounts.dream}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-xs text-slate-400 mb-1 block">Filter by state/city</Label>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Filter by state/city</Label>
                     <Input
                       value={stateFilter}
                       onChange={(e) => setStateFilter(e.target.value)}
                       placeholder="e.g., Maharashtra or Mumbai"
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-card border-border"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-slate-400 mb-1 block">Tier</Label>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Tier</Label>
                     <Select value={tierFilter} onValueChange={setTierFilter}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
+                      <SelectTrigger className="bg-card border-border text-muted-foreground">
                         <SelectValue placeholder="All tiers" />
                       </SelectTrigger>
                       <SelectContent>
@@ -502,7 +500,7 @@ export default function CollegeMatcherPage() {
                   </div>
                   {history.length > 0 && (
                     <div>
-                      <Label className="text-xs text-slate-400 mb-1 block">Run history</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Run history</Label>
                       <div className="flex flex-wrap gap-2">
                         {history.map((item) => (
                           <Button
@@ -510,7 +508,7 @@ export default function CollegeMatcherPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-xs text-slate-400 hover:text-yellow-300"
+                            className="text-xs text-muted-foreground hover:text-yellow-300"
                           >
                             {new Date(item.timestamp).toLocaleDateString()} ({item.total})
                           </Button>
@@ -532,11 +530,11 @@ export default function CollegeMatcherPage() {
                 <div key={category} className="mb-8">
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center`}>
-                      <Icon className="w-5 h-5 text-white" />
+                      <Icon className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">{categoryLabels[category as keyof typeof categoryLabels]}</h3>
-                      <p className="text-sm text-slate-400">{filtered.length} colleges</p>
+                      <h3 className="text-xl font-bold text-foreground">{categoryLabels[category as keyof typeof categoryLabels]}</h3>
+                      <p className="text-sm text-muted-foreground">{filtered.length} colleges</p>
                     </div>
                   </div>
                   <div>{filtered.map(renderRecommendation)}</div>
@@ -545,7 +543,8 @@ export default function CollegeMatcherPage() {
             })}
           </div>
         )}
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }

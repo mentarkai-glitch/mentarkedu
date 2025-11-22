@@ -36,6 +36,7 @@ import {
   Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -100,13 +101,23 @@ export function SidebarNav() {
       ],
     },
     {
-      title: "Study",
+      title: "Learning Hub",
       items: [
         { title: "Study Analyzer", href: "/dashboard/student/study", icon: Target },
         { title: "Practice Questions", href: "/dashboard/student/practice", icon: FileQuestion },
         { title: "Visual Explainer", href: "/dashboard/student/visual", icon: Lightbulb },
         { title: "Project Helper", href: "/dashboard/student/projects", icon: FileText },
         { title: "Academic Papers", href: "/dashboard/student/papers", icon: Library },
+      ],
+    },
+    {
+      title: "Exam Prep",
+      items: [
+        { title: "Mock Tests", href: "/dashboard/student/mock-tests", icon: FileQuestion },
+        { title: "Previous Year Papers", href: "/dashboard/student/pyqs", icon: Library },
+        { title: "Syllabus Tracker", href: "/dashboard/student/syllabus-tracker", icon: Target },
+        { title: "Rank Predictor", href: "/dashboard/student/rank-predictor", icon: TrendingUp },
+        { title: "Concept Heatmap", href: "/dashboard/student/concept-heatmap", icon: Activity },
       ],
     },
     {
@@ -153,7 +164,7 @@ export function SidebarNav() {
         <Button
           size="icon"
           variant="outline"
-          className="fixed bottom-4 left-4 z-30 h-12 w-12 rounded-full border-yellow-500/40 text-yellow-200 bg-slate-900/80 backdrop-blur"
+          className="fixed bottom-4 left-4 z-30 h-12 w-12 rounded-full border-gold/40 text-gold bg-card/80 backdrop-blur"
           onClick={() => setCollapsed(false)}
           aria-label="Open dashboard navigation"
         >
@@ -164,29 +175,32 @@ export function SidebarNav() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-screen bg-slate-900 border-r border-slate-700 transition-all duration-300",
+          "fixed top-0 left-0 z-50 h-screen bg-card border-r border-border transition-all duration-300",
           collapsed ? "-translate-x-full lg:translate-x-0 lg:w-16" : "translate-x-0 w-72"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo & Toggle */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between p-4 border-b border-border gap-2">
             {!collapsed && (
-              <Link href="/dashboard/student" className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
+              <Link href="/dashboard/student" className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-8 h-8 bg-gradient-to-br from-gold to-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Brain className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-display text-xl font-bold text-white">Mentark</span>
+                <span className="font-display text-xl font-bold text-foreground truncate">Mentark</span>
               </Link>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCollapsed(!collapsed)}
-              className="lg:block hidden text-slate-400 hover:text-white"
-            >
-              {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!collapsed && <ThemeToggle size="sm" variant="ghost" />}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCollapsed(!collapsed)}
+                className="lg:block hidden text-muted-foreground hover:text-foreground"
+              >
+                {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+              </Button>
+            </div>
           </div>
 
           {/* Navigation Sections */}
@@ -194,7 +208,7 @@ export function SidebarNav() {
             {navSections.map((section, idx) => (
               <div key={idx} className="space-y-2">
                 {!collapsed && (
-                  <h3 className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     {section.title}
                   </h3>
                 )}
@@ -209,17 +223,17 @@ export function SidebarNav() {
                           className={cn(
                             "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors",
                             active
-                              ? "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-white border border-yellow-500/30"
-                              : "text-slate-400 hover:text-white hover:bg-slate-800"
+                              ? "bg-gradient-to-r from-gold/20 to-orange-500/20 text-foreground border border-gold/30"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
                           )}
                           title={collapsed ? item.title : undefined}
                         >
-                          <item.icon className={cn("w-5 h-5 flex-shrink-0", active && "text-yellow-400")} />
+                          <item.icon className={cn("w-5 h-5 flex-shrink-0", active && "text-gold")} />
                           {!collapsed && (
                             <>
                               <span className="flex-1 text-sm font-medium">{item.title}</span>
                               {item.badge && (
-                                <span className="px-2 py-0.5 text-xs bg-yellow-500 text-black rounded-full font-semibold">
+                                <span className="px-2 py-0.5 text-xs bg-gold text-black rounded-full font-semibold">
                                   {item.badge}
                                 </span>
                               )}
@@ -235,7 +249,7 @@ export function SidebarNav() {
           </nav>
 
           {/* User Section */}
-          <div className="border-t border-slate-700 p-4 space-y-2">
+          <div className="border-t border-border p-4 space-y-2">
             {!collapsed && (
               <Link
                 href="/dashboard/student/agents"
@@ -262,8 +276,8 @@ export function SidebarNav() {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors",
                   pathname?.startsWith("/dashboard/student/settings")
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
                 title={collapsed ? "Settings" : undefined}
               >
@@ -273,7 +287,7 @@ export function SidebarNav() {
             </Link>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
               title={collapsed ? "Logout" : undefined}
             >
               <LogOut className="w-5 h-5" />
@@ -284,10 +298,11 @@ export function SidebarNav() {
       </aside>
 
       {/* Toggle Button for Mobile */}
-      {collapsed && (
+      {collapsed && isMobile && (
         <button
           onClick={() => setCollapsed(false)}
-          className="fixed bottom-4 left-4 z-40 lg:hidden w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg"
+          className="fixed bottom-4 left-4 z-40 lg:hidden w-12 h-12 bg-gradient-to-r from-gold to-orange-500 rounded-full flex items-center justify-center shadow-lg min-h-[48px] min-w-[48px]"
+          aria-label="Open navigation menu"
         >
           <Brain className="w-6 h-6 text-white" />
         </button>

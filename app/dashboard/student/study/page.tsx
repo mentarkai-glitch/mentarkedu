@@ -10,9 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { TabNav } from '@/components/ui/tab-nav';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface KnowledgeGap {
   topic: string;
@@ -224,51 +228,43 @@ export default function StudyWorkspacePage() {
       case 'high':
         return 'bg-orange-500/20 text-orange-400 border-orange-500/50';
       case 'medium':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
+        return 'bg-gold-500/20 text-gold-400 border-gold-500/50';
       case 'low':
         return 'bg-green-500/20 text-green-400 border-green-500/50';
       default:
-        return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+        return 'bg-card/20 text-muted-foreground border-border/50';
     }
   };
 
   return (
-    <div className="min-h-screen bg-black p-3 sm:p-4 md:p-8 overflow-x-hidden">
-      <div className="container mx-auto max-w-6xl w-full">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4 sm:mb-6">
-            <div className="p-2 sm:p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30 flex-shrink-0">
-              <Target className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent break-words">
-                Study Workspace
-              </h1>
-              <p className="text-xs sm:text-sm md:text-base text-slate-400 break-words">
-                Upload materials, identify knowledge gaps, and generate AI-guided study plans.
-              </p>
-            </div>
-          </div>
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <PageHeader
+          title="Study Workspace"
+          description="Upload materials, identify knowledge gaps, and generate AI-guided study plans"
+          icon={<Target className="w-8 h-8 text-gold" />}
+        />
+
+        <PageContainer spacing="md">
 
           <Tabs value={tab} onValueChange={setTab} className="w-full">
-            <div className="w-full overflow-x-auto">
-              <TabsList className="inline-flex w-full min-w-max bg-slate-900/50 border border-yellow-500/30 sm:grid sm:grid-cols-3">
-                <TabsTrigger value="analyze" className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4">
-                  <span className="hidden sm:inline">📝 </span>Upload
-                </TabsTrigger>
-                <TabsTrigger value="gaps" disabled={gaps.length === 0} className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4">
-                  <span className="hidden sm:inline">🎯 </span>Gaps
-                </TabsTrigger>
-                <TabsTrigger value="plan" disabled={!plan} className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4">
-                  <span className="hidden sm:inline">📅 </span>Plan
-                </TabsTrigger>
-              </TabsList>
-            </div>
+            <TabNav
+              items={[
+                { value: 'analyze', label: 'Upload', icon: <span className="text-base">📝</span> },
+                { value: 'gaps', label: 'Gaps', icon: <span className="text-base">🎯</span>, disabled: gaps.length === 0 },
+                { value: 'plan', label: 'Plan', icon: <span className="text-base">📅</span>, disabled: !plan }
+              ]}
+              value={tab}
+              onValueChange={setTab}
+              fullWidth
+              variant="default"
+              size="md"
+            />
 
             <TabsContent value="analyze" className="mt-6">
-              <Card className="bg-slate-900/50 border-yellow-500/30">
+              <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-yellow-400">Step 1: Upload Your Study Materials</CardTitle>
+                  <CardTitle className="text-gold-400">Step 1: Upload Your Study Materials</CardTitle>
                   <CardDescription>Add your notes, syllabus, or textbook content for AI analysis.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -282,7 +278,7 @@ export default function StudyWorkspacePage() {
                         placeholder="e.g., Physics, Math"
                         value={currentMaterial.subject}
                         onChange={(event) => setCurrentMaterial({ ...currentMaterial, subject: event.target.value })}
-                        className="bg-slate-800 border-slate-700 w-full text-sm sm:text-base"
+                        className="bg-card border-border w-full text-sm sm:text-base"
                       />
                     </div>
                     <div className="w-full min-w-0">
@@ -293,7 +289,7 @@ export default function StudyWorkspacePage() {
                         value={currentMaterial.type}
                         onValueChange={(value) => setCurrentMaterial({ ...currentMaterial, type: value })}
                       >
-                        <SelectTrigger className="bg-slate-800 border-slate-700 w-full text-sm sm:text-base">
+                        <SelectTrigger className="bg-card border-border w-full text-sm sm:text-base">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -314,13 +310,13 @@ export default function StudyWorkspacePage() {
                       rows={6}
                       value={currentMaterial.content}
                       onChange={(event) => setCurrentMaterial({ ...currentMaterial, content: event.target.value })}
-                      className="bg-slate-800 border-slate-700 font-mono text-sm"
+                      className="bg-card border-border font-mono text-sm"
                     />
                   </div>
 
                   <Button
                     onClick={handleAddMaterial}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                    className="w-full bg-gradient-to-r from-gold-500 to-orange-500 hover:from-gold-600 hover:to-orange-600 text-black font-semibold"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Add Material
@@ -332,10 +328,10 @@ export default function StudyWorkspacePage() {
                       {materials.map((material, index) => (
                         <div
                           key={`${material.subject}-${index}`}
-                          className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700"
+                          className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
                         >
                           <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-yellow-400" />
+                            <FileText className="w-4 h-4 text-gold-400" />
                             <span className="text-sm font-medium">{material.subject}</span>
                             <Badge variant="outline" className="text-xs">
                               {material.type}
@@ -352,7 +348,7 @@ export default function StudyWorkspacePage() {
                   <Button
                     onClick={handleAnalyzeGaps}
                     disabled={materials.length === 0 || loading}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                    className="w-full bg-gradient-to-r from-gold-500 to-orange-500 hover:from-gold-600 hover:to-orange-600 text-black font-semibold"
                   >
                     <Brain className="w-4 h-4 mr-2" />
                     {loading ? 'Analyzing...' : 'Analyze Knowledge Gaps'}
@@ -362,23 +358,23 @@ export default function StudyWorkspacePage() {
             </TabsContent>
 
             <TabsContent value="gaps" className="mt-6">
-              <Card className="bg-slate-900/50 border-yellow-500/30">
+              <Card className="bg-card/50 border-gold-500/30">
                 <CardHeader>
-                  <CardTitle className="text-yellow-400">Step 2: Knowledge Gap Analysis</CardTitle>
+                  <CardTitle className="text-gold-400">Step 2: Knowledge Gap Analysis</CardTitle>
                   <CardDescription>{summary || 'Review identified gaps and generate your study plan.'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {gaps.map((gap, index) => (
-                    <div key={`${gap.topic}-${index}`} className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                    <div key={`${gap.topic}-${index}`} className="p-4 bg-card rounded-lg border border-border">
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-lg text-white">{gap.topic}</h3>
+                        <h3 className="font-semibold text-lg text-foreground">{gap.topic}</h3>
                         <Badge className={getImportanceColor(gap.importance)}>{gap.importance}</Badge>
                       </div>
-                      <p className="text-sm text-slate-400 mb-2">⏱️ {gap.estimatedTime} • Priority: {gap.priority}</p>
+                      <p className="text-sm text-muted-foreground mb-2">⏱️ {gap.estimatedTime} • Priority: {gap.priority}</p>
                       {gap.dependencies && gap.dependencies.length > 0 && (
                         <div className="mt-2">
-                          <span className="text-xs text-slate-500">Prerequisites: </span>
-                          <span className="text-xs text-slate-400">{gap.dependencies.join(', ')}</span>
+                          <span className="text-xs text-muted-foreground">Prerequisites: </span>
+                          <span className="text-xs text-muted-foreground">{gap.dependencies.join(', ')}</span>
                         </div>
                       )}
                     </div>
@@ -393,7 +389,7 @@ export default function StudyWorkspacePage() {
                         max={12}
                         value={constraints.availableHoursPerDay}
                         onChange={(event) => setConstraints({ ...constraints, availableHoursPerDay: parseInt(event.target.value, 10) })}
-                        className="bg-slate-800 border-slate-700"
+                        className="bg-card border-border"
                       />
                     </div>
                     <div>
@@ -402,7 +398,7 @@ export default function StudyWorkspacePage() {
                         value={constraints.urgency}
                         onValueChange={(value: 'low' | 'medium' | 'high') => setConstraints({ ...constraints, urgency: value })}
                       >
-                        <SelectTrigger className="bg-slate-800 border-slate-700">
+                        <SelectTrigger className="bg-card border-border">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -418,7 +414,7 @@ export default function StudyWorkspacePage() {
                         value={constraints.preferredLearningStyle}
                         onValueChange={(value) => setConstraints({ ...constraints, preferredLearningStyle: value })}
                       >
-                        <SelectTrigger className="bg-slate-800 border-slate-700">
+                        <SelectTrigger className="bg-card border-border">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -434,7 +430,7 @@ export default function StudyWorkspacePage() {
                   <Button
                     onClick={handleGeneratePlan}
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                    className="w-full bg-gradient-to-r from-gold-500 to-orange-500 hover:from-gold-600 hover:to-orange-600 text-black font-semibold"
                   >
                     <Calendar className="w-4 h-4 mr-2" />
                     {loading ? 'Generating Plan...' : 'Generate 7-Day Study Plan'}
@@ -446,18 +442,18 @@ export default function StudyWorkspacePage() {
             <TabsContent value="plan" className="mt-6">
               {plan && (
                 <div className="space-y-6">
-                  <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
+                  <Card className="bg-gradient-to-br from-gold-500/10 to-orange-500/10 border-gold-500/30">
                     <CardHeader>
-                      <CardTitle className="text-yellow-400">🎯 Expected Outcome</CardTitle>
+                      <CardTitle className="text-gold-400">🎯 Expected Outcome</CardTitle>
                       <CardDescription>{plan.expectedOutcome}</CardDescription>
                     </CardHeader>
                   </Card>
 
                   {plan.topics.map((day, index) => (
-                    <Card key={`plan-day-${day.day}-${index}`} className="bg-slate-900/50 border-yellow-500/30">
+                    <Card key={`plan-day-${day.day}-${index}`} className="bg-card/50 border-gold-500/30">
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-yellow-400">Day {day.day}</CardTitle>
+                          <CardTitle className="text-gold-400">Day {day.day}</CardTitle>
                           <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/50">
                             <Clock className="w-3 h-3 mr-1" />
                             {day.timeRequired}
@@ -470,7 +466,7 @@ export default function StudyWorkspacePage() {
                           <Label className="text-sm font-semibold mb-2 block">Topics to Cover</Label>
                           <div className="flex flex-wrap gap-2">
                             {day.topics.map((topic, topicIndex) => (
-                              <Badge key={`${topic}-${topicIndex}`} variant="outline" className="bg-slate-800">
+                              <Badge key={`${topic}-${topicIndex}`} variant="outline" className="bg-card">
                                 {topic}
                               </Badge>
                             ))}
@@ -484,16 +480,16 @@ export default function StudyWorkspacePage() {
                               {day.resources.map((resource, resourceIndex) => (
                                 <div
                                   key={`${resource.title}-${resourceIndex}`}
-                                  className="flex items-center gap-2 p-2 bg-slate-800 rounded border border-slate-700"
+                                  className="flex items-center gap-2 p-2 bg-card rounded border border-border"
                                 >
-                                  <FileText className="w-4 h-4 text-yellow-400" />
+                                  <FileText className="w-4 h-4 text-gold-400" />
                                   <span className="text-sm">{resource.title}</span>
                                   {resource.url && (
                                     <a
                                       href={resource.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="ml-auto text-yellow-400 hover:text-yellow-300 text-xs"
+                                      className="ml-auto text-gold-400 hover:text-gold-300 text-xs"
                                     >
                                       View →
                                     </a>
@@ -507,12 +503,12 @@ export default function StudyWorkspacePage() {
                     </Card>
                   ))}
 
-                  <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <Card className="bg-card/50 border-gold-500/30">
                     <CardHeader>
-                      <CardTitle className="text-yellow-400">💡 Recommendations</CardTitle>
+                      <CardTitle className="text-gold-400">💡 Recommendations</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ul className="list-disc list-inside space-y-2 text-slate-300">
+                      <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                         {plan.recommendations.map((recommendation, index) => (
                           <li key={`${recommendation}-${index}`} className="text-sm">
                             {recommendation}
@@ -526,26 +522,26 @@ export default function StudyWorkspacePage() {
             </TabsContent>
           </Tabs>
 
-          <Card className="mt-8 bg-slate-900/60 border-yellow-500/20">
+          <Card className="mt-8 bg-card/60 border-gold-500/20">
             <CardHeader>
-              <CardTitle className="text-yellow-400">Need deeper analytics?</CardTitle>
+              <CardTitle className="text-gold-400">Need deeper analytics?</CardTitle>
               <CardDescription>
                 Visit the Study Analyzer for live signals, session logging, and AI recommendations tailored to your current path.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center gap-3">
-              <p className="text-sm text-slate-400 flex-1 min-w-[200px]">
+              <p className="text-sm text-muted-foreground flex-1 min-w-[200px]">
                 Log deep-work blocks, monitor mastery trends, and let Mentark suggest your next move.
               </p>
               <Link href="/dashboard/student/study-analyzer">
-                <Button className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-semibold hover:from-yellow-400 hover:to-orange-400">
+                <Button className="bg-gradient-to-r from-gold-500 to-orange-500 text-black font-semibold hover:from-gold-400 hover:to-orange-400">
                   Open Study Analyzer
                 </Button>
               </Link>
             </CardContent>
           </Card>
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }

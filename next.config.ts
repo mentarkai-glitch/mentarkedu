@@ -26,39 +26,22 @@ const nextConfig: NextConfig = {
     if (isServer) {
       config.externals = config.externals || [];
       config.externals.push({
-        'firebase-admin/app': 'commonjs firebase-admin/app',
-        'firebase-admin/messaging': 'commonjs firebase-admin/messaging',
+        'firebase-admin': 'commonjs firebase-admin',
       });
     }
     
     return config;
   },
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "2mb",
-    },
-  },
 };
 
-// Sentry Webpack Plugin Options
-// Note: Type assertion used because Sentry webpack plugin types may not be fully typed
-const sentryWebpackPluginOptions: any = {
-  // Only upload source maps in production
-  silent: process.env.NODE_ENV === "development",
-  org: "mentark-tech",
-  
-  // Auth token for uploading source maps and creating releases
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  
-  // Project slug (can also be set via NEXT_PUBLIC_SENTRY_PROJECT env var)
-  // Make sure this matches your Sentry project slug exactly
-  project: process.env.NEXT_PUBLIC_SENTRY_PROJECT || 'mentark-quantum',
-  
-  // Disable source map upload if auth token is not provided
-  dryRun: !process.env.SENTRY_AUTH_TOKEN,
-  
-  // For all available options, see:
-  // https://github.com/getsentry/sentry-webpack-plugin#options
-};
+// Only wrap with Sentry config if SENTRY_AUTH_TOKEN is set
+const finalConfig = process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(nextConfig, {
+      // Sentry configuration options
+      silent: true,
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+    })
+  : nextConfig;
 
-export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
+export default finalConfig;

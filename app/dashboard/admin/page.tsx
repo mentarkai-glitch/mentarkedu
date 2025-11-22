@@ -42,6 +42,8 @@ import { TeacherList } from "@/components/admin/TeacherList";
 import { BillingCard } from "@/components/admin/BillingCard";
 import { PlanComparison } from "@/components/admin/PlanComparison";
 import { BatchHealthHeatmap } from "@/components/admin/BatchHealthHeatmap";
+import { BatchRadar } from "@/components/dashboard/admin/BatchRadar";
+import { InterventionWarRoom } from "@/components/dashboard/admin/InterventionWarRoom";
 
 interface Analytics {
   overview: {
@@ -416,6 +418,12 @@ export default function AdminDashboard() {
 
             {/* Batch Health */}
             <BatchHealthHeatmap />
+
+            {/* Air Traffic Control - Batch Radar */}
+            <BatchRadar />
+
+            {/* Intervention War Room */}
+            <InterventionWarRoom />
 
             {/* Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

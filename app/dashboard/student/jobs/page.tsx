@@ -37,7 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -46,6 +46,11 @@ import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/services/analytics';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 import { generateResume, generateCoverLetter, downloadDocumentAsFile } from '@/lib/services/document-generation';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
+import { StatCard } from '@/components/ui/card/card-variants';
+import { TabNav } from '@/components/ui/tab-nav';
 
 interface Job {
   job_id: string;
@@ -536,68 +541,73 @@ export default function JobMatcherPage() {
   }, [recommendations, statusFilter, clientFilter]);
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Showing your last saved job matches."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <Briefcase className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Job Matcher
-                </h1>
-                <p className="text-slate-400">AI-powered job recommendations based on your ARKs</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Showing your last saved job matches."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Job Matcher"
+          description="AI-powered job recommendations based on your ARKs"
+          icon={<Briefcase className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex items-center gap-3 text-xs sm:text-sm">
               {isOnline ? (
                 <>
                   <Wifi className="h-4 w-4 text-green-400" />
-                  <span>Connected</span>
+                  <span className="text-muted-foreground">Connected</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-4 w-4 text-red-400" />
-                  <span className="text-red-300">Offline &mdash; showing last saved results</span>
+                  <span className="text-red-300">Offline</span>
                 </>
               )}
-              <Badge variant="outline" className="bg-slate-800 border-slate-700 text-xs">
+              <Badge variant="outline" className="bg-card/70 border-border text-xs">
                 Saved: {savedJobsList.length}
               </Badge>
               {recommendations.length > 0 && (
-                <Badge variant="outline" className="bg-slate-800 border-slate-700 text-xs">
+                <Badge variant="outline" className="bg-card/70 border-border text-xs">
                   Recommendations: {recommendations.length}
                 </Badge>
               )}
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'recommended' | 'search')} className="mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-900/50 border-yellow-500/30">
-              <TabsTrigger value="recommended" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                <Target className="w-4 h-4 mr-2" />
-                Recommended ({recommendations.filter(r => r.status === 'recommended' || statusFilter === 'all' || r.status === statusFilter).length})
-              </TabsTrigger>
-              <TabsTrigger value="search" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
-                <Search className="w-4 h-4 mr-2" />
-                Search New
-              </TabsTrigger>
-            </TabsList>
+            <TabNav
+              items={[
+                {
+                  value: 'recommended',
+                  label: `Recommended (${recommendations.filter(r => r.status === 'recommended' || statusFilter === 'all' || r.status === statusFilter).length})`,
+                  icon: <Target className="w-4 h-4" />
+                },
+                {
+                  value: 'search',
+                  label: 'Search New',
+                  icon: <Search className="w-4 h-4" />
+                }
+              ]}
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as 'recommended' | 'search')}
+              fullWidth={false}
+              variant="default"
+              size="md"
+            />
 
             {/* Recommended Tab */}
             <TabsContent value="recommended" className="mt-6">
               {/* Filter and Refresh */}
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 max-w-xs">
+                  <SelectTrigger className="bg-card border-border max-w-xs">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -613,7 +623,7 @@ export default function JobMatcherPage() {
                 <Button
                   onClick={() => loadRecommendations(statusFilter !== 'all' ? statusFilter : undefined)}
                   variant="outline"
-                  className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                  className="border-gold/40 text-gold-400 hover:bg-gold-500/10"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh
@@ -624,7 +634,7 @@ export default function JobMatcherPage() {
               {loadingRecommendations ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
-                    <Card key={i} className="bg-slate-900/50 border-yellow-500/30">
+                    <Card key={i} className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg">
                       <CardContent className="pt-6">
                         <Skeleton className="h-32 w-full" />
                       </CardContent>
@@ -634,7 +644,7 @@ export default function JobMatcherPage() {
               ) : filteredRecommendations.length > 0 ? (
                 <div className="space-y-4">
                   {filteredRecommendations.map((rec) => (
-                    <Card key={rec.id} className="bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
+                    <Card key={rec.id} className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 hover:border-gold/60 hover:shadow-xl transition-all">
                       <CardContent className="pt-6">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
@@ -643,26 +653,26 @@ export default function JobMatcherPage() {
                                 <img 
                                   src={rec.company_logo} 
                                   alt={rec.company_name}
-                                  className="w-12 h-12 rounded-lg object-cover border border-slate-700"
+                                  className="w-12 h-12 rounded-lg object-cover border border-border"
                                 />
                               )}
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="text-xl font-bold text-white">{rec.job_title}</h3>
+                                  <h3 className="text-xl font-bold text-foreground">{rec.job_title}</h3>
                                   <Badge className={`${
                                     rec.status === 'applied' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
                                     rec.status === 'viewed' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' :
-                                    rec.status === 'saved' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' :
+                                    rec.status === 'saved' ? 'bg-gold-500/20 text-gold-400 border-gold/50' :
                                     rec.status === 'ignored' ? 'bg-red-500/20 text-red-400 border-red-500/50' :
                                     'bg-purple-500/20 text-purple-400 border-purple-500/50'
                                   }`}>
                                     {rec.status}
                                   </Badge>
-                                  <Badge className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border-yellow-500/50">
+                                  <Badge className="bg-gradient-to-r from-gold-500/20 to-orange-500/20 text-gold-400 border-gold/50">
                                     {rec.relevance_score}% Match
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-2 text-slate-400 mb-2">
+                                <div className="flex items-center gap-2 text-muted-foreground mb-2">
                                   <Building className="w-4 h-4" />
                                   <span>{rec.company_name}</span>
                                 </div>
@@ -672,7 +682,7 @@ export default function JobMatcherPage() {
                                       Remote
                                     </Badge>
                                   )}
-                                  <Badge variant="outline" className="bg-slate-800">
+                                  <Badge variant="outline" className="bg-card">
                                     {rec.employment_type}
                                   </Badge>
                                   {rec.skills_matched && rec.skills_matched.length > 0 && (
@@ -683,25 +693,25 @@ export default function JobMatcherPage() {
                                 </div>
 
                                 {rec.job_description && (
-                                  <p className="text-slate-300 text-sm mb-4 line-clamp-2">
+                                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
                                     {rec.job_description.substring(0, 200)}...
                                   </p>
                                 )}
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                                  <div className="flex items-center gap-2 text-slate-400">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
                                     <MapPin className="w-4 h-4" />
                                     <span className="text-xs">{rec.job_location}</span>
                                   </div>
                                   {rec.job_posted_at_datetime_utc && (
-                                    <div className="flex items-center gap-2 text-slate-400">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
                                       <Clock className="w-4 h-4" />
                                       <span className="text-xs">
                                         {formatDate(rec.job_posted_at_datetime_utc)}
                                       </span>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2 text-slate-400">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
                                     <Star className="w-4 h-4" />
                                     <span className="text-xs">Recommended {formatDate(rec.recommended_at)}</span>
                                   </div>
@@ -709,10 +719,10 @@ export default function JobMatcherPage() {
 
                                 {rec.skills_matched && rec.skills_matched.length > 0 && (
                                   <div className="mb-4">
-                                    <p className="text-xs text-slate-500 mb-2">Matched Skills</p>
+                                    <p className="text-xs text-muted-foreground mb-2">Matched Skills</p>
                                     <div className="flex flex-wrap gap-2">
                                       {rec.skills_matched.slice(0, 5).map((skill, idx) => (
-                                        <Badge key={idx} variant="outline" className="text-xs bg-slate-800 border-blue-500/50">
+                                        <Badge key={idx} variant="outline" className="text-xs bg-card border-blue-500/50">
                                           {skill}
                                         </Badge>
                                       ))}
@@ -733,7 +743,7 @@ export default function JobMatcherPage() {
                                   updateRecommendationStatus(rec.id, 'viewed');
                                 }
                               }}
-                              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold rounded-lg transition-colors whitespace-nowrap"
+                              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gold-500 to-orange-500 hover:from-gold-600 hover:to-orange-600 text-black font-semibold rounded-lg transition-colors whitespace-nowrap"
                             >
                               Apply Now
                               <ExternalLink className="w-4 h-4" />
@@ -774,7 +784,7 @@ export default function JobMatcherPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                                className="border-gold/40 text-gold-400 hover:bg-gold-500/10"
                                 onClick={() => handleGenerateCoverLetter(rec)}
                                 title="Generate Cover Letter"
                               >
@@ -809,7 +819,7 @@ export default function JobMatcherPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                                  className="border-gold/40 text-gold-400 hover:bg-gold-500/10"
                                   onClick={() => updateRecommendationStatus(rec.id, 'saved')}
                                 >
                                   <Save className="w-3 h-3" />
@@ -833,22 +843,22 @@ export default function JobMatcherPage() {
                   ))}
                 </div>
               ) : (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg">
                   <CardContent className="pt-12 pb-12">
                     <div className="flex flex-col items-center justify-center text-center space-y-4">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
-                        <Target className="w-12 h-12 text-yellow-400" />
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gold-500/20 to-orange-500/20 border border-gold/30 flex items-center justify-center">
+                        <Target className="w-12 h-12 text-gold-400" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">No Recommendations Yet</h3>
-                        <p className="text-slate-400 text-sm mb-4">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">No Recommendations Yet</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
                           {statusFilter !== 'all' 
                             ? `No ${statusFilter} recommendations found.`
                             : 'Search for jobs to get personalized recommendations based on your ARKs'}
                         </p>
                         <Button
                           onClick={() => setActiveTab('search')}
-                          className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                          className="bg-gradient-to-r from-gold-500 to-orange-500 hover:from-gold-600 hover:to-orange-600 text-black font-semibold"
                         >
                           <TrendingUp className="w-4 h-4 mr-2" />
                           Search for Jobs
@@ -863,21 +873,21 @@ export default function JobMatcherPage() {
             {/* Search New Tab */}
             <TabsContent value="search" className="mt-6">
               {/* Search Form */}
-              <Card className="bg-slate-900/50 border-yellow-500/30 mb-6">
+              <Card className="bg-card/50 border-gold/30 mb-6">
             <CardHeader>
-              <CardTitle className="text-yellow-400">Find Your Perfect Job</CardTitle>
+              <CardTitle className="text-gold-400">Find Your Perfect Job</CardTitle>
               <CardDescription>Select an ARK to match jobs aligned with your learning goals</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {history.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                   <History className="h-3 w-3" />
                   <span>Recent runs:</span>
                   {history.map((item) => (
                     <Badge
                       key={item.timestamp}
                       variant="outline"
-                      className="cursor-pointer hover:border-yellow-500/60"
+                      className="cursor-pointer hover:border-gold/60"
                       onClick={() => {
                         setSelectedArk(item.arkId);
                         setLocation(item.location);
@@ -891,9 +901,9 @@ export default function JobMatcherPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-slate-300">Select ARK</label>
+                  <label className="text-sm font-medium mb-2 block text-muted-foreground">Select ARK</label>
                   <Select value={selectedArk} onValueChange={setSelectedArk}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue placeholder="Choose an ARK...">
                         {arks.find(a => a.id === selectedArk)?.title || 'Choose an ARK...'}
                       </SelectValue>
@@ -908,9 +918,9 @@ export default function JobMatcherPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-slate-300">Location</label>
+                  <label className="text-sm font-medium mb-2 block text-muted-foreground">Location</label>
                   <Select value={location} onValueChange={setLocation}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -928,7 +938,7 @@ export default function JobMatcherPage() {
 
               <Input
                 placeholder="Filter jobs by keyword (client-side)"
-                className="bg-slate-800 border-slate-700 text-slate-200"
+                className="bg-card border-border text-muted-foreground"
                 value={clientFilter}
                 onChange={(event) => setClientFilter(event.target.value)}
               />
@@ -942,7 +952,7 @@ export default function JobMatcherPage() {
               <Button
                 onClick={handleSearchJobs}
                 disabled={loading || !selectedArk}
-                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold"
+                className="w-full bg-gradient-to-r from-gold-500 to-orange-500 hover:from-gold-600 hover:to-orange-600 text-black font-semibold"
               >
                 {loading ? (
                   <>
@@ -966,13 +976,13 @@ export default function JobMatcherPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-amber-400 mb-1">Search Query</p>
-                    <p className="text-sm font-medium text-white">{searchSummary}</p>
+                    <p className="text-sm font-medium text-foreground">{searchSummary}</p>
                   </div>
                   <div>
                     <p className="text-sm text-amber-400 mb-2">Skills Matched</p>
                     <div className="flex flex-wrap gap-2">
                       {skillsMatched.slice(0, 5).map((skill, idx) => (
-                        <Badge key={idx} variant="outline" className="bg-slate-800 border-amber-500/50">
+                        <Badge key={idx} variant="outline" className="bg-card border-amber-500/50">
                           {skill}
                         </Badge>
                       ))}
@@ -987,7 +997,7 @@ export default function JobMatcherPage() {
           {loading && (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="bg-slate-900/50 border-yellow-500/30">
+                <Card key={i} className="bg-card/50 border-gold/30">
                   <CardContent className="pt-6">
                     <Skeleton className="h-32 w-full" />
                   </CardContent>
@@ -999,12 +1009,12 @@ export default function JobMatcherPage() {
           {!loading && jobs.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-foreground">
                   Recommended Jobs ({filteredJobs.length})
                 </h2>
               </div>
               {filteredJobs.map((job) => (
-                <Card key={job.job_id} className="bg-slate-900/50 border-yellow-500/30 hover:border-yellow-500/70 transition-colors">
+                <Card key={job.job_id} className="bg-card/50 border-gold/30 hover:border-gold/70 transition-colors">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -1013,12 +1023,12 @@ export default function JobMatcherPage() {
                             <img 
                               src={job.company_logo} 
                               alt={job.company_name}
-                              className="w-12 h-12 rounded-lg object-cover border border-slate-700"
+                              className="w-12 h-12 rounded-lg object-cover border border-border"
                             />
                           )}
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold text-white mb-1">{job.job_title}</h3>
-                            <div className="flex items-center gap-2 text-slate-400 mb-2">
+                            <h3 className="text-xl font-bold text-foreground mb-1">{job.job_title}</h3>
+                            <div className="flex items-center gap-2 text-muted-foreground mb-2">
                               <Building className="w-4 h-4" />
                               <span>{job.company_name}</span>
                             </div>
@@ -1028,38 +1038,38 @@ export default function JobMatcherPage() {
                                   Remote
                                 </Badge>
                               )}
-                              <Badge variant="outline" className="bg-slate-800">
+                              <Badge variant="outline" className="bg-card">
                                 {job.job_employment_type}
                               </Badge>
                             </div>
                           </div>
                         </div>
 
-                        <p className="text-slate-300 text-sm mb-4 line-clamp-2">
+                        <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
                           {job.job_description.substring(0, 200)}...
                         </p>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                          <div className="flex items-center gap-2 text-slate-400">
+                          <div className="flex items-center gap-2 text-muted-foreground">
                             <MapPin className="w-4 h-4" />
                             <span className="text-xs">
                               {job.job_city || job.job_state || job.job_country}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-400">
+                          <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock className="w-4 h-4" />
                             <span className="text-xs">
                               {formatDate(job.job_posted_at_datetime_utc)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-400">
+                          <div className="flex items-center gap-2 text-muted-foreground">
                             <DollarSign className="w-4 h-4" />
                             <span className="text-xs">
                               {formatSalary(job.job_min_salary, job.job_max_salary, job.job_salary_currency)}
                             </span>
                           </div>
                           {job.experience_level && (
-                            <div className="flex items-center gap-2 text-slate-400">
+                            <div className="flex items-center gap-2 text-muted-foreground">
                               <Star className="w-4 h-4" />
                               <span className="text-xs capitalize">{job.experience_level.replace('_', ' ')}</span>
                             </div>
@@ -1068,10 +1078,10 @@ export default function JobMatcherPage() {
 
                         {job.required_skills && job.required_skills.length > 0 && (
                           <div className="mb-4">
-                            <p className="text-xs text-slate-500 mb-2">Required Skills</p>
+                            <p className="text-xs text-muted-foreground mb-2">Required Skills</p>
                             <div className="flex flex-wrap gap-2">
                               {job.required_skills.slice(0, 5).map((skill, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs bg-slate-800 border-slate-700">
+                                <Badge key={idx} variant="outline" className="text-xs bg-card border-border">
                                   {skill}
                                 </Badge>
                               ))}
@@ -1084,7 +1094,7 @@ export default function JobMatcherPage() {
                         href={job.job_apply_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold rounded-lg transition-colors whitespace-nowrap"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gold-500 to-orange-500 hover:from-gold-600 hover:to-orange-600 text-black font-semibold rounded-lg transition-colors whitespace-nowrap"
                       >
                         Apply Now
                         <ExternalLink className="w-4 h-4" />
@@ -1103,7 +1113,7 @@ export default function JobMatcherPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                          className="border-gold/40 text-gold-400 hover:bg-gold-500/10"
                           onClick={() => handleGenerateCoverLetter(job)}
                           title="Generate Cover Letter"
                         >
@@ -1114,7 +1124,7 @@ export default function JobMatcherPage() {
                       <Button
                         variant={savedJobs[job.job_id] ? 'default' : 'outline'}
                         size="sm"
-                        className={`${savedJobs[job.job_id] ? 'bg-yellow-500 text-black hover:bg-yellow-600' : 'border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10'} mt-3 w-full`}
+                        className={`${savedJobs[job.job_id] ? 'bg-gold-500 text-black hover:bg-gold-600' : 'border-gold/40 text-gold-400 hover:bg-gold-500/10'} mt-3 w-full`}
                         onClick={() => toggleSaveJob(job)}
                       >
                         <Save className="w-3 h-3 mr-2" />
@@ -1125,7 +1135,7 @@ export default function JobMatcherPage() {
                 </Card>
               ))}
               {filteredJobs.length === 0 && (
-                <div className="p-6 text-center text-slate-400 bg-slate-900/50 border border-slate-800 rounded-lg">
+                <div className="p-6 text-center text-muted-foreground bg-card/50 border border-border rounded-lg">
                   No jobs match your filter right now.
                 </div>
               )}
@@ -1133,15 +1143,15 @@ export default function JobMatcherPage() {
           )}
 
           {!loading && jobs.length === 0 && !error && (
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-card/50 border-gold/30">
               <CardContent className="pt-12 pb-12">
                 <div className="flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
-                    <Briefcase className="w-12 h-12 text-yellow-400" />
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gold-500/20 to-orange-500/20 border border-gold/30 flex items-center justify-center">
+                    <Briefcase className="w-12 h-12 text-gold-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">Start Your Job Search</h3>
-                    <p className="text-slate-400 text-sm">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Start Your Job Search</h3>
+                    <p className="text-muted-foreground text-sm">
                       Select an ARK above to find jobs that match your career goals
                     </p>
                   </div>
@@ -1151,23 +1161,23 @@ export default function JobMatcherPage() {
           )}
 
           {savedJobsList.length > 0 && (
-            <Card className="bg-slate-900/60 border-yellow-500/20 mt-8">
+            <Card className="bg-card/60 border-gold/20 mt-8">
               <CardHeader>
-                <CardTitle className="text-yellow-400">Saved Jobs ({savedJobsList.length})</CardTitle>
+                <CardTitle className="text-gold-400">Saved Jobs ({savedJobsList.length})</CardTitle>
                 <CardDescription>Quick access to roles you bookmarked</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {savedJobsList.map((job) => (
-                  <div key={`saved-${job.job_id}`} className="flex flex-wrap items-center justify-between gap-2 border border-slate-800 rounded-lg p-3">
+                  <div key={`saved-${job.job_id}`} className="flex flex-wrap items-center justify-between gap-2 border border-border rounded-lg p-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{job.job_title}</p>
-                      <p className="text-xs text-slate-400 truncate">{job.company_name}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">{job.job_title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{job.company_name}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         asChild
                         size="sm"
-                        className="bg-yellow-500 text-black hover:bg-yellow-600"
+                        className="bg-gold-500 text-black hover:bg-gold-600"
                       >
                         <a href={job.job_apply_link} target="_blank" rel="noopener noreferrer">
                           Apply
@@ -1176,7 +1186,7 @@ export default function JobMatcherPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10"
+                        className="border-gold/40 text-gold-400 hover:bg-gold-500/10"
                         onClick={() => toggleSaveJob(job)}
                       >
                         Remove
@@ -1189,9 +1199,9 @@ export default function JobMatcherPage() {
               )}
             </TabsContent>
           </Tabs>
-        </motion.div>
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

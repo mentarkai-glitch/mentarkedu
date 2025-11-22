@@ -18,6 +18,12 @@ import {
 } from '@/lib/types';
 import { Loader2, TrendingUp, Brain, Clock, ArrowRight, ChevronLeft, ChevronRight, Sparkles, BookOpen, Video, FileText, ExternalLink } from 'lucide-react';
 import { trackEvent } from '@/lib/services/analytics';
+import { ContentRecommendations } from '@/components/study-analyzer/ContentRecommendations';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { StatCard } from '@/components/ui/card/card-variants';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
+import { motion } from 'framer-motion';
 
 export default function StudyAnalyzerPage() {
   const [signalsLoading, setSignalsLoading] = useState(true);
@@ -264,31 +270,28 @@ export default function StudyAnalyzerPage() {
   }, [masterySummary]);
 
   return (
-    <div className="min-h-screen bg-black p-3 sm:p-4 md:p-8 overflow-x-hidden">
-      <div className="container mx-auto max-w-6xl w-full">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-8">
-          <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-xl border border-emerald-500/30">
-            <Brain className="w-7 h-7 sm:w-9 sm:h-9 text-emerald-300" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-300 via-cyan-300 to-blue-300 bg-clip-text text-transparent">
-              Study Analyzer
-            </h1>
-            <p className="text-sm sm:text-base text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="6xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <PageHeader
+          title="Study Analyzer"
+          description={
+            <>
               Monitor momentum, surface weak spots, and log sessions in seconds. For material uploads and plan generation,
               head over to{' '}
               <Link href="/dashboard/student/study" className="text-emerald-300 underline-offset-4 hover:underline">
                 Study Workspace
               </Link>.
-            </p>
-          </div>
-        </div>
+            </>
+          }
+          icon={<Brain className="w-8 h-8 text-emerald-400" />}
+        />
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <Card className="xl:col-span-1 bg-slate-900/70 border border-emerald-500/20">
+        <PageContainer spacing="md">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <Card className="xl:col-span-1 bg-gradient-to-br from-emerald-900/40 to-cyan-900/30 border-emerald-500/40 shadow-lg hover:shadow-emerald-500/20 transition-all">
             <CardHeader>
-              <CardTitle>Quick Session Logger</CardTitle>
-              <CardDescription>Capture deep-work blocks so the analyzer stays accurate.</CardDescription>
+              <CardTitle className="text-emerald-300 text-xl">Quick Session Logger</CardTitle>
+              <CardDescription className="text-muted-foreground">Capture deep-work blocks so the analyzer stays accurate.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -298,7 +301,7 @@ export default function StudyAnalyzerPage() {
                     value={sessionForm.sessionType}
                     onValueChange={(value) => setSessionForm((prev) => ({ ...prev, sessionType: value }))}
                   >
-                    <SelectTrigger className="bg-slate-900 border-slate-700">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -314,7 +317,7 @@ export default function StudyAnalyzerPage() {
                     value={sessionForm.materialType}
                     onValueChange={(value) => setSessionForm((prev) => ({ ...prev, materialType: value }))}
                   >
-                    <SelectTrigger className="bg-slate-900 border-slate-700">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -334,7 +337,7 @@ export default function StudyAnalyzerPage() {
                     type="datetime-local"
                     value={sessionForm.startedAt}
                     onChange={(event) => setSessionForm((prev) => ({ ...prev, startedAt: event.target.value }))}
-                    className="bg-slate-900 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
                 <div>
@@ -347,7 +350,7 @@ export default function StudyAnalyzerPage() {
                     onChange={(event) =>
                       setSessionForm((prev) => ({ ...prev, durationMinutes: parseInt(event.target.value, 10) || 0 }))
                     }
-                    className="bg-slate-900 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
               </div>
@@ -358,7 +361,7 @@ export default function StudyAnalyzerPage() {
                   rows={3}
                   value={sessionForm.notes}
                   onChange={(event) => setSessionForm((prev) => ({ ...prev, notes: event.target.value }))}
-                  className="bg-slate-900 border-slate-700"
+                  className="bg-card border-border"
                   placeholder="Focus area, blockers, breakthroughs..."
                 />
               </div>
@@ -368,7 +371,7 @@ export default function StudyAnalyzerPage() {
                 <Input
                   value={sessionForm.tags}
                   onChange={(event) => setSessionForm((prev) => ({ ...prev, tags: event.target.value }))}
-                  className="bg-slate-900 border-slate-700"
+                  className="bg-card border-border"
                   placeholder="calculus, deep-work, exam"
                 />
               </div>
@@ -378,35 +381,41 @@ export default function StudyAnalyzerPage() {
                 disabled={sessionSaving}
                 className="w-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-semibold hover:from-emerald-300 hover:to-cyan-300"
               >
-                {sessionSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Log Session
+                {sessionSaving ? (
+                  <>
+                    <Spinner size="sm" color="default" />
+                    <span>Logging Session...</span>
+                  </>
+                ) : (
+                  'Log Session'
+                )}
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="xl:col-span-2 bg-slate-900/70 border border-emerald-500/20">
+          <Card className="xl:col-span-2 bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-emerald-500/40 shadow-lg">
             <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Live Study Signals</CardTitle>
+                <CardTitle className="text-emerald-300 text-xl">Live Study Signals</CardTitle>
                 <CardDescription>These metrics refresh whenever you log a session or finish an ARK milestone.</CardDescription>
               </div>
-              <Button variant="outline" size="icon" onClick={fetchStudySignals} className="bg-slate-900 border-slate-700">
+              <Button variant="outline" size="icon" onClick={fetchStudySignals} className="bg-card border-border">
                 <ArrowRight className="h-4 w-4 rotate-90" />
               </Button>
             </CardHeader>
             <CardContent>
               {signalsLoading ? (
                 <div className="py-10 flex justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-emerald-300" />
+                  <Spinner size="lg" color="default" />
                 </div>
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Average Mastery</p>
+                    <div className="p-4 rounded-lg bg-card border border-border">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Average Mastery</p>
                       <div className="flex items-end gap-2 mt-3">
                         <span className="text-3xl font-bold text-emerald-300">{masteryAverage.toFixed(0)}%</span>
-                        <span className="text-xs text-slate-500 mb-1">across tracked topics</span>
+                        <span className="text-xs text-muted-foreground mb-1">across tracked topics</span>
                       </div>
                       <Progress
                         value={masteryAverage}
@@ -440,42 +449,42 @@ export default function StudyAnalyzerPage() {
                               opacity="0.2"
                             />
                           </svg>
-                          <div className="flex justify-between text-[10px] text-slate-500 uppercase tracking-wide">
+                          <div className="flex justify-between text-[10px] text-muted-foreground uppercase tracking-wide">
                             <span>{masterySparkline.firstLabel ? new Date(masterySparkline.firstLabel).toLocaleDateString() : "Start"}</span>
                             <span>{masterySparkline.lastLabel ? new Date(masterySparkline.lastLabel).toLocaleDateString() : "Latest"}</span>
                           </div>
                         </div>
                       )}
                     </div>
-                    <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Top Mastery</p>
+                    <div className="p-4 rounded-lg bg-card border border-border">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Top Mastery</p>
                       {masteryLeader ? (
                         <>
-                          <p className="text-sm text-white font-semibold mt-2 break-words">
+                          <p className="text-sm text-foreground font-semibold mt-2 break-words">
                             {masteryLeader.topicName || masteryLeader.topicId}
                           </p>
                           <p className="text-lg text-emerald-300 font-bold mt-1">
                             {Math.round(masteryLeader.masteryLevel)}%
                           </p>
                           {masteryLeader.lastAssessedAt && (
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               Last assessed {new Date(masteryLeader.lastAssessedAt).toLocaleDateString()}
                             </p>
                           )}
                         </>
                       ) : (
-                        <p className="text-sm text-slate-500 mt-3">Log sessions to unlock mastery insights.</p>
+                        <p className="text-sm text-muted-foreground mt-3">Log sessions to unlock mastery insights.</p>
                       )}
                     </div>
-                    <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Next Focus</p>
+                    <div className="p-4 rounded-lg bg-card border border-border">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Next Focus</p>
                       {masteryNextFocus ? (
                         <>
-                          <p className="text-sm text-white font-semibold mt-2 break-words">
+                          <p className="text-sm text-foreground font-semibold mt-2 break-words">
                             {masteryNextFocus.topicName || masteryNextFocus.topicId}
                           </p>
-                          <p className="text-xs text-slate-400 mt-2">Suggested next steps:</p>
-                          <ul className="text-xs text-slate-300 mt-1 space-y-1">
+                          <p className="text-xs text-muted-foreground mt-2">Suggested next steps:</p>
+                          <ul className="text-xs text-muted-foreground mt-1 space-y-1">
                             {Array.isArray(nextFocusResources) && nextFocusResources.length > 0 ? (
                               nextFocusResources.slice(0, 3).map((resource, idx) => (
                                 <li key={`${resource}-${idx}`}>• {resource}</li>
@@ -486,19 +495,19 @@ export default function StudyAnalyzerPage() {
                           </ul>
                         </>
                       ) : (
-                        <p className="text-sm text-slate-500 mt-3">Complete ARK checkpoints to unlock AI guidance.</p>
+                        <p className="text-sm text-muted-foreground mt-3">Complete ARK checkpoints to unlock AI guidance.</p>
                       )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-emerald-300" />
                         Learning Path Highlights
                       </h3>
                       {learningPath.length === 0 ? (
-                        <p className="text-slate-500 text-sm">
+                        <p className="text-muted-foreground text-sm">
                           No learning nodes yet—complete Study Workspace to seed your path.
                         </p>
                       ) : (
@@ -513,12 +522,12 @@ export default function StudyAnalyzerPage() {
                                 )}
                                 
                                 {/* Timeline dot */}
-                                <div className="absolute left-0 top-2 w-4 h-4 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 border-2 border-slate-900" />
+                                <div className="absolute left-0 top-2 w-4 h-4 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 border-2 border-border" />
                                 
                                 {/* Node card */}
-                                <div className="p-4 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/30 transition-all">
+                                <div className="p-4 rounded-lg bg-card border border-border hover:border-emerald-500/30 transition-all">
                                   <div className="flex items-center justify-between mb-2">
-                                    <span className="text-white text-sm font-semibold break-words">
+                                    <span className="text-foreground text-sm font-semibold break-words">
                                       {node.topic_name || node.topic_id}
                                     </span>
                                     <Badge className={`${
@@ -531,7 +540,7 @@ export default function StudyAnalyzerPage() {
                                   </div>
                                   <Progress
                                     value={node.mastery_level}
-                                    className="h-2 bg-slate-800 mb-2"
+                                    className="h-2 bg-card mb-2"
                                     indicatorClassName={`${
                                       node.mastery_level >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
                                       node.mastery_level >= 50 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
@@ -540,10 +549,10 @@ export default function StudyAnalyzerPage() {
                                   />
                                   {node.recommended_next?.nextResources && (
                                     <div className="mt-2">
-                                      <p className="text-xs text-slate-400 mb-1">Recommended next steps:</p>
+                                      <p className="text-xs text-muted-foreground mb-1">Recommended next steps:</p>
                                       <div className="flex flex-wrap gap-1">
                                         {Array.isArray(node.recommended_next.nextResources) && node.recommended_next.nextResources.slice(0, 3).map((resource: string, rIdx: number) => (
-                                          <Badge key={rIdx} variant="outline" className="text-xs border-slate-700 text-slate-300">
+                                          <Badge key={rIdx} variant="outline" className="text-xs border-border text-muted-foreground">
                                             {resource}
                                           </Badge>
                                         ))}
@@ -556,7 +565,7 @@ export default function StudyAnalyzerPage() {
                           </div>
                           
                           {learningPath.length > 6 && (
-                            <p className="text-xs text-slate-500 text-center">
+                            <p className="text-xs text-muted-foreground text-center">
                               + {learningPath.length - 6} more topics in your learning path
                             </p>
                           )}
@@ -566,18 +575,18 @@ export default function StudyAnalyzerPage() {
 
                     <div className="space-y-6">
                       <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                           <Sparkles className="w-4 h-4 text-emerald-300" />
                           AI Content Recommendations
                         </h3>
                         {studyRecommendations.length === 0 ? (
-                          <p className="text-slate-500 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             You&apos;re caught up. New resources will appear once more data comes in.
                           </p>
                         ) : (
                           <div className="relative">
                             {/* Carousel */}
-                            <div className="relative overflow-hidden rounded-lg bg-slate-900 border border-emerald-500/30">
+                            <div className="relative overflow-hidden rounded-lg bg-card border border-emerald-500/30">
                               {studyRecommendations.slice(recommendationIndex, recommendationIndex + 1).map((rec) => {
                                 const getResourceIcon = () => {
                                   const type = (rec.resource_type || '').toLowerCase();
@@ -599,15 +608,15 @@ export default function StudyAnalyzerPage() {
                                   <div key={rec.id} className={`p-4 bg-gradient-to-br ${getResourceColor()}`}>
                                     <div className="flex items-start justify-between mb-2">
                                       <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-slate-900/50 text-emerald-300">
+                                        <div className="p-2 rounded-lg bg-card/50 text-emerald-300">
                                           {getResourceIcon()}
                                         </div>
                                         <div>
-                                          <span className="text-white text-sm font-semibold capitalize">
+                                          <span className="text-foreground text-sm font-semibold capitalize">
                                             {rec.resource_type || 'Resource'}
                                           </span>
                                           {rec.source && (
-                                            <p className="text-xs text-slate-400 mt-0.5">
+                                            <p className="text-xs text-muted-foreground mt-0.5">
                                               {rec.source === 'semantic_scholar' ? 'Academic Paper' : rec.source === 'youtube' ? 'Video' : rec.source}
                                             </p>
                                           )}
@@ -619,7 +628,7 @@ export default function StudyAnalyzerPage() {
                                         </Badge>
                                       )}
                                     </div>
-                                    <p className="text-sm text-slate-200 mb-3 line-clamp-2">
+                                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                                       {rec.feedback_notes || rec.metadata?.summary || 'AI recommends this resource based on your learning path.'}
                                     </p>
                                     {rec.metadata?.url && (
@@ -647,19 +656,19 @@ export default function StudyAnalyzerPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setRecommendationIndex((prev) => (prev > 0 ? prev - 1 : studyRecommendations.length - 1))}
-                                  className="border-slate-700 text-slate-400 hover:text-white"
+                                  className="border-border text-muted-foreground hover:text-foreground"
                                 >
                                   <ChevronLeft className="w-4 h-4 mr-1" />
                                   Previous
                                 </Button>
-                                <span className="text-xs text-slate-500">
+                                <span className="text-xs text-muted-foreground">
                                   {recommendationIndex + 1} / {studyRecommendations.length}
                                 </span>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setRecommendationIndex((prev) => (prev < studyRecommendations.length - 1 ? prev + 1 : 0))}
-                                  className="border-slate-700 text-slate-400 hover:text-white"
+                                  className="border-border text-muted-foreground hover:text-foreground"
                                 >
                                   Next
                                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -671,20 +680,20 @@ export default function StudyAnalyzerPage() {
                       </div>
 
                       <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                           <Clock className="w-4 h-4 text-emerald-300" />
                           Spaced Repetition Queue
                         </h3>
                         {queueItems.length === 0 ? (
-                          <p className="text-slate-500 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             No cards due. Keep practicing to build your memory streaks.
                           </p>
                         ) : (
                           queueItems.slice(0, 4).map((card) => (
-                            <div key={card.id} className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                            <div key={card.id} className="flex items-center justify-between p-3 bg-card border border-border rounded-lg">
                               <div>
-                                <p className="text-sm text-white font-medium break-words">{card.card_identifier}</p>
-                                <p className="text-xs text-slate-400">
+                                <p className="text-sm text-foreground font-medium break-words">{card.card_identifier}</p>
+                                <p className="text-xs text-muted-foreground">
                                   Due {new Date(card.due_at).toLocaleString()} • Interval {card.interval_days}d
                                 </p>
                               </div>
@@ -706,7 +715,7 @@ export default function StudyAnalyzerPage() {
           {adaptivePath && (
             <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <Brain className="w-6 h-6 text-purple-400" />
                   Adaptive Learning Path
                 </CardTitle>
@@ -717,18 +726,18 @@ export default function StudyAnalyzerPage() {
               <CardContent>
                 {pathLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                    <Spinner size="lg" color="default" />
                   </div>
                 ) : adaptivePath.path ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="p-3 rounded-lg bg-slate-900/50 border border-purple-500/30">
-                        <p className="text-slate-400 text-xs mb-1">Nodes</p>
-                        <p className="text-white font-semibold">{adaptivePath.path.nodes.length}</p>
+                      <div className="p-3 rounded-lg bg-card/50 border border-purple-500/30">
+                        <p className="text-muted-foreground text-xs mb-1">Nodes</p>
+                        <p className="text-foreground font-semibold">{adaptivePath.path.nodes.length}</p>
                       </div>
-                      <div className="p-3 rounded-lg bg-slate-900/50 border border-purple-500/30">
-                        <p className="text-slate-400 text-xs mb-1">Est. Completion</p>
-                        <p className="text-white font-semibold text-xs">
+                      <div className="p-3 rounded-lg bg-card/50 border border-purple-500/30">
+                        <p className="text-muted-foreground text-xs mb-1">Est. Completion</p>
+                        <p className="text-foreground font-semibold text-xs">
                           {new Date(adaptivePath.path.estimatedCompletion).toLocaleDateString()}
                         </p>
                       </div>
@@ -736,15 +745,15 @@ export default function StudyAnalyzerPage() {
                     
                     <div className="space-y-2 max-h-64 overflow-y-auto">
                       {adaptivePath.path.nodes.slice(0, 5).map((node: any, idx: number) => (
-                        <div key={node.id} className="p-3 rounded-lg bg-slate-900/50 border border-slate-700">
+                        <div key={node.id} className="p-3 rounded-lg bg-card/50 border border-border">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-white text-sm font-semibold">{node.topic}</span>
+                            <span className="text-foreground text-sm font-semibold">{node.topic}</span>
                             <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 capitalize">
                               {node.difficulty}
                             </Badge>
                           </div>
-                          <p className="text-xs text-slate-400 mb-2">{node.description}</p>
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground mb-2">{node.description}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Clock className="w-3 h-3" />
                             <span>{node.estimatedTime} min</span>
                             {node.prerequisites.length > 0 && (
@@ -775,7 +784,7 @@ export default function StudyAnalyzerPage() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-slate-400 text-sm text-center py-4">
+                  <p className="text-muted-foreground text-sm text-center py-4">
                     Generate an adaptive learning path to get started
                   </p>
                 )}
@@ -787,7 +796,7 @@ export default function StudyAnalyzerPage() {
           {currentFlashcard && (
             <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/30">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <BookOpen className="w-6 h-6 text-cyan-400" />
                   Flashcard Review
                 </CardTitle>
@@ -797,15 +806,15 @@ export default function StudyAnalyzerPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-6 rounded-lg bg-slate-900/50 border border-cyan-500/30 min-h-[200px] flex flex-col justify-center">
+                  <div className="p-6 rounded-lg bg-card/50 border border-cyan-500/30 min-h-[200px] flex flex-col justify-center">
                     <div className="text-center mb-4">
-                      <p className="text-slate-400 text-sm mb-2">Question</p>
-                      <p className="text-white text-lg font-semibold">{currentFlashcard.front}</p>
+                      <p className="text-muted-foreground text-sm mb-2">Question</p>
+                      <p className="text-foreground text-lg font-semibold">{currentFlashcard.front}</p>
                     </div>
                     
                     {showFlashcardAnswer && (
-                      <div className="mt-4 pt-4 border-t border-slate-700">
-                        <p className="text-slate-400 text-sm mb-2">Answer</p>
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <p className="text-muted-foreground text-sm mb-2">Answer</p>
                         <p className="text-cyan-300 text-base">{currentFlashcard.back}</p>
                       </div>
                     )}
@@ -814,7 +823,7 @@ export default function StudyAnalyzerPage() {
                   {!showFlashcardAnswer ? (
                     <Button
                       onClick={() => setShowFlashcardAnswer(true)}
-                      className="w-full bg-cyan-500 hover:bg-cyan-600 text-white"
+                      className="w-full bg-cyan-500 hover:bg-cyan-600 text-foreground"
                     >
                       Show Answer
                     </Button>
@@ -840,15 +849,22 @@ export default function StudyAnalyzerPage() {
                     </div>
                   )}
                   
-                  <div className="text-center text-xs text-slate-500">
+                  <div className="text-center text-xs text-muted-foreground">
                     <p>Quality: 0=Blackout, 1-2=Incorrect, 3=Hard, 4=Good, 5=Perfect</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
-        </div>
-      </div>
-    </div>
+
+          {/* Enhanced Content Recommendations */}
+          <div className="xl:col-span-3">
+            <ContentRecommendations 
+              autoLoad={false}
+            />
+          </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }

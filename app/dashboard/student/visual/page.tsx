@@ -28,6 +28,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OfflineBanner } from '@/components/ui/offline-banner';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface VisualExplanation {
   description: string;
@@ -197,45 +200,41 @@ export default function VisualExplainerPage() {
       case 'hierarchy': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';
       case 'timeline': return 'bg-green-500/20 text-green-400 border-green-500/50';
       case 'comparison': return 'bg-orange-500/20 text-orange-400 border-orange-500/50';
-      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+      default: return 'bg-card/20 text-muted-foreground border-border/50';
     }
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
-      <div className="container mx-auto max-w-5xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <OfflineBanner
-            isOnline={isOnline}
-            message="You are offline. Visual explanations will generate once you reconnect."
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30">
-                <Lightbulb className="w-8 h-8 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                  Visual Explainer
-                </h1>
-                <p className="text-slate-400">AI-powered diagrams & visual explanations</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="5xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <OfflineBanner
+          isOnline={isOnline}
+          message="You are offline. Visual explanations will generate once you reconnect."
+          className="mb-4"
+        />
+        
+        <PageHeader
+          title="Visual Explainer"
+          description="AI-powered diagrams & visual explanations"
+          icon={<Lightbulb className="w-8 h-8 text-gold" />}
+          actions={
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
               {isOnline ? (
                 <>
                   <Wifi className="h-4 w-4 text-green-400" />
-                  <span>Connected for visual generation</span>
+                  <span className="text-muted-foreground">Connected</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-4 w-4 text-red-400" />
-                  <span className="text-red-300">Offline &mdash; edit concept and retry when online</span>
+                  <span className="text-red-300">Offline</span>
                 </>
               )}
             </div>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {error && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2">
@@ -246,7 +245,7 @@ export default function VisualExplainerPage() {
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Input Section */}
-            <Card className="bg-slate-900/50 border-yellow-500/30">
+            <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-yellow-400">What Would You Like to Visualize?</CardTitle>
                 <CardDescription>Enter a concept and get an AI-generated visual explanation</CardDescription>
@@ -259,7 +258,7 @@ export default function VisualExplainerPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="border-yellow-500/30 bg-slate-900/60 text-yellow-300 hover:bg-yellow-500/10 flex items-center gap-2"
+                      className="border-yellow-500/30 bg-card/60 text-yellow-300 hover:bg-yellow-500/10 flex items-center gap-2"
                       onClick={() => applyTemplate(template)}
                     >
                       <Sparkles className="h-3 w-3" />
@@ -276,7 +275,7 @@ export default function VisualExplainerPage() {
                     rows={4}
                     value={concept}
                     onChange={(e) => setConcept(e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-card border-border"
                   />
                 </div>
 
@@ -288,13 +287,13 @@ export default function VisualExplainerPage() {
                       placeholder="e.g., Biology, Physics"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-card border-border"
                     />
                   </div>
                   <div>
                     <Label htmlFor="level">Level</Label>
                     <Select value={level} onValueChange={(value) => setLevel(value as 'beginner' | 'intermediate' | 'advanced')}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700">
+                      <SelectTrigger className="bg-card border-border">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -315,12 +314,12 @@ export default function VisualExplainerPage() {
                   {loading ? 'Generating Visual Explanation...' : isOnline ? 'Generate Explanation' : 'Reconnect to generate'}
                 </Button>
 
-                <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <p className="text-xs text-slate-400">
+                <div className="p-4 bg-card/50 rounded-lg border border-border">
+                  <p className="text-xs text-muted-foreground">
                     💡 <strong>Tip:</strong> Be specific! Instead of &quot;Math&quot;, try &quot;Quadratic Equations&quot; or &quot;Integration by Parts&quot;
                   </p>
                   {history.length > 0 && (
-                    <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                       <History className="h-3 w-3" /> Last generated concept: {history[0].concept}
                     </p>
                   )}
@@ -345,14 +344,14 @@ export default function VisualExplainerPage() {
                     </CardHeader>
                   </Card>
 
-                  <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <Card className="bg-card/50 border-yellow-500/30">
                     <CardHeader>
                       <CardTitle className="text-yellow-400">Key Visual Elements</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <ul className="space-y-2">
                         {explanation.keyPoints.map((point, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-slate-300">
+                          <li key={idx} className="flex items-start gap-2 text-muted-foreground">
                             <span className="text-yellow-400 mt-1">✓</span>
                             <span className="text-sm">{point}</span>
                           </li>
@@ -361,20 +360,20 @@ export default function VisualExplainerPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-slate-900/50 border-yellow-500/30">
+                  <Card className="bg-card/50 border-yellow-500/30">
                     <CardHeader>
                       <CardTitle className="text-yellow-400">AI Diagram Prompt</CardTitle>
                       <CardDescription>Use this prompt with your favourite image or diagram tool.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 text-sm text-slate-300 whitespace-pre-wrap">
+                      <div className="p-4 bg-card rounded-lg border border-border text-sm text-muted-foreground whitespace-pre-wrap">
                         {explanation.diagramPrompt}
                       </div>
                     </CardContent>
                   </Card>
 
                   {explanation.mermaidDiagram && (
-                    <Card className="bg-slate-900/50 border-yellow-500/30">
+                    <Card className="bg-card/50 border-yellow-500/30">
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <div>
@@ -395,7 +394,7 @@ export default function VisualExplainerPage() {
                               value={animationSpeed.toString()}
                               onValueChange={(v) => setAnimationSpeed(parseFloat(v))}
                             >
-                              <SelectTrigger className="w-24 h-8 border-yellow-500/40 bg-slate-800 text-yellow-300">
+                              <SelectTrigger className="w-24 h-8 border-yellow-500/40 bg-card text-yellow-300">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -426,8 +425,8 @@ export default function VisualExplainerPage() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-                          <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap break-all">
+                        <div className="p-4 bg-card rounded-lg border border-border">
+                          <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all">
                             {explanation.mermaidDiagram}
                           </pre>
                         </div>
@@ -529,13 +528,13 @@ export default function VisualExplainerPage() {
                   )}
 
                   {!explanation.mermaidDiagram && (
-                    <Card className="bg-slate-900/50 border-yellow-500/30">
+                    <Card className="bg-card/50 border-yellow-500/30">
                       <CardContent className="pt-6">
                         <div className="flex flex-col items-center justify-center py-12 text-center">
                           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center mb-4">
                             <ImageIcon className="w-12 h-12 text-yellow-400" />
                           </div>
-                          <p className="text-slate-400 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             💡 Use the visual description above to sketch or create your own diagram
                           </p>
                         </div>
@@ -552,15 +551,15 @@ export default function VisualExplainerPage() {
                   </Button>
                 </>
               ) : (
-                <Card className="bg-slate-900/50 border-yellow-500/30">
+                <Card className="bg-card/50 border-yellow-500/30">
                   <CardContent className="pt-12 pb-12">
                     <div className="flex flex-col items-center justify-center text-center space-y-4">
                       <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center">
                         <Lightbulb className="w-12 h-12 text-yellow-400" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">No Explanation Yet</h3>
-                        <p className="text-slate-400 text-sm">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">No Explanation Yet</h3>
+                        <p className="text-muted-foreground text-sm">
                           Enter a concept on the left and generate a visual explanation
                         </p>
                       </div>
@@ -570,46 +569,45 @@ export default function VisualExplainerPage() {
               )}
             </div>
           </div>
-        </motion.div>
 
-        {displayHistory.length > 0 && (
-          <div className="mt-8 space-y-4">
-            <div className="flex items-center gap-2 text-slate-300">
-              <History className="h-4 w-4 text-yellow-300" />
-              <h2 className="text-lg font-semibold">Recent visualizations</h2>
+          {displayHistory.length > 0 && (
+            <div className="mt-8 space-y-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <History className="h-4 w-4 text-yellow-300" />
+                <h2 className="text-lg font-semibold">Recent visualizations</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {displayHistory.map((item, idx) => (
+                  <Card key={`${item.concept}-${idx}`} className="bg-card/60 border-border">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm text-muted-foreground line-clamp-2">{item.concept}</CardTitle>
+                        <Badge className={getTypeColor(item.type)}>{item.type.replace('_', ' ')}</Badge>
+                      </div>
+                      <CardDescription className="text-xs text-muted-foreground">
+                        {item.subject} • {item.level}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-xs text-muted-foreground line-clamp-3">{item.description}</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                        onClick={() => handleHistorySelect(item)}
+                      >
+                        Reuse this visual
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {displayHistory.map((item, idx) => (
-                <Card key={`${item.concept}-${idx}`} className="bg-slate-900/60 border-slate-800">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm text-slate-200 line-clamp-2">{item.concept}</CardTitle>
-                      <Badge className={getTypeColor(item.type)}>{item.type.replace('_', ' ')}</Badge>
-                    </div>
-                    <CardDescription className="text-xs text-slate-500">
-                      {item.subject} • {item.level}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-xs text-slate-400 line-clamp-3">{item.description}</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
-                      onClick={() => handleHistorySelect(item)}
-                    >
-                      Reuse this visual
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
+          )}
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 

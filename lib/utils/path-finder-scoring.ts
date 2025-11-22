@@ -117,6 +117,13 @@ export interface CollegeRecommendation {
   };
   whyFit: string;
   url?: string;
+  culturalContext?: {
+    region: string;
+    localLanguage: string;
+    foodCulture: string;
+    lifestyle: string;
+    culturalFit: string;
+  };
 }
 
 export interface LifeVisualization {
@@ -172,31 +179,39 @@ export interface QuizResult {
   lifeVisualization: LifeVisualization;
 }
 
-// Question weights for enhanced scoring
+// Question weights for enhanced scoring - New Psychometric Structure
 const questionWeights: Record<string, number> = {
-  q1: 1.2,  // Core interests - high weight
-  q2: 1.1,  // Class activities - high weight
-  q3: 1.0,  // Learning style - standard
-  q5: 1.0,  // Personality - standard
-  q6: 1.1,  // Motivation - high weight
-  q8: 1.3,  // Subject preferences - very high weight
-  q9: 1.2,  // Work environment - high weight
-  q10: 1.0, // Problem solving - standard
-  q11: 1.1, // Future goals - high weight
-  q12: 0.8, // Exam preference - lower weight
-  q13: 1.2, // What makes you feel alive - high weight (passions)
-  q14: 1.1, // Natural abilities - high weight
-  q15: 1.0, // Flow activities - standard
-  q16: 1.0, // Values - standard
-  q17: 1.3, // 10-year vision - very high weight (text)
-  q18: 1.2, // Lifestyle preference - high weight
-  q19: 1.0, // Extracurriculars - standard
-  q20: 1.1, // Entrepreneurship interest - high weight (slider)
-  q21: 0.9, // Work-life balance - lower weight (slider)
-  q22: 0.8, // Geographic preference - lower weight
-  q23: 0.7, // Family expectations - lower weight
-  q24: 0.9, // Skill learning preference - lower weight
-  q25: 1.0  // Problem type preference - standard
+  // Phase 1: Natural Vibe (Q1-Q5) - High weight
+  q1: 1.3,  // Scroll Test - very high weight
+  q2: 1.2,  // School Fest Scenario - high weight
+  q3: 1.2,  // Broken Phone Reaction - high weight
+  q4: 1.1,  // Group Project Role - high weight
+  q5: 1.1,  // Flow State - high weight
+  // Phase 2: Dealbreakers (Q6-Q7) - Medium weight (negative filtering)
+  q6: 1.0,  // Ick List - standard (negative filtering handled separately)
+  q7: 1.0,  // Workspace Preference - standard
+  // Phase 3: Aptitude Reality (Q8-Q11) - High weight
+  q8: 1.4,  // Math Reality - very high weight
+  q9: 1.2,  // Memory vs Logic - high weight
+  q10: 1.1, // Reading Endurance - high weight
+  q11: 1.2, // Science Curiosity - high weight
+  // Phase 4: Future Vision (Q12-Q15) - High weight
+  q12: 1.3, // Success Definition - very high weight
+  q13: 1.2, // Entrepreneurship Meter - high weight
+  q14: 1.2, // Why Driver - high weight
+  q15: 1.1, // Social Interaction Level - high weight
+  // Phase 5: Logistics (Q16-Q20) - Medium weight
+  q16: 1.3, // Study Tolerance - very high weight (slider)
+  q17: 0.9, // Geographic Preference - lower weight
+  q18: 1.1, // Budget Constraints - high weight
+  q19: 0.8, // Parental Factor - lower weight
+  q20: 0.9, // Backup Plan - lower weight
+  // Phase 6: Validation (Q21-Q25) - Medium weight
+  q21: 1.2, // Subject Interest - high weight (multi-select)
+  q22: 1.0, // Tech Proficiency - standard
+  q23: 1.0, // Risk Appetite - standard
+  q24: 1.0, // Helping Style - standard
+  q25: 1.3  // Magic Wand - very high weight
 };
 
 export function calculateScores(answers: QuizAnswer[]): TraitScores {
@@ -213,15 +228,19 @@ export function calculateScores(answers: QuizAnswer[]): TraitScores {
     const question = pathFinderQuestions.find(q => q.id === question_id);
     if (!question) return;
 
-    // Handle slider question (Q4)
-    if (question_id === 'q4' && typeof answer === 'number') {
-      // study_tolerance is stored separately, not in trait scores
-      return;
+    // Handle slider questions (Q16, Q20, Q21) - stored separately, not in trait scores
+    if ((question_id === 'q16' || question_id === 'q20' || question_id === 'q21') && typeof answer === 'number') {
+      return; // These are stored separately
+    }
+
+    // Handle text question (Q17 - 10-year vision) - no trait mapping
+    if (question_id === 'q17' && typeof answer === 'string') {
+      return; // Handled in enhanced results generation
     }
 
     const weight = questionWeights[question_id] || 1.0;
 
-    // Handle multi-select questions (Q8)
+    // Handle multi-select questions (Q6, Q21)
     if (question.type === 'multi_select' && Array.isArray(answer)) {
       answer.forEach((selectedOption: string) => {
         const mapping = traitMapping[question_id];
@@ -254,13 +273,52 @@ export function determineStream(
   traitScores: TraitScores,
   answers: QuizAnswer[]
 ): { stream: string; confidence: 'High' | 'Medium' | 'Low' } {
-  // Extract additional data from answers
-  const studyTolerance = answers.find(a => a.question_id === 'q4')?.answer as number || 5;
-  const q5Answer = answers.find(a => a.question_id === 'q5')?.answer as string || '';
-  const q7Answer = answers.find(a => a.question_id === 'q7')?.answer as string || '';
+  // Extract additional data from answers - Updated for new question structure
+  const studyToleranceAnswer = answers.find(a => a.question_id === 'q16')?.answer;
+  let studyTolerance = 5; // Default
+  if (typeof studyToleranceAnswer === 'string') {
+    // Map Q16 answers to numeric values
+    if (studyToleranceAnswer === 'Yes, I am ready to grind for my goal') studyTolerance = 9;
+    else if (studyToleranceAnswer === 'Maybe, but I might burn out') studyTolerance = 6;
+    else if (studyToleranceAnswer === 'No, I prefer a balanced life with hobbies') studyTolerance = 4;
+    else if (studyToleranceAnswer === 'Absolutely not') studyTolerance = 2;
+  }
   
-  const prefersCreativeFreedom = q5Answer === 'Creative freedom' || q5Answer === 'Mix of both';
-  const budgetConstraint = q7Answer.includes('affordable') || q7Answer.includes('scholarship');
+  const q14Answer = answers.find(a => a.question_id === 'q14')?.answer as string || '';
+  const q18Answer = answers.find(a => a.question_id === 'q18')?.answer as string || '';
+  const q6Answers = answers.find(a => a.question_id === 'q6')?.answer as string[] || [];
+  
+  const prefersCreativeFreedom = q14Answer === 'To express myself creatively';
+  const budgetConstraint = q18Answer === '< ₹2 Lakhs (Need Scholarships/Govt Colleges)';
+  
+  // Negative filtering from Q6 (Ick List)
+  const avoidsTech = q6Answers.includes('Sitting in front of a computer coding for 8 hours');
+  const avoidsMedical = q6Answers.includes('Dealing with blood, needles, or sick people');
+  const avoidsCommerce = q6Answers.includes('Staring at spreadsheets and calculating taxes');
+  const avoidsHumanities = q6Answers.includes('Writing long essays or reading ancient literature');
+  const avoidsSales = q6Answers.includes('Public speaking or selling things to strangers');
+
+  // Apply negative filtering - reduce trait scores for avoided streams
+  if (avoidsTech) {
+    traitScores.logical = Math.max(0, traitScores.logical - 2);
+    traitScores.handsOn = Math.max(0, traitScores.handsOn - 1);
+  }
+  if (avoidsMedical) {
+    traitScores.people = Math.max(0, traitScores.people - 2);
+    traitScores.logical = Math.max(0, traitScores.logical - 1);
+  }
+  if (avoidsCommerce) {
+    traitScores.leader = Math.max(0, traitScores.leader - 1);
+    traitScores.logical = Math.max(0, traitScores.logical - 1);
+  }
+  if (avoidsHumanities) {
+    traitScores.creative = Math.max(0, traitScores.creative - 2);
+    traitScores.people = Math.max(0, traitScores.people - 1);
+  }
+  if (avoidsSales) {
+    traitScores.people = Math.max(0, traitScores.people - 1);
+    traitScores.leader = Math.max(0, traitScores.leader - 1);
+  }
 
   // Check stream rules in priority order
   for (const [streamName, rule] of Object.entries(streamRules)) {
@@ -480,9 +538,10 @@ export function calculateResult(answers: QuizAnswer[], language: 'en' | 'hi' | '
   const careerPathsWithProgression = generateCareerPathsWithProgression(stream, traitScores, answers, language);
   
   const q22Answer = answers.find(a => a.question_id === 'q22')?.answer as string[] || [];
-  const q17Answer = answers.find(a => a.question_id === 'q17')?.answer as string || '';
-  const collegeRecommendations = generateCollegeRecommendations(stream, q22Answer, budgetConstraint, language);
-  const lifeVisualization = generateLifeVisualization(stream, q17Answer, answers, language);
+  const q12Answer = answers.find(a => a.question_id === 'q12')?.answer as string || ''; // Success Definition
+  const q17Answer = answers.find(a => a.question_id === 'q17')?.answer as string || ''; // Geographic Preference
+  const collegeRecommendations = generateCollegeRecommendations(stream, q17Answer ? [q17Answer] : q22Answer, budgetConstraint, language);
+  const lifeVisualization = generateLifeVisualization(stream, q12Answer, answers, language);
 
   return {
     strengths,

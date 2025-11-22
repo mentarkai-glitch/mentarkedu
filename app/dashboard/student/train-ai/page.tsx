@@ -256,8 +256,8 @@ export default function TrainMentarkAIPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center text-slate-300">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
           <div className="h-12 w-12 border-b-2 border-yellow-400 rounded-full animate-spin mx-auto mb-4" />
           <p>Loading your personalised controls...</p>
         </div>
@@ -266,11 +266,11 @@ export default function TrainMentarkAIPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black overflow-x-hidden w-full">
+    <div className="min-h-screen bg-background overflow-x-hidden w-full">
       <div className="container mx-auto max-w-4xl px-3 sm:px-6 py-8 md:py-12">
-        <div className="flex items-center gap-3 text-slate-400 mb-6">
+        <div className="flex items-center gap-3 text-muted-foreground mb-6">
           <Link href="/dashboard/student">
-            <Button variant="ghost" size="sm" className="text-slate-300 hover:text-yellow-300 hover:bg-slate-900">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-yellow-300 hover:bg-card">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
             </Button>
@@ -287,11 +287,11 @@ export default function TrainMentarkAIPage() {
         >
           <Card className="glass border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-transparent to-transparent">
             <CardHeader>
-              <CardTitle className="text-white text-xl sm:text-2xl flex items-center gap-3">
+              <CardTitle className="text-foreground text-xl sm:text-2xl flex items-center gap-3">
                 <Sparkles className="h-6 w-6 text-yellow-300" />
                 Train Mentark AI with Your Story
               </CardTitle>
-              <CardDescription className="text-slate-200 text-sm sm:text-base leading-relaxed">
+              <CardDescription className="text-muted-foreground text-sm sm:text-base leading-relaxed">
                 Share your graduation plan, course year, and competitive exam prep so Mentark behaves like an Indian
                 mentor. Recommendations, reminders, and budgets will reference Indian universities, entrance exams, and
                 pricing in Indian rupees.
@@ -305,27 +305,27 @@ export default function TrainMentarkAIPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
         >
-          <Card className="border border-slate-700 bg-slate-900/70 backdrop-blur">
+          <Card className="border border-border bg-card/70 backdrop-blur">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <GraduationCap className="h-5 w-5 text-yellow-400" />
                 Academic Stage &amp; Goals
               </CardTitle>
-              <CardDescription className="text-slate-300">
+              <CardDescription className="text-muted-foreground">
                 Tell Mentark where you are in your journey so ARKs, mentors, and nudges stay context aware.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
               <section className="space-y-4">
-                <Label className="text-slate-200">Where are you right now?</Label>
+                <Label className="text-muted-foreground">Where are you right now?</Label>
                 <Select
                   value={form.academicStage}
                   onValueChange={(value: AcademicStage) => setForm((prev) => ({ ...prev, academicStage: value }))}
                 >
-                  <SelectTrigger className="bg-black/40 border border-slate-700 text-slate-100">
+                  <SelectTrigger className="bg-background/40 border border-border text-muted-foreground">
                     <SelectValue placeholder="Select your academic stage" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border border-slate-700 text-slate-100">
+                  <SelectContent className="bg-card border border-border text-muted-foreground">
                     {stageOptions.map((stage) => (
                       <SelectItem key={stage.value} value={stage.value}>
                         {stage.label}
@@ -333,22 +333,22 @@ export default function TrainMentarkAIPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Mentark uses this to suggest relevant milestones, scholarships, and internships in India.
                 </p>
               </section>
 
               {shouldShowGraduationTarget && (
                 <section className="space-y-2">
-                  <Label className="text-slate-200">Preferred graduation track (optional)</Label>
+                  <Label className="text-muted-foreground">Preferred graduation track (optional)</Label>
                   <Select
                     value={form.graduationTarget}
                     onValueChange={(value) => setForm((prev) => ({ ...prev, graduationTarget: value }))}
                   >
-                    <SelectTrigger className="bg-black/40 border border-slate-700 text-slate-100">
+                    <SelectTrigger className="bg-background/40 border border-border text-muted-foreground">
                       <SelectValue placeholder="Choose the graduation path you’re aiming for" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border border-slate-700 text-slate-100">
+                    <SelectContent className="bg-card border border-border text-muted-foreground">
                       {graduationTracks.map((track) => (
                         <SelectItem key={track} value={track}>
                           {track}
@@ -356,7 +356,7 @@ export default function TrainMentarkAIPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     Helps Mentark recommend the right institutes, professors, and scholarship alerts for your goal.
                   </p>
                 </section>
@@ -365,24 +365,24 @@ export default function TrainMentarkAIPage() {
               {isGraduationStage && (
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-slate-200">Course / Degree</Label>
+                    <Label className="text-muted-foreground">Course / Degree</Label>
                     <Input
                       value={form.graduationCourse}
                       onChange={(event) => setForm((prev) => ({ ...prev, graduationCourse: event.target.value }))}
                       placeholder="e.g. B.Tech Computer Science, B.Com Honours"
-                      className="bg-black/40 border border-slate-700 text-slate-100 placeholder:text-slate-500"
+                      className="bg-background/40 border border-border text-muted-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-200">Year / Semester</Label>
+                    <Label className="text-muted-foreground">Year / Semester</Label>
                     <Select
                       value={form.graduationYear}
                       onValueChange={(value) => setForm((prev) => ({ ...prev, graduationYear: value }))}
                     >
-                      <SelectTrigger className="bg-black/40 border border-slate-700 text-slate-100">
+                      <SelectTrigger className="bg-background/40 border border-border text-muted-foreground">
                         <SelectValue placeholder="Select your current year" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border border-slate-700 text-slate-100">
+                      <SelectContent className="bg-card border border-border text-muted-foreground">
                         {graduationYears.map((year) => (
                           <SelectItem key={year} value={year}>
                             {year}
@@ -396,7 +396,7 @@ export default function TrainMentarkAIPage() {
 
               {isCompetitiveStage && (
                 <section className="space-y-3">
-                  <Label className="text-slate-200 flex items-center gap-2">
+                  <Label className="text-muted-foreground flex items-center gap-2">
                     <Target className="h-4 w-4 text-yellow-400" />
                     Competitive exams you&apos;re targeting
                   </Label>
@@ -404,7 +404,7 @@ export default function TrainMentarkAIPage() {
                     {competitiveExamOptions.map((exam) => (
                       <label
                         key={exam}
-                        className="flex items-start gap-3 rounded-lg border border-slate-700 bg-black/30 px-3 py-2 text-sm text-slate-200 hover:border-yellow-500/40 cursor-pointer"
+                        className="flex items-start gap-3 rounded-lg border border-border bg-background/30 px-3 py-2 text-sm text-muted-foreground hover:border-yellow-500/40 cursor-pointer"
                       >
                         <Checkbox
                           checked={form.competitiveExams.includes(exam)}
@@ -419,7 +419,7 @@ export default function TrainMentarkAIPage() {
                       value={form.otherExam}
                       onChange={(event) => setForm((prev) => ({ ...prev, otherExam: event.target.value }))}
                       placeholder="Enter the exam name"
-                      className="bg-black/40 border border-slate-700 text-slate-100 placeholder:text-slate-500"
+                      className="bg-background/40 border border-border text-muted-foreground placeholder:text-muted-foreground"
                     />
                   )}
                 </section>
@@ -427,7 +427,7 @@ export default function TrainMentarkAIPage() {
 
               <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-slate-200 flex items-center gap-2">
+                  <Label className="text-muted-foreground flex items-center gap-2">
                     <IndianRupee className="h-4 w-4 text-yellow-400" />
                     Monthly learning budget (Optional)
                   </Label>
@@ -437,29 +437,29 @@ export default function TrainMentarkAIPage() {
                     value={form.monthlyBudget}
                     onChange={(event) => setForm((prev) => ({ ...prev, monthlyBudget: event.target.value }))}
                     placeholder="e.g. 2500"
-                    className="bg-black/40 border border-slate-700 text-slate-100 placeholder:text-slate-500"
+                    className="bg-background/40 border border-border text-muted-foreground placeholder:text-muted-foreground"
                   />
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     Helps Mentark recommend courses, coaching, or subscriptions within your Indian budget.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-slate-200">Dream role / college (Optional)</Label>
+                  <Label className="text-muted-foreground">Dream role / college (Optional)</Label>
                   <Textarea
                     value={form.careerGoal}
                     onChange={(event) => setForm((prev) => ({ ...prev, careerGoal: event.target.value }))}
                     placeholder="Tell us about your ideal college, company, or role so Mentark can guide you."
-                    className="bg-black/40 border border-slate-700 text-slate-100 placeholder:text-slate-500 h-32"
+                    className="bg-background/40 border border-border text-muted-foreground placeholder:text-muted-foreground h-32"
                   />
                 </div>
               </section>
 
-              <div className="rounded-lg border border-slate-700 bg-black/30 p-4 text-sm text-slate-300 space-y-2">
+              <div className="rounded-lg border border-border bg-background/30 p-4 text-sm text-muted-foreground space-y-2">
                 <p className="font-semibold text-yellow-200 flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
                   Why this matters
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-slate-300">
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>Mentark adapts milestones to Indian academic calendars and entrance exam timelines.</li>
                   <li>Resources, mentors, and scholarships suggested will respect Indian family budgets.</li>
                   <li>AI reminders become more relevant when we know your course load and exam dates.</li>
@@ -477,7 +477,7 @@ export default function TrainMentarkAIPage() {
         >
           <Button
             variant="outline"
-            className="border-slate-600 text-slate-200 hover:bg-slate-900"
+            className="border-border text-muted-foreground hover:bg-card"
             onClick={() => router.push("/dashboard/student")}
           >
             Skip for now

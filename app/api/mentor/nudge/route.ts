@@ -36,10 +36,26 @@ export async function GET(request: NextRequest) {
     // Get ARK progress
     const { data: activeArks } = await supabase
       .from("arks")
-      .select("id, summary, status")
+      .select("id, summary, status, progress")
       .eq("student_id", student.id)
       .eq("status", "active")
-      .limit(1);
+      .limit(3);
+
+    // Get recent test performance
+    const { data: recentTests } = await supabase
+      .from("test_attempts")
+      .select("score, percentage, mock_tests!inner(title)")
+      .eq("student_id", student.id)
+      .order("started_at", { ascending: false })
+      .limit(3);
+
+    // Get practice session stats
+    const { data: recentPractice } = await supabase
+      .from("practice_sessions")
+      .select("accuracy, total_questions, correct_answers")
+      .eq("student_id", student.id)
+      .order("started_at", { ascending: false })
+      .limit(5);
 
     // Get streak
     const { data: allCheckins } = await supabase
@@ -75,29 +91,47 @@ export async function GET(request: NextRequest) {
       ? checkins.reduce((sum: number, c: any) => sum + (c.energy || 3), 0) / checkins.length
       : 3;
 
+    const avgTestScore = recentTests && recentTests.length > 0
+      ? recentTests.reduce((sum: number, t: any) => sum + (t.percentage || 0), 0) / recentTests.length
+      : null;
+
+    const avgPracticeAccuracy = recentPractice && recentPractice.length > 0
+      ? recentPractice.reduce((sum: number, p: any) => {
+          const acc = p.total_questions > 0 ? (p.correct_answers / p.total_questions) * 100 : 0;
+          return sum + acc;
+        }, 0) / recentPractice.length
+      : null;
+
     const context = {
       streak,
       avgMood: Math.round(avgMood),
       avgEnergy: Math.round(avgEnergy),
       hasActiveArks: (activeArks?.length || 0) > 0,
+      activeArksCount: activeArks?.length || 0,
       recentCheckinsCount: checkins?.length || 0,
+      avgTestScore: avgTestScore ? Math.round(avgTestScore) : null,
+      avgPracticeAccuracy: avgPracticeAccuracy ? Math.round(avgPracticeAccuracy) : null,
+      recentTestCount: recentTests?.length || 0,
     };
 
-    // Generate nudge using Claude
-    const prompt = `Generate a personalized daily nudge message for a student preparing for competitive exams.
+    // Generate nudge using Claude with enhanced context
+    const prompt = `Generate a personalized daily nudge message for a student preparing for competitive exams (JEE/NEET).
 
 Context:
 - Streak: ${streak} days
 - Average Mood: ${Math.round(avgMood)}/5
 - Average Energy: ${Math.round(avgEnergy)}/5
-- Has Active ARKs: ${(activeArks?.length || 0) > 0 ? "Yes" : "No"}
+- Active ARKs: ${activeArks?.length || 0} (${activeArks?.map((a: any) => `${Math.round(a.progress || 0)}%`).join(", ") || "N/A"})
 - Recent Check-ins: ${checkins?.length || 0} in last 7 days
+${avgTestScore ? `- Recent Test Average: ${Math.round(avgTestScore)}%` : ""}
+${avgPracticeAccuracy ? `- Practice Accuracy: ${Math.round(avgPracticeAccuracy)}%` : ""}
 
-Generate a short, encouraging message (2-3 sentences) and suggest one actionable item. Return JSON:
+Generate a short, encouraging message (2-3 sentences) in a friendly, supportive tone. Include context about their progress. Suggest one specific actionable item. Return JSON:
 {
   "message": "...",
   "actionItem": "...",
-  "type": "motivation|reminder|support|celebration"
+  "type": "motivation|reminder|support|celebration|improvement",
+  "tone": "encouraging|celebratory|supportive|gentle"
 }`;
 
     try {

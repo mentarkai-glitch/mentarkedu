@@ -151,7 +151,7 @@ export default function TermsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <div className="container mx-auto max-w-4xl px-4 py-16 space-y-12">
         <motion.header
           initial={{ opacity: 0, y: 20 }}
@@ -162,19 +162,19 @@ export default function TermsPage() {
           <Button
             asChild
             variant="outline"
-            className="border-slate-700 text-slate-200 hover:text-yellow-200 w-max"
+            className="border-border text-foreground hover:text-primary w-max"
           >
             <Link href="/">← Back to home</Link>
           </Button>
-          <p className="text-xs uppercase tracking-[0.4em] text-yellow-300">Terms of Service</p>
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl">
+          <p className="text-xs uppercase tracking-[0.4em] text-primary">Terms of Service</p>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-foreground">
             Building the national mentorship OS with clarity and trust.
           </h1>
-          <p className="text-slate-300 sm:text-lg">
+          <p className="text-muted-foreground sm:text-lg">
             These terms outline the relationship between Mentark, Indian institutes, mentors, families, and learners. They
             apply across Mentark Neuro, Mentark Quantum, the AI mentor suite, and allied services.
           </p>
-          <p className="text-sm text-slate-500">Last updated: {lastUpdated}</p>
+          <p className="text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
         </motion.header>
 
         <div className="space-y-10">
@@ -185,13 +185,13 @@ export default function TermsPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.5 }}
-              className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8 space-y-4"
+              className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4"
             >
-              <h2 className="text-2xl font-semibold text-white">{section.title}</h2>
-              <ul className="space-y-3 text-sm sm:text-base text-slate-300">
+              <h2 className="text-2xl font-semibold text-card-foreground">{section.title}</h2>
+              <ul className="space-y-3 text-sm sm:text-base text-muted-foreground">
                 {section.clauses.map((clause) => (
                   <li key={clause} className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-yellow-400" />
+                    <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
                     <span className="leading-relaxed">{clause}</span>
                   </li>
                 ))}
@@ -202,11 +202,11 @@ export default function TermsPage() {
 
         <div className="space-y-6">
           {EXPANDED_CLAUSES.map((clause) => (
-            <Card key={clause.title} className="bg-slate-900/40 border-slate-800">
+            <Card key={clause.title} className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white text-2xl">{clause.title}</CardTitle>
+                <CardTitle className="text-card-foreground text-2xl">{clause.title}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-slate-300 text-sm sm:text-base">
+              <CardContent className="space-y-3 text-muted-foreground text-sm sm:text-base">
                 {clause.body.map((item) => (
                   <p key={item}>{item}</p>
                 ))}
@@ -220,10 +220,10 @@ export default function TermsPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5 }}
-          className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-6 sm:p-8 space-y-4"
+          className="rounded-2xl border border-primary/30 bg-primary/10 p-6 sm:p-8 space-y-4"
         >
-          <h2 className="text-2xl font-semibold text-white">Questions about these terms?</h2>
-          <p className="text-slate-200">
+          <h2 className="text-2xl font-semibold text-card-foreground">Questions about these terms?</h2>
+          <p className="text-foreground">
             Reach out at partnerships@mentark.com for institute agreements or connect@mentark.com for personal accounts.
             We aim to respond within three working days.
           </p>
@@ -231,20 +231,20 @@ export default function TermsPage() {
             <Button asChild className="bg-gradient-cyan-blue text-black font-semibold hover:opacity-90">
               <Link href="mailto:partnerships@mentark.com">Contact partnerships</Link>
             </Button>
-            <Button asChild variant="outline" className="border-slate-600 text-slate-200 hover:text-yellow-200">
+            <Button asChild variant="outline" className="border-border text-foreground hover:text-primary">
               <Link href="mailto:connect@mentark.com">Write to support</Link>
             </Button>
           </div>
         </motion.section>
 
-        <Card className="bg-slate-900/40 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white text-2xl">Contact</CardTitle>
+            <CardTitle className="text-card-foreground text-2xl">Contact</CardTitle>
           </CardHeader>
-          <CardContent className="text-slate-300 space-y-3 text-sm sm:text-base">
+          <CardContent className="text-muted-foreground space-y-3 text-sm sm:text-base">
             <p>
               For questions about these terms, email{" "}
-              <Link href="mailto:legal@mentark.com" className="text-yellow-300">
+              <Link href="mailto:legal@mentark.com" className="text-primary">
                 legal@mentark.com
               </Link>{" "}
               or write to Mentark Labs Private Limited, Mumbai, Maharashtra, India.

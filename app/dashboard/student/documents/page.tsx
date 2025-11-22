@@ -30,6 +30,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { listDocuments, downloadDocumentAsFile } from '@/lib/services/document-generation';
 import Link from 'next/link';
+import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
+import { Spinner, CardSkeleton } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Document {
   id: string;
@@ -166,24 +169,16 @@ export default function DocumentsLibraryPage() {
   }, {} as Record<string, Document[]>);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                <FileText className="w-10 h-10 text-purple-400" />
-                My Documents
-              </h1>
-              <p className="text-slate-400">View and manage all your generated documents</p>
-            </div>
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="7xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <PageHeader
+          title="My Documents"
+          description="View and manage all your generated documents"
+          icon={<FileText className="w-8 h-8 text-gold" />}
+          actions={
             <div className="flex gap-2">
               <Link href="/dashboard/student/documents/generate">
-                <Button className="bg-purple-600 hover:bg-purple-700">
+                <Button>
                   <FileText className="w-4 h-4 mr-2" />
                   Generate New
                 </Button>
@@ -192,27 +187,38 @@ export default function DocumentsLibraryPage() {
                 variant="outline"
                 onClick={loadDocuments}
                 disabled={loading}
-                className="border-slate-600 text-slate-200 hover:bg-slate-700/50"
+                className="border-gold/40 text-gold hover:bg-gold/10"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                {loading ? (
+                  <>
+                    <Spinner size="sm" color="gold" />
+                    <span className="ml-2">Refreshing...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </>
+                )}
               </Button>
             </div>
-          </div>
-        </motion.div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
         {/* Filters and Search */}
-        <Card className="bg-slate-800/50 border-slate-700 mb-6">
+        <Card className="bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-gold/40 shadow-lg mb-6">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search documents..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-slate-700/50 border-slate-600 text-white pl-10"
+                    className="bg-card/50 border-border text-foreground pl-10"
                   />
                   {searchQuery && (
                     <Button
@@ -227,7 +233,7 @@ export default function DocumentsLibraryPage() {
                 </div>
               </div>
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                <SelectTrigger className="bg-card/50 border-border text-foreground">
                   <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
@@ -245,7 +251,7 @@ export default function DocumentsLibraryPage() {
                 </SelectContent>
               </Select>
               <Select value={filterFormat} onValueChange={setFilterFormat}>
-                <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
+                <SelectTrigger className="bg-card/50 border-border text-foreground">
                   <SelectValue placeholder="All Formats" />
                 </SelectTrigger>
                 <SelectContent>
@@ -258,9 +264,9 @@ export default function DocumentsLibraryPage() {
               </Select>
             </div>
             <div className="mt-4 flex items-center gap-4">
-              <span className="text-sm text-slate-400">Sort by:</span>
+              <span className="text-sm text-muted-foreground">Sort by:</span>
               <Select value={sortBy} onValueChange={(v: 'newest' | 'oldest' | 'type') => setSortBy(v)}>
-                <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white w-40">
+                <SelectTrigger className="bg-card/50 border-border text-foreground w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,7 +275,7 @@ export default function DocumentsLibraryPage() {
                   <SelectItem value="type">By Type</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-sm text-slate-400 ml-auto">
+              <span className="text-sm text-muted-foreground ml-auto">
                 {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -280,25 +286,25 @@ export default function DocumentsLibraryPage() {
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="bg-slate-800/50 border-slate-700">
+              <Card key={i} className="bg-card/50 border-border">
                 <CardContent className="pt-6">
                   <div className="animate-pulse">
-                    <div className="h-20 bg-slate-700/50 rounded" />
+                    <div className="h-20 bg-card/50 rounded" />
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : filteredDocuments.length === 0 ? (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-card/50 border-border">
             <CardContent className="pt-12 pb-12">
               <div className="flex flex-col items-center justify-center text-center space-y-4">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center">
                   <FileText className="w-12 h-12 text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-2">No documents found</h3>
-                  <p className="text-slate-400 mb-4">
+                  <h3 className="text-xl font-semibold text-foreground mb-2">No documents found</h3>
+                  <p className="text-muted-foreground mb-4">
                     {searchQuery || filterType !== 'all' || filterFormat !== 'all'
                       ? 'Try adjusting your filters'
                       : 'Start by generating your first document'}
@@ -319,8 +325,8 @@ export default function DocumentsLibraryPage() {
               // Grouped by type
               Object.entries(groupedByType).map(([type, docs]) => (
                 <div key={type}>
-                  <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                    <span className={`${documentTypeColors[type] || 'bg-slate-500'} p-2 rounded-lg text-white`}>
+                  <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <span className={`${documentTypeColors[type] || 'bg-card'} p-2 rounded-lg text-foreground`}>
                       {documentTypeIcons[type] || <File className="w-4 h-4" />}
                     </span>
                     {getDocumentTypeLabel(type)} ({docs.length})
@@ -350,8 +356,9 @@ export default function DocumentsLibraryPage() {
             )}
           </div>
         )}
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 
@@ -389,7 +396,7 @@ function DocumentCard({ document, onDownload, onPreview }: DocumentCardProps) {
     });
   };
 
-  const typeColor = documentTypeColors[document.document_type] || 'bg-slate-500';
+  const typeColor = documentTypeColors[document.document_type] || 'bg-card';
   const typeIcon = documentTypeIcons[document.document_type] || <File className="w-5 h-5" />;
 
   return (
@@ -398,19 +405,19 @@ function DocumentCard({ document, onDownload, onPreview }: DocumentCardProps) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.01 }}
     >
-      <Card className="bg-slate-800/50 border-slate-700 hover:border-purple-500/50 transition-colors">
+      <Card className="bg-card/50 border-border hover:border-purple-500/50 transition-colors">
         <CardContent className="pt-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4 flex-1">
-              <div className={`${typeColor} p-3 rounded-lg text-white`}>
+              <div className={`${typeColor} p-3 rounded-lg text-foreground`}>
                 {typeIcon}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold text-white">
+                  <h3 className="text-lg font-semibold text-foreground">
                     {getDocumentTypeLabel(document.document_type)}
                   </h3>
-                  <Badge variant="outline" className="bg-slate-700/50 border-slate-600 text-slate-300">
+                  <Badge variant="outline" className="bg-card/50 border-border text-muted-foreground">
                     {document.format.toUpperCase()}
                   </Badge>
                   {document.template_used && (
@@ -419,7 +426,7 @@ function DocumentCard({ document, onDownload, onPreview }: DocumentCardProps) {
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-slate-400 mb-2">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
                     <span>{formatDate(document.generated_at)}</span>
@@ -438,7 +445,7 @@ function DocumentCard({ document, onDownload, onPreview }: DocumentCardProps) {
                   )}
                 </div>
                 {document.metadata && Object.keys(document.metadata).length > 0 && (
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-muted-foreground">
                     {document.metadata.job_id && (
                       <span className="mr-3">Job: {document.metadata.job_id.slice(0, 8)}...</span>
                     )}
@@ -457,7 +464,7 @@ function DocumentCard({ document, onDownload, onPreview }: DocumentCardProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => onPreview(document)}
-                className="border-slate-600 text-slate-200 hover:bg-slate-700/50"
+                className="border-border text-muted-foreground hover:bg-card/50"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
@@ -474,8 +481,11 @@ function DocumentCard({ document, onDownload, onPreview }: DocumentCardProps) {
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
+
 
 

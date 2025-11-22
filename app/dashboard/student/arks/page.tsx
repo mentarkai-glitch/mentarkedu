@@ -154,33 +154,33 @@ export default function MyARKsPage() {
       case "paused":
         return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
       default:
-        return "bg-slate-500/20 text-slate-400 border-slate-500/30";
+        return "bg-card/20 text-muted-foreground border-border/30";
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Loading your ARKs...</p>
+      <PageLayout containerWidth="wide" padding="desktop">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <Spinner size="xl" color="gold" />
+            <p className="text-foreground mt-4">Loading your ARKs...</p>
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black overflow-x-hidden">
-      {loadError && (
-        <div className="bg-red-500/10 border-b border-red-500/30">
-          <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3 text-red-200">
-              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-semibold">We couldn&apos;t load your ARKs.</p>
-                <p className="text-sm text-red-200/80">{loadError}</p>
-              </div>
-            </div>
+    <PageLayout containerWidth="wide" padding="desktop" maxWidth="7xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        {loadError && (
+          <Alert className="mb-4 bg-red-500/10 border-red-500/30">
+            <AlertTriangle className="w-5 h-5" />
+            <AlertDescription className="text-red-200">
+              <p className="font-semibold">We couldn&apos;t load your ARKs.</p>
+              <p className="text-sm">{loadError}</p>
+            </AlertDescription>
             <Button
               variant="outline"
               size="sm"
@@ -189,35 +189,34 @@ export default function MyARKsPage() {
             >
               Try again
             </Button>
-          </div>
-        </div>
-      )}
+          </Alert>
+        )}
 
-      {/* Page Header */}
-      <div className="border-b border-slate-700 bg-slate-900/50 w-full">
-        <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 w-full max-w-full">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6 w-full">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2 break-words">My ARKs</h1>
-              <p className="text-sm sm:text-base text-slate-400 break-words">Manage your learning journeys</p>
-            </div>
-            <Link href="/ark/create" className="w-full sm:w-auto flex-shrink-0">
-              <Button className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-semibold text-sm sm:text-base">
+        <PageHeader
+          title="My ARKs"
+          description="Manage your learning journeys"
+          icon={<BookOpen className="w-8 h-8 text-gold" />}
+          actions={
+            <Link href="/ark/create">
+              <Button className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
-                <span className="whitespace-nowrap">Create New ARK</span>
+                Create New ARK
               </Button>
             </Link>
-          </div>
+          }
+        />
+
+        <PageContainer spacing="md">
 
           {/* Filters & Search */}
           <div className="flex flex-col gap-3 sm:gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
               <Input
                 placeholder="Search ARKs..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 sm:pl-10 bg-slate-800 border-slate-700 text-white text-sm sm:text-base h-10 sm:h-11"
+                className="pl-9 sm:pl-10 bg-card border-border text-foreground text-sm sm:text-base h-10 sm:h-11"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -227,19 +226,19 @@ export default function MyARKsPage() {
                     key={status}
                     variant={filter === status ? "default" : "outline"}
                     onClick={() => setFilter(status)}
-                    className={`text-xs sm:text-sm ${filter === status ? "bg-yellow-500 text-black" : "border-slate-600"}`}
+                    className={`text-xs sm:text-sm ${filter === status ? "bg-yellow-500 text-black" : "border-border"}`}
                     size="sm"
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </Button>
                 ))}
               </div>
-              <div className="flex gap-1 sm:gap-2 border border-slate-700 rounded-lg p-1">
+              <div className="flex gap-1 sm:gap-2 border border-border rounded-lg p-1">
                 <Button
                   variant={view === "grid" ? "default" : "ghost"}
                   onClick={() => setView("grid")}
                   size="sm"
-                  className={view === "grid" ? "bg-slate-700" : "text-slate-400 p-2"}
+                  className={view === "grid" ? "bg-card" : "text-muted-foreground p-2"}
                 >
                   <Grid className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
@@ -247,7 +246,7 @@ export default function MyARKsPage() {
                   variant={view === "list" ? "default" : "ghost"}
                   onClick={() => setView("list")}
                   size="sm"
-                  className={view === "list" ? "bg-slate-700" : "text-slate-400 p-2"}
+                  className={view === "list" ? "bg-card" : "text-muted-foreground p-2"}
                 >
                   <List className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
@@ -255,27 +254,24 @@ export default function MyARKsPage() {
                   variant={view === "timeline" ? "default" : "ghost"}
                   onClick={() => setView("timeline")}
                   size="sm"
-                  className={view === "timeline" ? "bg-slate-700" : "text-slate-400 p-2"}
+                  className={view === "timeline" ? "bg-card" : "text-muted-foreground p-2"}
                 >
                   <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* ARKs Display */}
-      <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 w-full max-w-full">
+          {/* ARKs Display */}
         {filteredARKs.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center py-12 sm:py-20"
           >
-            <BookOpen className="w-16 h-16 sm:w-24 sm:h-24 text-slate-700 mx-auto mb-4 sm:mb-6" />
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">No ARKs Yet</h2>
-            <p className="text-sm sm:text-base text-slate-400 mb-6 sm:mb-8 px-4">
+            <BookOpen className="w-16 h-16 sm:w-24 sm:h-24 text-muted-foreground mx-auto mb-4 sm:mb-6" />
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-3 sm:mb-4">No ARKs Yet</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 px-4">
               Start your personalized learning journey by creating your first ARK
             </p>
             <Link href="/ark/create" className="inline-block">
@@ -289,36 +285,36 @@ export default function MyARKsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
             {filteredARKs.map((ark) => (
               <motion.div key={ark.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="min-w-0">
-                <Card className="bg-slate-800/50 border-slate-700 hover:border-yellow-500/30 transition-all h-full w-full overflow-hidden">
+                <Card className="bg-card/50 border-border hover:border-yellow-500/30 transition-all h-full w-full overflow-hidden">
                   <CardHeader className="min-w-0">
                     <div className="flex items-start justify-between mb-2 gap-2">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-white mb-1 line-clamp-2 break-words">{ark.title}</CardTitle>
+                        <CardTitle className="text-foreground mb-1 line-clamp-2 break-words">{ark.title}</CardTitle>
                         <Badge className={`${getStatusColor(ark.status)} mt-1`}>{ark.status}</Badge>
                       </div>
                     </div>
                     {ark.description && (
-                      <p className="text-slate-400 text-sm line-clamp-2 break-words">{ark.description}</p>
+                      <p className="text-muted-foreground text-sm line-clamp-2 break-words">{ark.description}</p>
                     )}
                   </CardHeader>
                   <CardContent className="space-y-4 min-w-0">
                     {/* Progress */}
                     <div className="w-full">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-slate-400">Progress</span>
-                        <span className="text-sm font-semibold text-white flex-shrink-0 ml-2">{ark.progress}%</span>
+                        <span className="text-sm text-muted-foreground">Progress</span>
+                        <span className="text-sm font-semibold text-foreground flex-shrink-0 ml-2">{ark.progress}%</span>
                       </div>
                       <Progress value={ark.progress} className="h-2 w-full" />
                     </div>
 
                     {/* Next Milestone */}
-                    <div className="flex items-start gap-2 text-sm text-slate-300 min-w-0">
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground min-w-0">
                       <Target className="w-4 h-4 mt-0.5 text-yellow-400 flex-shrink-0" />
                       <span className="line-clamp-2 break-words min-w-0">{ark.nextMilestone}</span>
                     </div>
 
                     {/* Due Date */}
-                    <div className="flex items-start gap-2 text-sm text-slate-400 min-w-0">
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground min-w-0">
                       <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
                       <span className="break-words">Due: {new Date(ark.dueDate).toLocaleDateString()}</span>
                     </div>
@@ -379,8 +375,9 @@ export default function MyARKsPage() {
             ))}
           </div>
         )}
-      </div>
-    </div>
+        </PageContainer>
+      </motion.div>
+    </PageLayout>
   );
 }
 
