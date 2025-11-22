@@ -863,6 +863,7 @@ export default function StudyAnalyzerPage() {
               autoLoad={false}
             />
           </div>
+          </div>
         </PageContainer>
       </motion.div>
     </PageLayout>
