@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return errorResponse(
-        `Validation error: ${error.errors.map((e) => e.message).join(", ")}`,
+        `Validation error: ${error.issues.map((e) => e.message).join(", ")}`,
         400
       );
     }

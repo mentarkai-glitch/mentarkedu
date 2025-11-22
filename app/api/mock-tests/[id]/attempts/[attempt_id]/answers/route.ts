@@ -84,7 +84,7 @@ export async function POST(
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return errorResponse(`Validation error: ${error.errors.map(e => e.message).join(", ")}`, 400);
+      return errorResponse(`Validation error: ${error.issues.map(e => e.message).join(", ")}`, 400);
     }
     console.error("Error saving answer:", error);
     return errorResponse(error.message || "Internal server error", 500);
