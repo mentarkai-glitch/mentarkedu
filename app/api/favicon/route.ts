@@ -8,7 +8,7 @@ export async function GET() {
     const iconPath = join(process.cwd(), 'public', 'favicon.ico');
     const iconBuffer = await readFile(iconPath);
     
-    return new NextResponse(iconBuffer.buffer, {
+    return new NextResponse(new Uint8Array(iconBuffer), {
       headers: {
         'Content-Type': 'image/x-icon',
         'Cache-Control': 'public, max-age=31536000, immutable',
@@ -20,7 +20,7 @@ export async function GET() {
         const iconPath = join(process.cwd(), 'public', 'icons', 'icon-192.png');
         const iconBuffer = await readFile(iconPath);
         
-        return new NextResponse(iconBuffer.buffer, {
+        return new NextResponse(new Uint8Array(iconBuffer), {
           headers: {
             'Content-Type': 'image/png',
             'Cache-Control': 'public, max-age=31536000, immutable',
