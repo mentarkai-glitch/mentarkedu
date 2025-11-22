@@ -71,8 +71,16 @@ export async function POST(request: NextRequest) {
 
     return successResponse(result);
   } catch (error) {
-    return handleApiError(error, "Failed to generate document");
+    return handleApiError(error, {
+      endpoint: "/api/documents/generate",
+      method: "POST",
+    });
   }
 }
+
+
+
+
+
 
 

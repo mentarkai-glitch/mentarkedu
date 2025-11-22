@@ -98,8 +98,16 @@ export async function POST(request: NextRequest) {
 
     return successResponse(result);
   } catch (error) {
-    return handleApiError(error, "Failed to generate project report");
+    return handleApiError(error, {
+      endpoint: "/api/documents/project-report",
+      method: "POST",
+    });
   }
 }
+
+
+
+
+
 
 

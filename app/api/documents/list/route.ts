@@ -55,8 +55,16 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    return handleApiError(error, "Failed to list documents");
+    return handleApiError(error, {
+      endpoint: "/api/documents/list",
+      method: "GET",
+    });
   }
 }
+
+
+
+
+
 
 

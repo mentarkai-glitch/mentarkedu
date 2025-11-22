@@ -80,7 +80,10 @@ export async function POST(request: NextRequest) {
 
     return successResponse(result);
   } catch (error) {
-    return handleApiError(error, "Failed to generate resume");
+    return handleApiError(error, {
+      endpoint: "/api/documents/resume",
+      method: "POST",
+    });
   }
 }
 
@@ -112,7 +115,10 @@ export async function GET(request: NextRequest) {
 
     return successResponse({ resume });
   } catch (error) {
-    return handleApiError(error, "Failed to fetch resume");
+    return handleApiError(error, {
+      endpoint: "/api/documents/resume",
+      method: "GET",
+    });
   }
 }
 
@@ -166,5 +172,10 @@ function buildResumeFromStudentData(
     projects: [],
   };
 }
+
+
+
+
+
 
 

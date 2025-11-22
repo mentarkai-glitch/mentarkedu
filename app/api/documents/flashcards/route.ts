@@ -101,8 +101,16 @@ export async function POST(request: NextRequest) {
 
     return successResponse(result);
   } catch (error) {
-    return handleApiError(error, "Failed to generate flashcards");
+    return handleApiError(error, {
+      endpoint: "/api/documents/flashcards",
+      method: "POST",
+    });
   }
 }
+
+
+
+
+
 
 

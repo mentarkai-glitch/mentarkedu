@@ -86,8 +86,16 @@ export async function POST(request: NextRequest) {
 
     return successResponse(result);
   } catch (error) {
-    return handleApiError(error, "Failed to generate cover letter");
+    return handleApiError(error, {
+      endpoint: "/api/documents/cover-letter",
+      method: "POST",
+    });
   }
 }
+
+
+
+
+
 
 
