@@ -235,7 +235,7 @@ export default function PaperStrategyPage() {
                 <div>
                   <p className="text-sm font-medium text-foreground mb-1">Problem Questions</p>
                   <p className="text-sm text-muted-foreground">
-                    {problemQuestions.length} questions took >5 minutes and were answered incorrectly. These killed your momentum.
+                    {problemQuestions.length} questions took &gt;5 minutes and were answered incorrectly. These killed your momentum.
                   </p>
                 </div>
               </div>
