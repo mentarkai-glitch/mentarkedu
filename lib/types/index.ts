@@ -961,7 +961,8 @@ export type AITask =
   | "research"
   | "prediction"
   | "resource_recommendation"
-  | "mentor_chat";
+  | "mentor_chat"
+  | "doubt_analysis";
 
 export type AIModel = 
   | "gpt-4o" 
