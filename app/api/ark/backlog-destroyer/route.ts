@@ -92,7 +92,7 @@ Return JSON:
 
     try {
       const aiResponse = await callGPT4o(prompt);
-      const planData = JSON.parse(aiResponse || '{}');
+      const planData = JSON.parse(aiResponse.content || '{}');
       
       return successResponse({
         totalTime: planData.totalTime || 18,
@@ -115,8 +115,6 @@ Return JSON:
         })),
       }, "Survival plan generated successfully");
     }
-
-    return successResponse(plan, "Survival plan generated successfully");
   } catch (error) {
     return handleApiError(error, {
       endpoint: "/api/ark/backlog-destroyer",
