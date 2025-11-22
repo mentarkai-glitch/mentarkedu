@@ -53,3 +53,7 @@ test-results/
 
 # Document generation (work in progress - keep local until ready)
 /mentark-docgen/
+
+# Large data files (exceed GitHub's 100MB limit)
+data/raw/*.jsonl
+data/processed/*.jsonl

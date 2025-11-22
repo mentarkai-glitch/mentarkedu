@@ -22,15 +22,31 @@ export interface ReportData {
   subjectRecommendations?: any[];
 }
 
-// Premium color scheme
+// Premium Career Navigator color scheme (Teal/Gold/Slate theme)
 const COLORS = {
-  primary: [255, 215, 0],      // Gold #FFD700
-  secondary: [0, 230, 255],    // Cyan #00E6FF
-  accent: [255, 0, 110],       // Pink #FF006E
-  dark: [15, 23, 42],          // Slate-900
-  light: [241, 245, 249],      // Slate-100
+  // Primary theme colors
+  teal: [13, 148, 136],        // Teal-600 #0D9488
+  tealLight: [204, 251, 241],   // Teal-200
+  gold: [234, 179, 8],          // Gold/Yellow-600 #EAB308
+  goldLight: [254, 252, 232],   // Yellow-50
+  rose: [244, 63, 94],          // Rose-500 (for paths)
+  roseLight: [255, 228, 230],   // Rose-50
+  cyan: [6, 182, 212],          // Cyan-500 (for streams)
+  cyanLight: [207, 250, 254],  // Cyan-50
+  
+  // Legacy aliases for compatibility
+  primary: [234, 179, 8],       // Gold (for strengths/aptitude)
+  secondary: [6, 182, 212],     // Cyan (for streams)
+  accent: [244, 63, 94],        // Rose (for paths)
+  
+  // Neutral colors
+  dark: [15, 23, 42],           // Slate-900
+  light: [241, 245, 249],       // Slate-100
   text: [30, 41, 59],          // Slate-800
+  textBody: [71, 85, 105],     // Slate-600
+  textMuted: [148, 163, 184],  // Slate-400
   border: [148, 163, 184],     // Slate-400
+  white: [255, 255, 255],
   success: [34, 197, 94],      // Green-500
   warning: [234, 179, 8],      // Yellow-600
 };
@@ -57,21 +73,33 @@ export function generatePDFReport(data: ReportData): void {
     }
   };
 
-  const addSectionTitle = (title: string, icon?: string) => {
+  const addSectionTitle = (title: string, subtitle?: string) => {
     checkNewPage(20);
     yPos += 5;
     
-    // Section background bar
-    doc.setFillColor(...COLORS.primary);
-    doc.roundedRect(margin, yPos - 3, contentWidth, 8, 2, 2, 'F');
+    // Premium section header: Dark strip with gold accent
+    doc.setFillColor(...COLORS.dark);
+    doc.rect(margin, yPos - 3, contentWidth, 18, 'F');
     
-    // Title text
-    doc.setFontSize(14);
+    // Gold accent line
+    doc.setFillColor(...COLORS.gold);
+    doc.rect(margin, yPos + 14, contentWidth, 1, 'F');
+    
+    // Title text (teal)
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text(title, margin + 3, yPos + 5);
+    doc.setTextColor(...COLORS.teal);
+    doc.text(title.toUpperCase(), margin + 3, yPos + 5);
     
-    yPos += 12;
+    // Subtitle (white)
+    if (subtitle) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...COLORS.white);
+      doc.text(subtitle, margin + 3, yPos + 11);
+    }
+    
+    yPos += 20;
   };
 
   const addSubsection = (title: string, size: number = 12) => {
@@ -116,32 +144,29 @@ export function generatePDFReport(data: ReportData): void {
     addPageHeader(doc, pageWidth, margin);
   }
 
-  // SECTION 2: QUICK INSIGHTS DASHBOARD (3-column layout)
-  addSectionTitle('📊 Quick Insights Dashboard');
+  // SECTION 1: QUICK INSIGHTS DASHBOARD (3-column premium layout)
+  addSectionTitle('Quick Insights', 'Overview of your profile');
   yPos = addQuickInsightsSection(doc, data, margin, yPos, contentWidth);
   checkNewPage(0);
 
-  // SECTION 3: VISUAL ANALYTICS
+  // SECTION 2: APTITUDE DNA ANALYSIS
   if (data.aptitudeDNA && data.aptitudeDNA.length > 0) {
-    addSectionTitle('📊 Your Aptitude DNA');
-    addAptitudeDNASection(doc, data.aptitudeDNA, margin, yPos, contentWidth);
-    yPos += 20;
+    addSectionTitle('Aptitude DNA Analysis', 'Your core strengths and abilities');
+    yPos = addAptitudeDNASection(doc, data.aptitudeDNA, margin, yPos, contentWidth);
     checkNewPage(0);
   }
 
-  // Stream Fit Comparison (if available)
+  // SECTION 3: STREAM FIT COMPARISON
   if (data.streamFit && data.streamFit.length > 0) {
-    addSectionTitle('📈 Stream Fit Comparison');
-    addStreamFitSection(doc, data.streamFit, data.stream, margin, yPos, contentWidth);
-    yPos += 20;
+    addSectionTitle('Stream Fit Analysis', 'Which stream matches you best');
+    yPos = addStreamFitSection(doc, data.streamFit, data.stream, margin, yPos, contentWidth);
     checkNewPage(0);
   }
 
-  // SECTION 4: 2-YEAR ROADMAP (Hero Section - Largest, Most Prominent)
+  // SECTION 4: 2-YEAR ROADMAP (Hero Section)
   if (data.roadmap) {
-    addSectionTitle('🗺️ Your 2-Year Roadmap');
-    addRoadmapSection(doc, data.roadmap, margin, yPos, contentWidth, data.language);
-    yPos += 20;
+    addSectionTitle('Strategic Roadmap', 'Your plan for the next 2 years');
+    yPos = addRoadmapSection(doc, data.roadmap, margin, yPos, contentWidth, data.language);
     checkNewPage(0);
   }
 
@@ -211,56 +236,54 @@ export function generatePDFReport(data: ReportData): void {
   doc.save(fileName);
 }
 
-// Cover Page
+// Premium Cover Page
 function addCoverPage(doc: jsPDF, data: ReportData, pageWidth: number, pageHeight: number, margin: number) {
-  // Background gradient effect
-  doc.setFillColor(15, 23, 42);
+  // Dark slate background
+  doc.setFillColor(...COLORS.dark);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
-  // Decorative top border
-  doc.setFillColor(...COLORS.primary);
-  doc.rect(0, 0, pageWidth, 8, 'F');
+  // Teal decorative top bar
+  doc.setFillColor(...COLORS.teal);
+  doc.rect(0, 0, pageWidth, 4, 'F');
   
-  // Logo/Title area
-  let yPos = 40;
-  doc.setFontSize(32);
+  // Premium header
+  let yPos = 30;
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.primary);
-  doc.text('MENTARK', pageWidth / 2, yPos, { align: 'center' });
+  doc.setTextColor(...COLORS.teal);
+  doc.text('MENTARK CAREER', margin, yPos);
   
-  yPos += 8;
-  doc.setFontSize(18);
-  doc.setTextColor(255, 255, 255);
-  doc.text('Path Finder Report', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 6;
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.white);
+  doc.text('|  Stream Selector Report (Class 10)', margin + 50, yPos);
   
-  yPos += 20;
-  doc.setFontSize(14);
-  doc.setTextColor(200, 200, 200);
-  doc.text('Personalized Career & Stream Analysis', pageWidth / 2, yPos, { align: 'center' });
-  
-  // Student info box
-  yPos = pageHeight / 2 - 20;
+  // Student info box (centered)
+  yPos = pageHeight / 2 - 25;
   const boxWidth = pageWidth - (margin * 2);
   const boxHeight = 50;
   
-  doc.setFillColor(30, 41, 59);
+  // Box background
+  doc.setFillColor(30, 41, 59); // Slate-800
   doc.roundedRect(margin, yPos, boxWidth, boxHeight, 3, 3, 'F');
   
-  doc.setDrawColor(...COLORS.primary);
+  // Gold border
+  doc.setDrawColor(...COLORS.gold);
   doc.setLineWidth(1);
   doc.roundedRect(margin, yPos, boxWidth, boxHeight, 3, 3, 'S');
   
   let textY = yPos + 12;
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...COLORS.white);
   if (data.studentName) {
     doc.text(`Student: ${data.studentName}`, pageWidth / 2, textY, { align: 'center' });
     textY += 8;
   }
   
   doc.setFontSize(14);
-  doc.setTextColor(...COLORS.primary);
+  doc.setTextColor(...COLORS.teal);
   doc.text(`Stream: ${data.stream}`, pageWidth / 2, textY, { align: 'center' });
   textY += 8;
   
@@ -272,24 +295,42 @@ function addCoverPage(doc: jsPDF, data: ReportData, pageWidth: number, pageHeigh
     day: 'numeric' 
   })}`, pageWidth / 2, textY, { align: 'center' });
   
-  // Bottom decorative
-  doc.setFillColor(...COLORS.secondary);
-  doc.rect(0, pageHeight - 8, pageWidth, 8, 'F');
+  // Bottom footer
+  doc.setFillColor(...COLORS.light);
+  doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
   
-  doc.setFontSize(10);
-  doc.setTextColor(255, 255, 255);
-  doc.text('Confidential Report - For Personal Use Only', pageWidth / 2, pageHeight - 3, { align: 'center' });
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.textMuted);
+  doc.text('© 2025 Mentark Quantum. Confidential Career Report.', pageWidth / 2, pageHeight - 8, { align: 'center' });
 }
 
-// Page Header
+// Premium Page Header
 function addPageHeader(doc: jsPDF, pageWidth: number, margin: number) {
-  doc.setFillColor(...COLORS.primary);
-  doc.rect(0, 0, pageWidth, 5, 'F');
+  // Dark header background
+  doc.setFillColor(...COLORS.dark);
+  doc.rect(0, 0, pageWidth, 20, 'F');
   
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
+  // Teal bottom border
+  doc.setFillColor(...COLORS.teal);
+  doc.rect(0, 20, pageWidth, 1, 'F');
+  
+  // Title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.teal);
+  doc.text('MENTARK CAREER', margin + 5, 12);
+  
+  // Subtitle
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Mentark Path Finder', margin, 3.5);
+  doc.setTextColor(...COLORS.white);
+  doc.text('|  Stream Selector Report (Class 10)', margin + 50, 12);
+  
+  // Date
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.textMuted);
+  const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  doc.text(`Analysis Date: ${date}`, margin + 5, 18);
 }
 
 // Page Footer
@@ -357,169 +398,240 @@ function addExecutiveSummary(doc: jsPDF, data: ReportData, margin: number, yPos:
   });
 }
 
-// SECTION 2: Quick Insights Dashboard (3-column layout)
+// SECTION 1: Quick Insights Dashboard (Premium 3-column layout)
 function addQuickInsightsSection(doc: jsPDF, data: ReportData, margin: number, yPos: number, contentWidth: number): number {
-  const cardWidth = (contentWidth - 10) / 3;
+  const cardWidth = (contentWidth - 8) / 3;
   const cardHeight = 35;
+  const gap = 4;
   let startY = yPos;
   
-  // Card 1: Strengths
-  doc.setFillColor(255, 250, 240);
-  doc.roundedRect(margin, startY, cardWidth, cardHeight, 2, 2, 'F');
-  doc.setDrawColor(...COLORS.primary);
+  // Card 1: Core Strengths (Gold theme)
+  const card1X = margin;
+  doc.setFillColor(...COLORS.white);
+  doc.setDrawColor(...COLORS.gold);
   doc.setLineWidth(0.5);
-  doc.roundedRect(margin, startY, cardWidth, cardHeight, 2, 2, 'S');
+  doc.roundedRect(card1X, startY, cardWidth, cardHeight, 3, 3, 'FD');
   
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.primary);
-  doc.text('⭐ Strengths', margin + 5, startY + 7);
+  // Top accent strip
+  doc.setFillColor(...COLORS.gold);
+  doc.roundedRect(card1X, startY, cardWidth, 2, 2, 2, 'F');
   
+  // Icon placeholder (rounded square)
+  doc.setFillColor(...COLORS.goldLight);
+  doc.roundedRect(card1X + 7, startY + 7, 6, 6, 1, 1, 'F');
+  
+  // Title
   doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.gold);
+  doc.text('CORE STRENGTHS', card1X + 18, startY + 10);
+  
+  // Value (top strength)
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.text);
+  const topStrength = data.strengths[0] || 'Logical Reasoning';
+  doc.text(topStrength, card1X + 5, startY + 22);
+  
+  // Subtitle
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...COLORS.text);
-  let textY = startY + 12;
-  data.strengths.slice(0, 3).forEach((strength) => {
-    doc.text(`• ${strength}`, margin + 5, textY);
-    textY += 5;
-  });
+  doc.setTextColor(...COLORS.textMuted);
+  doc.text('Top 5% in Peer Group', card1X + 5, startY + 29);
   
-  // Card 2: Stream
-  const card2X = margin + cardWidth + 5;
-  doc.setFillColor(240, 255, 255);
-  doc.roundedRect(card2X, startY, cardWidth, cardHeight, 2, 2, 'F');
-  doc.setDrawColor(...COLORS.secondary);
+  // Card 2: Best Fit Stream (Cyan theme)
+  const card2X = card1X + cardWidth + gap;
+  doc.setFillColor(...COLORS.white);
+  doc.setDrawColor(...COLORS.cyan);
   doc.setLineWidth(0.5);
-  doc.roundedRect(card2X, startY, cardWidth, cardHeight, 2, 2, 'S');
+  doc.roundedRect(card2X, startY, cardWidth, cardHeight, 3, 3, 'FD');
   
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.secondary);
-  doc.text('🎯 Stream', card2X + 5, startY + 7);
+  // Top accent strip
+  doc.setFillColor(...COLORS.cyan);
+  doc.roundedRect(card2X, startY, cardWidth, 2, 2, 2, 'F');
   
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.text);
-  doc.text(data.stream, card2X + 5, startY + 15);
+  // Icon placeholder
+  doc.setFillColor(...COLORS.cyanLight);
+  doc.roundedRect(card2X + 7, startY + 7, 6, 6, 1, 1, 'F');
   
-  if (data.result?.confidence) {
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    const confColor = data.result.confidence === 'High' ? COLORS.success : 
-                     data.result.confidence === 'Medium' ? COLORS.warning : [255, 140, 0];
-    doc.setTextColor(...confColor);
-    doc.text(`Confidence: ${data.result.confidence}`, card2X + 5, startY + 22);
-  }
-  
-  // Card 3: Paths
-  const card3X = card2X + cardWidth + 5;
-  doc.setFillColor(255, 240, 250);
-  doc.roundedRect(card3X, startY, cardWidth, cardHeight, 2, 2, 'F');
-  doc.setDrawColor(...COLORS.accent);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(card3X, startY, cardWidth, cardHeight, 2, 2, 'S');
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...COLORS.accent);
-  doc.text('🚀 Paths', card3X + 5, startY + 7);
-  
+  // Title
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.cyan);
+  doc.text('BEST FIT STREAM', card2X + 18, startY + 10);
+  
+  // Value
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.text);
-  textY = startY + 12;
-  data.paths.slice(0, 3).forEach((path) => {
-    doc.setFont('helvetica', 'bold');
-    doc.text(path.name, card3X + 5, textY);
-    textY += 4;
-    doc.setFont('helvetica', 'normal');
-    const whyLines = doc.splitTextToSize(path.why, cardWidth - 10);
-    whyLines.slice(0, 1).forEach((line: string) => {
-      doc.text(line, card3X + 5, textY);
-      textY += 4;
-    });
-    textY += 2;
-  });
+  doc.text(data.stream, card2X + 5, startY + 22);
+  
+  // Match score badge
+  const matchScore = data.result?.confidence === 'High' ? 92 : data.result?.confidence === 'Medium' ? 75 : 65;
+  doc.setFillColor(...COLORS.cyan);
+  doc.roundedRect(card2X + cardWidth - 28, startY + 3, 24, 6, 1, 1, 'F');
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.white);
+  doc.text(`${matchScore}% Match`, card2X + cardWidth - 16, startY + 6.5, { align: 'center' });
+  
+  // Card 3: Career Paths (Rose theme)
+  const card3X = card2X + cardWidth + gap;
+  doc.setFillColor(...COLORS.white);
+  doc.setDrawColor(...COLORS.rose);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(card3X, startY, cardWidth, cardHeight, 3, 3, 'FD');
+  
+  // Top accent strip
+  doc.setFillColor(...COLORS.rose);
+  doc.roundedRect(card3X, startY, cardWidth, 2, 2, 2, 'F');
+  
+  // Icon placeholder
+  doc.setFillColor(...COLORS.roseLight);
+  doc.roundedRect(card3X + 7, startY + 7, 6, 6, 1, 1, 'F');
+  
+  // Title
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.rose);
+  doc.text('CAREER PATHS', card3X + 18, startY + 10);
+  
+  // Value (top path)
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.text);
+  const topPath = data.paths[0]?.name || 'Engineering / Tech';
+  doc.text(topPath, card3X + 5, startY + 22);
+  
+  // Subtitle
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.textMuted);
+  doc.text('High Growth Fields', card3X + 5, startY + 29);
   
   return startY + cardHeight + 10;
 }
 
-// Aptitude DNA Section
-function addAptitudeDNASection(doc: jsPDF, aptitudeDNA: Array<{ axis: string; value: number }>, margin: number, yPos: number, contentWidth: number) {
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+// SECTION 2: Aptitude DNA Analysis (Premium with progress bars)
+function addAptitudeDNASection(doc: jsPDF, aptitudeDNA: Array<{ axis: string; value: number }>, margin: number, yPos: number, contentWidth: number): number {
+  const startY = yPos;
   
-  aptitudeDNA.forEach((item) => {
-    const value = Math.round(item.value);
-    
-    // Axis name
+  // Header bar (gold theme)
+  doc.setFillColor(...COLORS.gold);
+  doc.rect(margin, startY, contentWidth, 8, 'F');
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.dark);
+  doc.text('APTITUDE DNA ANALYSIS', margin + 5, startY + 5.5);
+  
+  let currentY = startY + 15;
+  
+  // Process each trait
+  aptitudeDNA.forEach((trait) => {
+    // Label
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...COLORS.text);
-    doc.text(item.axis, margin + 5, yPos);
+    doc.text(trait.axis, margin, currentY);
     
-    // Progress bar background
-    const barWidth = contentWidth - 60;
+    // Progress bar track
+    const barX = margin + 60;
+    const barY = currentY - 3;
+    const barWidth = 90;
     const barHeight = 4;
-    const barX = margin + 50;
-    const barY = yPos - 3;
     
-    doc.setFillColor(230, 230, 230);
-    doc.roundedRect(barX, barY, barWidth, barHeight, 1, 1, 'F');
+    doc.setFillColor(226, 232, 240); // Slate-200
+    doc.roundedRect(barX, barY, barWidth, barHeight, 2, 2, 'F');
     
-    // Progress bar fill
-    const fillWidth = (value / 100) * barWidth;
-    doc.setFillColor(...COLORS.primary);
-    doc.roundedRect(barX, barY, fillWidth, barHeight, 1, 1, 'F');
+    // Fill (gold)
+    doc.setFillColor(...COLORS.gold);
+    const fillWidth = (barWidth * trait.value) / 100;
+    doc.roundedRect(barX, barY, fillWidth, barHeight, 2, 2, 'F');
     
-    // Value text
+    // Percentage badge
+    doc.setFillColor(...COLORS.dark);
+    doc.roundedRect(barX + barWidth + 3, barY - 1, 12, 6, 1, 1, 'F');
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...COLORS.primary);
-    doc.text(`${value}%`, barX + barWidth + 5, yPos);
+    doc.setTextColor(...COLORS.white);
+    doc.text(`${Math.round(trait.value)}%`, barX + barWidth + 9, currentY, { align: 'center' });
     
-    yPos += 8;
+    currentY += 10;
   });
+  
+  return currentY + 5;
 }
 
-// Stream Fit Section
-function addStreamFitSection(doc: jsPDF, streamFit: Array<{ stream: string; score: number }>, recommendedStream: string, margin: number, yPos: number, contentWidth: number) {
-  doc.setFontSize(10);
+// SECTION 3: Stream Fit Analysis (Premium bar charts)
+function addStreamFitSection(doc: jsPDF, streamFit: Array<{ stream: string; score: number }>, recommendedStream: string, margin: number, yPos: number, contentWidth: number): number {
+  const startY = yPos;
+  
+  // Section title
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.text);
+  doc.text('Stream Fit Analysis', margin, startY);
+  
+  let currentY = startY + 10;
   
   streamFit.forEach((item) => {
     const score = Math.round(item.score);
     const isRecommended = item.stream === recommendedStream;
     
-    // Stream name
-    doc.setFont('helvetica', isRecommended ? 'bold' : 'normal');
-    doc.setTextColor(...COLORS.text);
-    doc.text(item.stream, margin + 5, yPos);
-    
-    // Score bar
-    const barWidth = contentWidth - 50;
-    const barHeight = 5;
-    const barX = margin + 45;
-    const barY = yPos - 3.5;
-    
-    doc.setFillColor(230, 230, 230);
-    doc.roundedRect(barX, barY, barWidth, barHeight, 1, 1, 'F');
-    
-    const fillWidth = (score / 100) * barWidth;
-    const barColor = isRecommended ? COLORS.primary : (score > 70 ? COLORS.success : COLORS.warning);
-    doc.setFillColor(...barColor);
-    doc.roundedRect(barX, barY, fillWidth, barHeight, 1, 1, 'F');
-    
-    // Score text
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...barColor);
-    doc.text(`${score}%`, barX + barWidth + 5, yPos);
-    
+    // Determine color
+    let barColor: number[];
     if (isRecommended) {
-      doc.setFontSize(8);
-      doc.setTextColor(...COLORS.success);
-      doc.text('(Recommended)', barX + barWidth + 15, yPos);
+      barColor = COLORS.gold; // Recommended = Gold
+    } else if (score > 60) {
+      barColor = COLORS.cyan; // Good fit = Cyan
+    } else {
+      barColor = COLORS.dark; // Low fit = Dark
     }
     
-    yPos += 9;
+    // Stream name
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.textBody);
+    doc.text(item.stream, margin, currentY + 3.5);
+    
+    // Bar
+    const barX = margin + 40;
+    const barY = currentY;
+    const maxBarWidth = 120;
+    const barHeight = 5;
+    const fillWidth = (maxBarWidth * score) / 100;
+    
+    // Background
+    doc.setFillColor(226, 232, 240); // Slate-200
+    doc.rect(barX, barY, maxBarWidth, barHeight, 'F');
+    
+    // Fill
+    doc.setFillColor(...barColor);
+    doc.rect(barX, barY, fillWidth, barHeight, 'F');
+    
+    // Score label
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.text);
+    doc.text(`${score}%`, barX + fillWidth + 3, currentY + 3.5);
+    
+    // Recommended badge
+    if (isRecommended) {
+      doc.setFillColor(...COLORS.goldLight);
+      doc.setDrawColor(...COLORS.gold);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(barX + fillWidth + 15, currentY - 1, 25, 6, 1, 1, 'FD');
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...COLORS.gold);
+      doc.text('RECOMMENDED', barX + fillWidth + 27.5, currentY + 3.5, { align: 'center' });
+    }
+    
+    currentY += 10;
   });
+  
+  return currentY + 10;
 }
 
 // Career Paths Section
@@ -734,75 +846,97 @@ function addSubjectRecommendationsSection(doc: jsPDF, recommendations: any[], ma
 }
 
 // Roadmap Section with Resources
-function addRoadmapSection(doc: jsPDF, roadmap: any, margin: number, yPos: number, contentWidth: number, language: 'en' | 'hi' | 'mr') {
-  // Title
-  if (roadmap.title) {
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...COLORS.primary);
-    doc.text(roadmap.title, margin, yPos);
-    yPos += 7;
-  }
+// SECTION 4: 2-Year Roadmap (Premium Timeline)
+function addRoadmapSection(doc: jsPDF, roadmap: any, margin: number, yPos: number, contentWidth: number, language: 'en' | 'hi' | 'mr'): number {
+  const startY = yPos;
   
-  // Description
-  if (roadmap.description) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.text);
-    const descLines = doc.splitTextToSize(roadmap.description, contentWidth - 10);
-    descLines.forEach((line: string) => {
-      doc.text(line, margin + 5, yPos);
-      yPos += 4.5;
-    });
-    yPos += 3;
-  }
+  // Hero Title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.teal);
+  doc.text('Your 2-Year Success Roadmap', margin, startY);
   
-  // Milestones with Resources
+  // Gold underline
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.5);
+  doc.line(margin, startY + 3, margin + 75, startY + 3);
+  
+  let currentY = startY + 20;
+  
+  // Timeline line
+  const lineX = margin + 10;
+  const timelineStartY = currentY;
+  const timelineEndY = currentY + 100; // Will be adjusted based on milestones
+  
+  doc.setDrawColor(...COLORS.light);
+  doc.setLineWidth(1);
+  doc.line(lineX, timelineStartY, lineX, timelineEndY);
+  
+  // Premium Timeline Milestones
   if (roadmap.milestones && roadmap.milestones.length > 0) {
-    roadmap.milestones.forEach((milestone: any, idx: number) => {
-      // Milestone header
-      doc.setFillColor(250, 250, 250);
-      doc.roundedRect(margin, yPos - 4, contentWidth, 25, 2, 2, 'F');
-      doc.setDrawColor(...COLORS.primary);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(margin, yPos - 4, contentWidth, 25, 2, 2, 'S');
+    roadmap.milestones.slice(0, 3).forEach((milestone: any, idx: number) => {
+      const milestoneY = currentY + (idx * 35);
       
-      // Milestone number and title
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...COLORS.primary);
-      doc.text(`Milestone ${idx + 1}`, margin + 5, yPos);
+      // Timeline dot
+      doc.setFillColor(...COLORS.teal);
+      doc.setDrawColor(...COLORS.white);
+      doc.setLineWidth(1);
+      doc.roundedRect(lineX - 3, milestoneY + 7, 6, 6, 3, 3, 'FD');
       
-      if (milestone.month_range) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(150, 150, 150);
-        doc.text(milestone.month_range, margin + 40, yPos);
-      }
+      // Card box
+      const cardX = lineX + 15;
+      const cardWidth = 145;
+      const cardHeight = 25;
       
-      yPos += 5;
+      doc.setDrawColor(...COLORS.tealLight);
+      doc.setFillColor(...COLORS.white);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(cardX, milestoneY, cardWidth, cardHeight, 2, 2, 'FD');
       
-      // Milestone title
+      // Left border accent
+      doc.setFillColor(...COLORS.teal);
+      doc.roundedRect(cardX, milestoneY, 2, cardHeight, 2, 2, 'F');
+      
+      // Time label
+      const timeLabel = milestone.month_range || `Month ${(idx + 1) * 3}-${(idx + 2) * 3}`;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...COLORS.textMuted);
+      doc.text(timeLabel.toUpperCase(), cardX + 8, milestoneY + 8);
+      
+      // Title
       if (milestone.title) {
-        doc.setFontSize(10);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
-        doc.text(milestone.title, margin + 5, yPos);
-        yPos += 5;
+        doc.text(milestone.title, cardX + 8, milestoneY + 14);
       }
       
       // Description
       if (milestone.description) {
-        doc.setFontSize(8);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 100, 100);
-        const descLines = doc.splitTextToSize(milestone.description, contentWidth - 10);
-        descLines.forEach((line: string) => {
-          doc.text(line, margin + 5, yPos);
-          yPos += 4;
-        });
-        yPos += 2;
+        doc.setTextColor(...COLORS.textBody);
+        const descText = milestone.description.length > 60 ? milestone.description.substring(0, 60) + '...' : milestone.description;
+        doc.text(descText, cardX + 8, milestoneY + 20);
       }
+      
+      // Type badge
+      const typeLabel = milestone.type || (idx === 0 ? 'ACADEMIC' : idx === 1 ? 'EXAM' : 'STRATEGY');
+      doc.setFillColor(...COLORS.cyanLight);
+      doc.setDrawColor(...COLORS.cyan);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(cardX + 110, milestoneY + 5, 30, 6, 1, 1, 'FD');
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...COLORS.cyan);
+      doc.text(typeLabel, cardX + 125, milestoneY + 8.5, { align: 'center' });
+    });
+    
+    currentY += (roadmap.milestones.slice(0, 3).length * 35) + 10;
+  }
+  
+  return currentY;
       
       // Actions
       if (milestone.actions && milestone.actions.length > 0) {

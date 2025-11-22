@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { successResponse, errorResponse } from "@/lib/utils/api-helpers";
+import { cache, cacheKeys } from "@/lib/utils/cache";
 
 export async function GET(request: NextRequest) {
   try {
