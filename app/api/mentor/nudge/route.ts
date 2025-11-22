@@ -136,7 +136,7 @@ Generate a short, encouraging message (2-3 sentences) in a friendly, supportive 
 
     try {
       const aiResponse = await callClaude(prompt);
-      const nudgeData = JSON.parse(aiResponse || '{}');
+      const nudgeData = JSON.parse(aiResponse.content || '{}');
       
       return successResponse({
         id: `nudge-${Date.now()}`,
