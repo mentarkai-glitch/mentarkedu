@@ -4,7 +4,7 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -25,7 +25,8 @@ export async function GET(
       return errorResponse("Admin access required", 403);
     }
 
-    const batchId = params.id === "all" ? null : params.id;
+    const { id } = await params;
+    const batchId = id === "all" ? null : id;
 
     // Get students in batch
     let studentsQuery = supabase
