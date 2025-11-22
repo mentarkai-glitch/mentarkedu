@@ -481,9 +481,7 @@ function DocumentCard({ document, onDownload, onPreview }: DocumentCardProps) {
           </div>
         </CardContent>
       </Card>
-        </PageContainer>
-      </motion.div>
-    </PageLayout>
+    </motion.div>
   );
 }
 
