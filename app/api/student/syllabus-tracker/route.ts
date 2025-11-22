@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const { data: tracker, error } = await supabase
       .from("syllabus_tracker")
       .select("*")
-      .eq("student_id", student.user_id)
+      .eq("student_id", user.id)
       .eq("exam_type", examType)
       .order("subject", { ascending: true })
       .order("chapter", { ascending: true })
