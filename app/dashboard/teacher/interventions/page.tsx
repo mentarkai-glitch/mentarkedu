@@ -282,8 +282,7 @@ export default function TeacherInterventionsPage() {
             </div>
             </DialogContent>
           </Dialog>
-          </div>
-      </div>
+        </div>
 
       {/* Interventions List */}
       {loading ? (
