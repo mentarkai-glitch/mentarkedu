@@ -101,13 +101,13 @@ export async function GET(
 
     // Calculate statistics
     const totalQuestions = questions.length;
-    const correctAnswers = questions.filter((q) => q.correct && !q.skipped).length;
-    const wrongAnswers = questions.filter((q) => !q.correct && !q.skipped).length;
-    const skippedQuestions = questions.filter((q) => q.skipped).length;
-    const totalTime = questions.reduce((sum, q) => sum + q.timeSpent, 0);
+    const correctAnswers = questions.filter((q: any) => q.correct && !q.skipped).length;
+    const wrongAnswers = questions.filter((q: any) => !q.correct && !q.skipped).length;
+    const skippedQuestions = questions.filter((q: any) => q.skipped).length;
+    const totalTime = questions.reduce((sum: number, q: any) => sum + q.timeSpent, 0);
 
     // Find problem questions (took >5 min and wrong)
-    const problemQuestions = questions.filter((q) => q.timeSpent > 5 && !q.correct && !q.skipped);
+    const problemQuestions = questions.filter((q: any) => q.timeSpent > 5 && !q.correct && !q.skipped);
 
     // Generate insights
     const insights = {
