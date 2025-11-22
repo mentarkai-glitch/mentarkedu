@@ -52,6 +52,11 @@ class SimpleCache {
 export const cache = new SimpleCache();
 
 /**
+ * Specialized cache instances
+ */
+export const modelSelectionCache = new SimpleCache();
+
+/**
  * Cache key generators
  */
 export const cacheKeys = {
@@ -63,3 +68,13 @@ export const cacheKeys = {
   analytics: (type: string, params: string) => `analytics:${type}:${params}`,
   recommendations: (studentId: string) => `recommendations:${studentId}`,
 };
+
+/**
+ * Create a cache key from multiple parts
+ */
+export function createCacheKey(...parts: (string | number | undefined | null)[]): string {
+  return parts
+    .filter(part => part !== undefined && part !== null)
+    .map(part => String(part))
+    .join(':');
+}

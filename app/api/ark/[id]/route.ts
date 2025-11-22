@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from "@/lib/utils/api-helpers";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -25,11 +25,12 @@ export async function GET(
       return errorResponse("Student not found", 404);
     }
 
+    const { id } = await params;
     // Get ARK with milestones and tasks
     const { data: ark, error: arkError } = await supabase
       .from("arks")
       .select("*")
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("student_id", student.user_id)
       .single();
 
@@ -41,7 +42,7 @@ export async function GET(
     const { data: milestones, error: milestonesError } = await supabase
       .from("ark_milestones")
       .select("*")
-      .eq("ark_id", params.id)
+      .eq("ark_id", id)
       .order("due_date", { ascending: true });
 
     if (milestonesError) {
@@ -104,7 +105,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -125,6 +126,7 @@ export async function PATCH(
       return errorResponse("Student not found", 404);
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status, progress } = body;
 
@@ -135,7 +137,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from("arks")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("student_id", student.user_id)
       .select()
       .single();
