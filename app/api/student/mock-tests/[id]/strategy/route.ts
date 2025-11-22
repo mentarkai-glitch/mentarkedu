@@ -4,7 +4,7 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -24,7 +24,8 @@ export async function GET(
       return errorResponse("Student profile not found", 404);
     }
 
-    const testId = params.id;
+    const { id } = await params;
+    const testId = id;
 
     // Get test attempt data
     // Assuming we have a test_attempts or mock_test_results table

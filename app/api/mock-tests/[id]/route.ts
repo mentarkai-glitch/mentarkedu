@@ -4,7 +4,7 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -14,7 +14,8 @@ export async function GET(
       return errorResponse("Unauthorized", 401);
     }
 
-    const testId = params.id;
+    const { id } = await params;
+    const testId = id;
 
     // Get test details
     const { data: test, error: testError } = await supabase

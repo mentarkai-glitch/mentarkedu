@@ -23,11 +23,12 @@ const QUESTIONS_NAMESPACE = "questions";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const questionId = params.id;
+    const { id } = await params;
+    const questionId = id;
 
     // Get question from Supabase
     const { data: question, error: questionError } = await supabase

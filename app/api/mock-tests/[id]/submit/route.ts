@@ -18,7 +18,7 @@ const submitTestSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -28,7 +28,8 @@ export async function POST(
       return errorResponse("Unauthorized", 401);
     }
 
-    const testId = params.id;
+    const { id } = await params;
+    const testId = id;
     const body = await request.json();
     const validated = submitTestSchema.parse(body);
 

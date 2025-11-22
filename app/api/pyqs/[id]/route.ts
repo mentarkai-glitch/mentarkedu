@@ -4,12 +4,13 @@ import { successResponse, errorResponse, handleApiError } from "@/lib/utils/api-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
     
-    const pyqId = params.id;
+    const { id } = await params;
+    const pyqId = id;
 
     // Get PYQ details
     const { data: pyq, error } = await supabase

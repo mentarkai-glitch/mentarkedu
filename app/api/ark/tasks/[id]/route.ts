@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from "@/lib/utils/api-helpers";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -25,6 +25,7 @@ export async function PATCH(
       return errorResponse("Student not found", 404);
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { completion_status, completed_at } = body;
 
@@ -40,7 +41,7 @@ export async function PATCH(
           )
         )
       `)
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (taskError || !task) {
@@ -62,7 +63,7 @@ export async function PATCH(
     const { data: updatedTask, error: updateError } = await supabase
       .from("ark_tasks")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 

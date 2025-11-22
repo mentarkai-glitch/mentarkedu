@@ -14,7 +14,7 @@ const saveAnswerSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; attempt_id: string } }
+  { params }: { params: Promise<{ id: string; attempt_id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -24,7 +24,7 @@ export async function POST(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { attempt_id } = params;
+    const { attempt_id } = await params;
     const body = await request.json();
     const validated = saveAnswerSchema.parse(body);
 
@@ -93,7 +93,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; attempt_id: string } }
+  { params }: { params: Promise<{ id: string; attempt_id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -103,7 +103,7 @@ export async function GET(
       return errorResponse("Unauthorized", 401);
     }
 
-    const { attempt_id } = params;
+    const { attempt_id } = await params;
 
     // Get student
     const { data: student } = await supabase
