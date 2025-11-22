@@ -8,24 +8,24 @@ export async function GET() {
     const iconPath = join(process.cwd(), 'public', 'favicon.ico');
     const iconBuffer = await readFile(iconPath);
     
-    return new NextResponse(iconBuffer, {
+    return new NextResponse(iconBuffer.buffer, {
       headers: {
         'Content-Type': 'image/x-icon',
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });
   } catch {
-    // Fallback to PNG icon if favicon.ico doesn't exist
-    try {
-      const iconPath = join(process.cwd(), 'public', 'icons', 'icon-192.png');
-      const iconBuffer = await readFile(iconPath);
-      
-      return new NextResponse(iconBuffer, {
-        headers: {
-          'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=31536000, immutable',
-        },
-      });
+      // Fallback to PNG icon if favicon.ico doesn't exist
+      try {
+        const iconPath = join(process.cwd(), 'public', 'icons', 'icon-192.png');
+        const iconBuffer = await readFile(iconPath);
+        
+        return new NextResponse(iconBuffer.buffer, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          },
+        });
     } catch (error) {
       // Return 204 No Content instead of 500
       return new NextResponse(null, { status: 204 });
