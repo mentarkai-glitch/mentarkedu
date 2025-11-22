@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from "@/lib/utils/api-helpers";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -25,6 +25,7 @@ export async function GET(
       return errorResponse("Admin access required", 403);
     }
 
+    const { id } = await params;
     const { data: teacher, error } = await supabase
       .from("teachers")
       .select(`
@@ -37,7 +38,7 @@ export async function GET(
           profile_data
         )
       `)
-      .eq("user_id", params.id)
+      .eq("user_id", id)
       .single();
 
     if (error) {
@@ -64,7 +65,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -85,6 +86,7 @@ export async function PATCH(
       return errorResponse("Admin access required", 403);
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { specialization, assigned_batches } = body;
 
@@ -96,7 +98,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from("teachers")
       .update(updateData)
-      .eq("user_id", params.id)
+      .eq("user_id", id)
       .select()
       .single();
 
