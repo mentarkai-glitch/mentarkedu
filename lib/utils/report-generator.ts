@@ -936,96 +936,22 @@ function addRoadmapSection(doc: jsPDF, roadmap: any, margin: number, yPos: numbe
     currentY += (roadmap.milestones.slice(0, 3).length * 35) + 10;
   }
   
-  return currentY;
-      
-      // Actions
-      if (milestone.actions && milestone.actions.length > 0) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...COLORS.text);
-        doc.text('Actions:', margin + 5, yPos);
-        yPos += 4;
-        
-        doc.setFont('helvetica', 'normal');
-        milestone.actions.forEach((action: string) => {
-          doc.setFillColor(...COLORS.success);
-          doc.circle(margin + 7, yPos - 1, 1, 'F');
-          doc.text(action, margin + 11, yPos);
-          yPos += 4.5;
-        });
-        yPos += 2;
-      }
-      
-      // Resources (NEW - Detailed)
-      if (milestone.resources && milestone.resources.length > 0) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...COLORS.secondary);
-        doc.text('Resources:', margin + 5, yPos);
-        yPos += 4;
-        
-        milestone.resources.forEach((resource: any) => {
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(...COLORS.text);
-          
-          // Resource type badge
-          const typeColors: Record<string, number[]> = {
-            video: [255, 0, 110],
-            article: [0, 230, 255],
-            course: [255, 215, 0],
-            book: [34, 197, 94],
-            tool: [234, 179, 8]
-          };
-          
-          const typeColor = typeColors[resource.type] || [150, 150, 150];
-          doc.setFillColor(...typeColor);
-          doc.roundedRect(margin + 7, yPos - 2.5, 12, 3.5, 1, 1, 'F');
-          doc.setFontSize(7);
-          doc.setTextColor(255, 255, 255);
-          doc.text(resource.type.toUpperCase(), margin + 13, yPos, { align: 'center' });
-          
-          // Resource title
-          doc.setFontSize(8);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(...COLORS.text);
-          doc.text(resource.title || '', margin + 22, yPos);
-          yPos += 4;
-          
-          // Resource description
-          if (resource.description) {
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.setTextColor(100, 100, 100);
-            const resDescLines = doc.splitTextToSize(resource.description, contentWidth - 25);
-            resDescLines.forEach((line: string) => {
-              doc.text(line, margin + 11, yPos);
-              yPos += 3.5;
-            });
-          }
-          
-          yPos += 2;
-        });
-      }
-      
-      yPos += 5;
-    });
-  }
-  
   // Monthly Plan
   if (roadmap.monthly_plan) {
+    currentY += 10;
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...COLORS.text);
-    doc.text('Monthly Action Plan', margin, yPos);
-    yPos += 6;
+    doc.text('Monthly Action Plan', margin, currentY);
+    currentY += 6;
     
     if (typeof roadmap.monthly_plan === 'object') {
       Object.entries(roadmap.monthly_plan).forEach(([period, items]: [string, any]) => {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.primary);
-        doc.text(period.replace(/_/g, ' ').toUpperCase(), margin + 5, yPos);
-        yPos += 4;
+        doc.text(period.replace(/_/g, ' ').toUpperCase(), margin + 5, currentY);
+        currentY += 4;
         
         if (Array.isArray(items)) {
           doc.setFont('helvetica', 'normal');
@@ -1033,15 +959,17 @@ function addRoadmapSection(doc: jsPDF, roadmap: any, margin: number, yPos: numbe
           doc.setTextColor(...COLORS.text);
           items.forEach((item: string) => {
             doc.setFillColor(...COLORS.primary);
-            doc.circle(margin + 7, yPos - 1, 1, 'F');
-            doc.text(item, margin + 11, yPos);
-            yPos += 4.5;
+            doc.circle(margin + 7, currentY - 1, 1, 'F');
+            doc.text(item, margin + 11, currentY);
+            currentY += 4.5;
           });
         }
-        yPos += 2;
+        currentY += 2;
       });
     }
   }
+  
+  return currentY;
 }
 
 // College Recommendations Section
@@ -1067,7 +995,7 @@ function addCollegeRecommendationsSection(doc: jsPDF, colleges: any[], margin: n
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.text);
-    doc.text(`📍 ${college.location}`, margin + 5, yPos + 6);
+    doc.text(`Location: ${college.location}`, margin + 5, yPos + 6);
     
     // Rank and Rating
     if (college.rank) {
@@ -1079,7 +1007,7 @@ function addCollegeRecommendationsSection(doc: jsPDF, colleges: any[], margin: n
     if (college.rating) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...COLORS.warning);
-      doc.text(`⭐ ${college.rating}`, margin + contentWidth - 20, yPos);
+      doc.text(`* ${college.rating}`, margin + contentWidth - 20, yPos);
     }
     
     // Fees
