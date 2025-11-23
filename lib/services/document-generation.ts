@@ -49,7 +49,7 @@ export interface FlashcardOptions {
 export interface NotesOptions {
   topic?: string;
   content?: string;
-  source?: "search" | "chat" | "custom";
+  source?: "search" | "chat" | "custom" | "doubt_solver";
   source_id?: string;
   format?: "pdf" | "docx";
   template?: string;
