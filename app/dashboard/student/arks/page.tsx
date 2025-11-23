@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { generateARKReport, downloadDocumentAsFile } from "@/lib/services/document-generation";
 import { PageLayout, PageHeader, PageContainer } from '@/components/layout/PageLayout';
 import { Spinner } from '@/components/ui/loading';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   BookOpen,
   Plus,
